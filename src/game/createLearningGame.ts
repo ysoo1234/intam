@@ -2279,7 +2279,7 @@ class AirportScene extends Phaser.Scene {
       this.feverUntilMs > this.elapsedMs && !this.finished ? 1.55 : 1;
     if (this.sky) this.sky.tilePositionX += 21 * speedMultiplier * (safeDelta / 1000);
     if (this.city) this.city.tilePositionX += 92 * speedMultiplier * (safeDelta / 1000);
-    if (this.ground) this.ground.tilePositionX += 855 * speedMultiplier * (safeDelta / 1000);
+    if (this.ground) this.ground.tilePositionX += 950 * speedMultiplier * (safeDelta / 1000);
 
     if (this.finished) return;
     if (this.countdownMs > 0) {

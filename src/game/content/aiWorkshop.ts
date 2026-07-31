@@ -301,7 +301,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerImage: "/assets/customers/imaginative-student.png",
     productId: "ai-art",
     dialogue:
-      "머릿속에는 멋진 그림이 있는데 손이 못 따라와요. 설명대로 그려 주는 AI가 필요해요!",
+      "제 머릿속에는 멋진 발명품이 있어요. 이 발명품을 그리는데 도움이 될 만한 AI가 필요해요!",
     thanks: "제 상상이 드디어 화면 밖으로 나왔어요!",
     wrongReplies: [
       "이건 제가 설명한 그림을 만들어 주는 도구가 아니에요.",
