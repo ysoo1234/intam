@@ -10,6 +10,7 @@ export type WorkshopRequest = {
   id: string;
   customerRole: string;
   customerEmoji: string;
+  customerImage: string;
   productId: string;
   dialogue: string;
   thanks: string;
@@ -129,6 +130,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "walking-grandparent",
     customerRole: "운동을 즐기는 어르신",
     customerEmoji: "🚶",
+    customerImage: "/assets/customers/walking-grandparent.png",
     productId: "smart-band",
     dialogue:
       "산책은 제가 할 테니, 심박수랑 걸음 수 계산은 기계에게 맡기고 싶어요.",
@@ -142,6 +144,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "rain-student",
     customerRole: "등교 준비가 바쁜 학생",
     customerEmoji: "🎒",
+    customerImage: "/assets/customers/student-troubled-standing-v3.png",
     productId: "ai-speaker",
     dialogue:
       "양말 신으면서 오늘 비가 오는지 말로 물어볼 수 있으면 좋겠어요!",
@@ -155,6 +158,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "hungry-traveler",
     customerRole: "메뉴판 앞에서 배고픈 여행객",
     customerEmoji: "🧳",
+    customerImage: "/assets/customers/hungry-traveler.png",
     productId: "photo-translator",
     dialogue:
       "메뉴판은 멋진데 한 글자도 모르겠어요. 사진만 찍으면 번역되는 건 없나요?",
@@ -168,6 +172,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "busy-cleaner",
     customerRole: "청소할 시간이 없는 직장인",
     customerEmoji: "💼",
+    customerImage: "/assets/customers/office-worker-no-time-clean.png",
     productId: "robot-vacuum",
     dialogue:
       "퇴근하면 저도 바닥처럼 누워 버려요. 대신 먼지를 찾아다닐 친구가 필요해요.",
@@ -181,6 +186,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "fridge-parent",
     customerRole: "저녁 메뉴를 고민하는 보호자",
     customerEmoji: "🍳",
+    customerImage: "/assets/customers/dinner-parent.png",
     productId: "smart-fridge",
     dialogue:
       "냉장고 문을 열 때마다 재료들이 저한테 메뉴를 물어봐요. 반대였으면 좋겠어요!",
@@ -194,6 +200,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "math-student",
     customerRole: "수학 문제와 씨름하는 학생",
     customerEmoji: "📐",
+    customerImage: "/assets/customers/math-student.png",
     productId: "study-helper",
     dialogue:
       "문제가 자꾸 저를 이겨요. 제가 왜 틀렸는지 차근차근 설명해 줄 친구가 필요해요.",
@@ -207,6 +214,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "flower-student",
     customerRole: "꽃 이름이 궁금한 학생",
     customerEmoji: "🌷",
+    customerImage: "/assets/customers/flower-student.png",
     productId: "plant-camera",
     dialogue:
       "꽃에게 이름을 물어봤는데 대답이 없어요. 사진으로 찾아 주는 카메라가 필요해요!",
@@ -220,6 +228,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "hot-student",
     customerRole: "더운 방에서 공부하는 학생",
     customerEmoji: "🥵",
+    customerImage: "/assets/customers/hot-student.png",
     productId: "smart-home",
     dialogue:
       "공부보다 에어컨 리모컨 찾기가 더 어려워요. 방을 알아서 시원하게 해 주세요!",
@@ -233,6 +242,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "careful-doctor",
     customerRole: "꼼꼼한 의사",
     customerEmoji: "🧑‍⚕️",
+    customerImage: "/assets/customers/careful-doctor.png",
     productId: "medical-reader",
     dialogue:
       "영상에서 살펴볼 부분을 빠르게 표시해 주면, 제가 더 꼼꼼히 판단할 수 있겠어요.",
@@ -246,6 +256,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "parking-driver",
     customerRole: "주차만 하면 긴장하는 운전자",
     customerEmoji: "🚙",
+    customerImage: "/assets/customers/driver-nervous-parking-v2.png",
     productId: "auto-parking",
     dialogue:
       "주차선이 저만 보면 좁아지는 것 같아요. 빈 공간을 찾아 안전하게 세워 주세요!",
@@ -259,6 +270,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "field-farmer",
     customerRole: "넓은 밭을 돌보는 농부",
     customerEmoji: "🧑‍🌾",
+    customerImage: "/assets/customers/field-farmer.png",
     productId: "crop-drone",
     dialogue:
       "밭이 너무 넓어서 제 두 눈이 야근 중이에요. 하늘에서 병든 곳을 찾아 주세요!",
@@ -272,6 +284,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "theater-traveler",
     customerRole: "한국 공연을 보고 싶은 외국인",
     customerEmoji: "🎟️",
+    customerImage: "/assets/customers/theater-traveler.png",
     productId: "performance-interpreter",
     dialogue:
       "배우의 표정은 이해했는데 대사는 놓쳤어요. 공연을 바로 통역해 주세요!",
@@ -285,6 +298,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "poster-student",
     customerRole: "상상력이 넘치는 학생",
     customerEmoji: "🖼️",
+    customerImage: "/assets/customers/imaginative-student.png",
     productId: "ai-art",
     dialogue:
       "머릿속에는 멋진 그림이 있는데 손이 못 따라와요. 설명대로 그려 주는 AI가 필요해요!",
@@ -298,6 +312,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "pet-owner",
     customerRole: "강아지가 걱정되는 보호자",
     customerEmoji: "🐕",
+    customerImage: "/assets/customers/worried-pet-owner.png",
     productId: "pet-care",
     dialogue:
       "제가 없는 동안 강아지가 소파를 지키는지, 소파를 먹는지 살펴봐 주세요!",
@@ -311,6 +326,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     id: "fresh-air-resident",
     customerRole: "맑은 공기를 원하는 주민",
     customerEmoji: "😷",
+    customerImage: "/assets/customers/fresh-air-resident.png",
     productId: "smart-air",
     dialogue:
       "공기가 답답해지기 전에 알아서 눈치채고 깨끗하게 해 주면 좋겠어요.",

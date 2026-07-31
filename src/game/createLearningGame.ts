@@ -859,27 +859,23 @@ class WorldScene extends Phaser.Scene {
   }
 
   private createTouchControls() {
-    this.add
+    const joystickBase = this.add
       .circle(106, 610, 64, COLORS.cream, 0.72)
       .setStrokeStyle(6, COLORS.ink, 0.68)
-      .setDepth(50);
+      .setDepth(50)
+      .setInteractive({ useHandCursor: true });
     this.joystickKnob = this.add
       .circle(106, 610, 29, COLORS.mint, 0.92)
       .setStrokeStyle(5, COLORS.ink, 0.82)
       .setDepth(51);
-    const zone = this.add
-      .zone(106, 610, 150, 150)
-      .setCircleDropZone(75)
-      .setInteractive()
-      .setDepth(52);
 
-    zone.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+    joystickBase.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       this.joystickPointerId = pointer.id;
       const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       this.updateJoystick(worldPoint.x, worldPoint.y);
     });
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => {
-      if (pointer.id === this.joystickPointerId && pointer.isDown) {
+      if (pointer.id === this.joystickPointerId) {
         const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
         this.updateJoystick(worldPoint.x, worldPoint.y);
       }
@@ -887,8 +883,15 @@ class WorldScene extends Phaser.Scene {
     this.input.on("pointerup", (pointer: Phaser.Input.Pointer) => {
       if (pointer.id === this.joystickPointerId) this.resetJoystick();
     });
+    this.input.on("pointerupoutside", (pointer: Phaser.Input.Pointer) => {
+      if (pointer.id === this.joystickPointerId) this.resetJoystick();
+    });
 
-    const action = this.add.container(1173, 610).setDepth(50);
+    const action = this.add
+      .container(1173, 610)
+      .setDepth(50)
+      .setSize(116, 116)
+      .setInteractive({ useHandCursor: true });
     const actionShape = this.add.graphics();
     actionShape.fillStyle(COLORS.ink, 0.24);
     actionShape.fillCircle(4, 7, 58);
@@ -906,11 +909,7 @@ class WorldScene extends Phaser.Scene {
         fontStyle: "bold",
       })
       .setOrigin(0.5);
-    const actionZone = this.add
-      .zone(0, 0, 116, 116)
-      .setCircleDropZone(58)
-      .setInteractive({ useHandCursor: true });
-    actionZone.on("pointerdown", () => {
+    action.on("pointerdown", () => {
       this.actionQueued = true;
       this.tweens.add({
         targets: action,
@@ -919,7 +918,7 @@ class WorldScene extends Phaser.Scene {
         yoyo: true,
       });
     });
-    action.add([actionShape, actionText, actionZone]);
+    action.add([actionShape, actionText]);
 
   }
 
@@ -2278,9 +2277,9 @@ class AirportScene extends Phaser.Scene {
     const safeDelta = Math.min(delta, 50);
     const speedMultiplier =
       this.feverUntilMs > this.elapsedMs && !this.finished ? 1.55 : 1;
-    if (this.sky) this.sky.tilePositionX += 14 * speedMultiplier * (safeDelta / 1000);
-    if (this.city) this.city.tilePositionX += 46 * speedMultiplier * (safeDelta / 1000);
-    if (this.ground) this.ground.tilePositionX += 285 * speedMultiplier * (safeDelta / 1000);
+    if (this.sky) this.sky.tilePositionX += 21 * speedMultiplier * (safeDelta / 1000);
+    if (this.city) this.city.tilePositionX += 92 * speedMultiplier * (safeDelta / 1000);
+    if (this.ground) this.ground.tilePositionX += 855 * speedMultiplier * (safeDelta / 1000);
 
     if (this.finished) return;
     if (this.countdownMs > 0) {
@@ -2464,6 +2463,9 @@ class AiWorkshopScene extends Phaser.Scene {
     this.load.image("ai-workshop-interior", GAME_ASSETS.shop.workshop);
     this.load.image("ai-workbench-foreground", GAME_ASSETS.shop.workbench);
     this.load.image("workshop-hanger", GAME_ASSETS.shop.hanger);
+    WORKSHOP_REQUESTS.forEach((request) => {
+      this.load.image(`workshop-customer-${request.id}`, request.customerImage);
+    });
     if (!this.textures.exists("player-front")) {
       this.load.image("player-front", GAME_ASSETS.characters.player.front);
       this.load.image("player-back", GAME_ASSETS.characters.player.back);
@@ -2676,7 +2678,8 @@ class AiWorkshopScene extends Phaser.Scene {
     const pedestal = this.add.ellipse(0, 68, 175, 45, COLORS.ink, 0.12);
     this.customerArt = this.add
       .image(0, 0, "customer-fallback")
-      .setDisplaySize(150, 148);
+      .setDisplaySize(205, 230)
+      .setPosition(0, -30);
     this.customerEmoji = this.add
       .text(-54, -55, "🛍️", {
         fontSize: "37px",
@@ -2815,7 +2818,15 @@ class AiWorkshopScene extends Phaser.Scene {
     this.clearCarriedProducts();
     this.clearHangingProducts();
     this.customerCountText?.setText(`손님 ${this.customerNumber}`);
-    this.customerEmoji?.setText(isDouble ? "🛍️" : first.customerEmoji);
+    const customerTexture = `workshop-customer-${first.id}`;
+    const hasCustomerTexture = this.textures.exists(customerTexture);
+    this.customerArt
+      ?.setTexture(hasCustomerTexture ? customerTexture : "customer-fallback")
+      .setDisplaySize(hasCustomerTexture ? 205 : 150, hasCustomerTexture ? 230 : 148)
+      .setPosition(0, hasCustomerTexture ? -30 : 0);
+    this.customerEmoji
+      ?.setText(isDouble ? "🛍️" : first.customerEmoji)
+      .setVisible(!hasCustomerTexture);
     this.customerRoleText?.setText(
       isDouble ? "AI 쇼핑 큰손 손님" : first.customerRole,
     );
