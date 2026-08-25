@@ -1,0 +1,1 @@
+export { CoreKitchenScene } from "./CoreKitchenScene";

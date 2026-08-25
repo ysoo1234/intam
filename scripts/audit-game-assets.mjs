@@ -1,0 +1,223 @@
+import { readdir, stat } from "node:fs/promises";
+import path from "node:path";
+import process from "node:process";
+
+import sharp from "sharp";
+
+const ASSET_ROOT = path.join(process.cwd(), "public", "assets");
+const MAX_RUNTIME_BYTES = 20 * 1024 * 1024;
+const MAX_RUNTIME_SINGLE_BYTES = 2 * 1024 * 1024;
+const EXPECTED_CUSTOMER_COUNT = 52;
+const CUSTOMER_RUNTIME_PREFIX = "customers/v3-game/";
+const CUSTOMER_RUNTIME_SPEC = {
+  format: "webp",
+  width: 454,
+  height: 680,
+};
+
+const RUNTIME_SPECS = new Map([
+  ["intro/gem-board.webp", { format: "webp", width: 1920, height: 1080 }],
+  ["world/village-ground.webp", { format: "webp", width: 1280, height: 720 }],
+  ["world/village-ai-shop.webp", { format: "webp", width: 292, height: 264 }],
+  ["world/village-airport.webp", { format: "webp", width: 269, height: 275 }],
+  ["world/village-ethics-office.webp", { format: "webp", width: 251, height: 240 }],
+  ["world/village-ai-world-gate.webp", { format: "webp", width: 324, height: 328 }],
+  ["world/village-fountain.webp", { format: "webp", width: 211, height: 218 }],
+  ["characters/midi_front_game.png", { format: "png", width: 176, height: 226 }],
+  ["characters/midi_back_game.png", { format: "png", width: 176, height: 226 }],
+  ["characters/midi_left_game.png", { format: "png", width: 176, height: 226 }],
+  ["characters/midi_right_game.png", { format: "png", width: 176, height: 226 }],
+  ["characters/midi_fly.webp", { format: "webp", width: 512, height: 238 }],
+  [
+    "shop/ai-workshop-interior-v6.webp",
+    { format: "webp", width: 1280, height: 720 },
+  ],
+  [
+    "shop/ai-workbench-foreground-v2.webp",
+    { format: "webp", width: 820, height: 212 },
+  ],
+  [
+    "shop/workshop-item-panel-4.webp",
+    { format: "webp", width: 680, height: 188 },
+  ],
+  [
+    "shop/workshop-item-panel-5.webp",
+    { format: "webp", width: 720, height: 165 },
+  ],
+  ["airport/bg_sky.webp", { format: "webp", width: 1600, height: 720 }],
+  ["airport/bg_city.webp", { format: "webp", width: 1600, height: 720 }],
+  ["airport/bg_ground.webp", { format: "webp", width: 1600, height: 720 }],
+  ["airport/data_doc.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/data_image.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/data_sound.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/data_video.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/bad_data_doc.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/bad_data_image.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/bad_data_sound.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/bad_data_video.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/public_data_science_technology.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/public_data_education.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/public_data_transport.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/public_data_law.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/public_data_industry.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/public_data_medical.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/public_data_safety.webp", { format: "webp", width: 256, height: 256 }],
+  ["airport/public_data_environment.webp", { format: "webp", width: 256, height: 256 }],
+  [
+    "airport/corrupted-data-tower-v1.webp",
+    { format: "webp", width: 1024, height: 1536 },
+  ],
+  [
+    "ethics-review/office-v2.webp",
+    { format: "webp", width: 1279, height: 720 },
+  ],
+  [
+    "ethics-review/briefing-sheet-v2.webp",
+    { format: "webp", width: 1080, height: 608 },
+  ],
+  [
+    "ethics-review/case-file-v2.webp",
+    { format: "webp", width: 860, height: 484 },
+  ],
+]);
+const RUNTIME_FILES = new Set(RUNTIME_SPECS.keys());
+
+async function listFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(
+    entries.map(async (entry) => {
+      const entryPath = path.join(directory, entry.name);
+      return entry.isDirectory() ? listFiles(entryPath) : [entryPath];
+    }),
+  );
+  return nested.flat();
+}
+
+function formatBytes(bytes) {
+  return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+}
+
+const files = await listFiles(ASSET_ROOT);
+const measured = await Promise.all(
+  files.map(async (file) => ({
+    absolutePath: file,
+    file: path.relative(process.cwd(), file),
+    asset: path.relative(ASSET_ROOT, file).replaceAll("\\", "/"),
+    bytes: (await stat(file)).size,
+  })),
+);
+const totalBytes = measured.reduce((sum, file) => sum + file.bytes, 0);
+const runtime = measured.filter(
+  (file) =>
+    RUNTIME_FILES.has(file.asset) ||
+    (file.asset.startsWith(CUSTOMER_RUNTIME_PREFIX) &&
+      file.asset.endsWith(".webp")),
+);
+const runtimeBytes = runtime.reduce((sum, file) => sum + file.bytes, 0);
+const oversized = runtime
+  .filter((file) => file.bytes > MAX_RUNTIME_SINGLE_BYTES)
+  .sort((a, b) => b.bytes - a.bytes);
+const measuredByAsset = new Map(measured.map((file) => [file.asset, file]));
+const runtimeMetadata = new Map(
+  await Promise.all(
+    runtime.map(async (file) => {
+      try {
+        return [file.asset, { ...(await sharp(file.absolutePath).metadata()) }];
+      } catch (error) {
+        return [
+          file.asset,
+          { error: error instanceof Error ? error.message : String(error) },
+        ];
+      }
+    }),
+  ),
+);
+const validationErrors = [];
+
+function validateMetadata(asset, expected) {
+  const metadata = runtimeMetadata.get(asset);
+  if (!metadata) {
+    validationErrors.push(`Missing runtime metadata: ${asset}`);
+    return;
+  }
+  if (metadata.error) {
+    validationErrors.push(`Unreadable runtime image ${asset}: ${metadata.error}`);
+    return;
+  }
+
+  for (const field of ["format", "width", "height"]) {
+    if (metadata[field] !== expected[field]) {
+      validationErrors.push(
+        `Unexpected ${field} for ${asset}: ${metadata[field] ?? "unknown"} ` +
+          `(expected ${expected[field]})`,
+      );
+    }
+  }
+}
+
+for (const [asset, expected] of RUNTIME_SPECS) {
+  if (!measuredByAsset.has(asset)) {
+    validationErrors.push(`Missing runtime asset: ${asset}`);
+    continue;
+  }
+  validateMetadata(asset, expected);
+}
+
+const customerRuntime = runtime.filter(
+  (file) =>
+    file.asset.startsWith(CUSTOMER_RUNTIME_PREFIX) &&
+    file.asset.endsWith(".webp"),
+);
+if (customerRuntime.length !== EXPECTED_CUSTOMER_COUNT) {
+  validationErrors.push(
+    `Unexpected customer runtime count: ${customerRuntime.length} ` +
+      `(expected ${EXPECTED_CUSTOMER_COUNT})`,
+  );
+}
+for (const customer of customerRuntime) {
+  validateMetadata(customer.asset, CUSTOMER_RUNTIME_SPEC);
+}
+
+console.log(
+  `${runtime.length} runtime assets, ${formatBytes(runtimeBytes)} loaded on demand; ` +
+    `${measured.length} public files, ${formatBytes(totalBytes)} deployed`,
+);
+if (validationErrors.length === 0) {
+  console.log(
+    `${RUNTIME_FILES.size} fixed runtime images and ${customerRuntime.length} customer WebP images passed metadata validation.`,
+  );
+}
+if (oversized.length > 0) {
+  console.table(
+    oversized.map((file) => ({
+      file: file.file,
+      size: formatBytes(file.bytes),
+    })),
+  );
+}
+
+if (validationErrors.length > 0) {
+  validationErrors.forEach((error) => console.error(`- ${error}`));
+  process.exitCode = 1;
+}
+
+if (runtimeBytes > MAX_RUNTIME_BYTES) {
+  console.error(
+    `Runtime asset budget exceeded: ${formatBytes(runtimeBytes)} > ${formatBytes(MAX_RUNTIME_BYTES)}.`,
+  );
+  process.exitCode = 1;
+}
+
+if (oversized.length > 0) {
+  console.error(
+    `Single-file runtime budget exceeded: ${oversized.length} file(s) are larger than ${formatBytes(MAX_RUNTIME_SINGLE_BYTES)}.`,
+  );
+  process.exitCode = 1;
+}
+
+if (totalBytes > 35 * 1024 * 1024) {
+  console.error(
+    "Public asset budget exceeded. Keep editable sources in assets-source and only runtime files in public/assets.",
+  );
+  process.exitCode = 1;
+}

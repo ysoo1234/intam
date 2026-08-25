@@ -1,3 +1,5 @@
+import { WORKSHOP_PRODUCT_DIALOGUES } from "./aiWorkshopDialogues";
+
 export type WorkshopProduct = {
   id: string;
   label: string;
@@ -11,331 +13,442 @@ export type WorkshopRequest = {
   customerRole: string;
   customerEmoji: string;
   customerImage: string;
+  customerHappyImage: string;
   productId: string;
   dialogue: string;
+  readyDialogue: string;
   thanks: string;
   wrongReplies: string[];
 };
 
 export const WORKSHOP_PRODUCTS: WorkshopProduct[] = [
   {
-    id: "smart-band",
-    label: "스마트밴드",
-    emoji: "⌚",
-    color: 0x64cbd5,
-    description: "심박수와 걸음 수를 확인해 건강 관리를 도와요.",
-  },
-  {
     id: "ai-speaker",
     label: "AI 스피커",
     emoji: "🔊",
-    color: 0x8ab7e8,
-    description: "말을 알아듣고 필요한 정보를 소리로 알려 줘요.",
+    color: 0x73bde2,
+    description: "말을 알아듣고 필요한 정보를 찾아 음성으로 알려 줘요.",
+  },
+  {
+    id: "call-translator",
+    label: "실시간 통화 번역기",
+    emoji: "📞",
+    color: 0xef7d7d,
+    description: "통화 중인 두 사람의 말을 바로 번역해 들려줘요.",
   },
   {
     id: "photo-translator",
     label: "사진 번역기",
     emoji: "📷",
-    color: 0xf5b85d,
-    description: "사진 속 글자를 읽어 우리말로 번역해 줘요.",
-  },
-  {
-    id: "robot-vacuum",
-    label: "로봇 청소기",
-    emoji: "🧹",
-    color: 0xe98973,
-    description: "주변을 살피며 바닥을 스스로 청소해요.",
-  },
-  {
-    id: "smart-fridge",
-    label: "스마트 냉장고",
-    emoji: "🧊",
-    color: 0x78d4bb,
-    description: "남은 재료를 살펴 만들 수 있는 음식을 알려 줘요.",
-  },
-  {
-    id: "study-helper",
-    label: "AI 학습 도우미",
-    emoji: "📚",
-    color: 0xb293df,
-    description: "틀린 문제와 어려운 내용을 알맞게 설명해 줘요.",
+    color: 0xf0bc55,
+    description: "사진 속 글자를 읽고 원하는 언어로 번역해 줘요.",
   },
   {
     id: "plant-camera",
     label: "식물 찾기 카메라",
     emoji: "🌼",
-    color: 0x8acb68,
-    description: "사진 속 식물의 모습을 알아보고 이름을 찾아 줘요.",
+    color: 0x86c96a,
+    description: "식물 사진을 살펴보고 이름과 특징을 찾아 줘요.",
   },
   {
-    id: "smart-home",
-    label: "스마트홈 조절기",
-    emoji: "🏠",
-    color: 0x65c9ad,
-    description: "온도와 습도에 맞춰 집 안 기기를 조절해요.",
+    id: "face-lock",
+    label: "얼굴 인식 잠금",
+    emoji: "🙂",
+    color: 0xe99ab6,
+    description: "등록된 얼굴인지 확인한 뒤 안전하게 잠금을 풀어 줘요.",
+  },
+  {
+    id: "spell-checker",
+    label: "맞춤법 도우미",
+    emoji: "✏️",
+    color: 0x7aaee5,
+    description: "쓴 글을 읽고 맞춤법이 틀린 곳을 찾아 알려 줘요.",
+  },
+  {
+    id: "smart-fridge",
+    label: "스마트 냉장고",
+    emoji: "🧊",
+    color: 0x6fcab7,
+    description: "보관된 재료를 살펴보고 만들 수 있는 음식을 추천해 줘요.",
+  },
+  {
+    id: "robot-vacuum",
+    label: "로봇 청소기",
+    emoji: "🧹",
+    color: 0xea8d73,
+    description: "주변을 살피며 스스로 이동해 바닥을 청소해요.",
+  },
+  {
+    id: "pet-care-robot",
+    label: "반려동물 돌봄 로봇",
+    emoji: "🐶",
+    color: 0x78c99a,
+    description: "보호자가 없는 동안 반려동물 곁에서 돌봐 줘요.",
+  },
+  {
+    id: "security-camera",
+    label: "AI 보안 카메라",
+    emoji: "📹",
+    color: 0x8d9fd7,
+    description: "낯선 사람이나 위험한 움직임을 찾아 바로 알려 줘요.",
+  },
+  {
+    id: "smart-air-purifier",
+    label: "스마트 공기청정기",
+    emoji: "🌬️",
+    color: 0x6bc6cd,
+    description: "공기 상태를 확인하고 스스로 알맞게 깨끗하게 해요.",
+  },
+  {
+    id: "smart-washer",
+    label: "스마트 세탁기",
+    emoji: "🫧",
+    color: 0x789fe0,
+    description: "옷감과 오염 상태를 살펴 알맞은 방법으로 세탁해요.",
+  },
+  {
+    id: "study-helper",
+    label: "AI 학습 도우미",
+    emoji: "📚",
+    color: 0x9e8ad8,
+    description: "문제를 푼 과정을 살펴보고 틀린 이유를 쉽게 설명해 줘요.",
+  },
+  {
+    id: "nutrition-kiosk",
+    label: "영양 분석 키오스크",
+    emoji: "🥗",
+    color: 0xef9c75,
+    description: "음식 사진을 분석해 어떤 영양소가 들었는지 알려 줘요.",
   },
   {
     id: "medical-reader",
     label: "의료 영상 판독기",
     emoji: "🩻",
     color: 0x6faee7,
-    description: "의사가 의료 영상의 이상한 부분을 살피도록 도와요.",
+    description: "의료 영상에서 이상이 의심되는 부분을 빠르게 표시해 줘요.",
   },
   {
-    id: "auto-parking",
-    label: "AI 자동 주차 장치",
+    id: "smart-band",
+    label: "스마트밴드",
+    emoji: "⌚",
+    color: 0x74c5b0,
+    description: "심박수와 걸음 수 같은 움직임 정보를 계속 확인해 줘요.",
+  },
+  {
+    id: "ai-wheelchair",
+    label: "AI 휠체어",
+    emoji: "♿",
+    color: 0x779bd6,
+    description: "주변을 살피고 안전한 길을 찾아 원하는 곳까지 이동해요.",
+  },
+  {
+    id: "road-safety-cctv",
+    label: "도로 안전 CCTV",
+    emoji: "🚦",
+    color: 0x6dadd6,
+    description: "도로 영상을 분석해 위험한 상황을 빠르게 찾아 알려 줘요.",
+  },
+  {
+    id: "autonomous-car",
+    label: "자율주행 자동차",
     emoji: "🚗",
-    color: 0xf19a61,
-    description: "빈 공간을 살피고 안전하게 주차하도록 도와요.",
+    color: 0x8c9edb,
+    description: "차 주변과 도로를 살피며 목적지까지 안전하게 운전해요.",
+  },
+  {
+    id: "delivery-robot",
+    label: "자율주행 배달 로봇",
+    emoji: "📦",
+    color: 0xe67e6b,
+    description: "골목과 보행로를 살피며 물건을 집 앞까지 배달해요.",
+  },
+  {
+    id: "drone-taxi",
+    label: "드론 택시",
+    emoji: "🚁",
+    color: 0x65b9c4,
+    description: "하늘길을 이용해 목적지까지 빠르게 이동해요.",
   },
   {
     id: "crop-drone",
     label: "병해충 탐지 드론",
-    emoji: "🚁",
-    color: 0x81c06d,
-    description: "농작물 사진을 살펴 병든 곳을 찾아 알려 줘요.",
+    emoji: "🛸",
+    color: 0x82bf67,
+    description: "넓은 밭을 촬영하고 병해충이 의심되는 작물을 찾아 줘요.",
+  },
+  {
+    id: "harvest-robot",
+    label: "AI 수확 로봇",
+    emoji: "🍎",
+    color: 0xe89166,
+    description: "과일의 익은 정도를 살펴 잘 익은 과일만 골라 수확해요.",
+  },
+  {
+    id: "greenhouse-computer",
+    label: "온실 조절 컴퓨터",
+    emoji: "🌡️",
+    color: 0x66c4a6,
+    description: "온도와 습도, 햇빛의 양을 작물에 알맞게 조절해요.",
+  },
+  {
+    id: "smart-watering",
+    label: "스마트 물주기 장치",
+    emoji: "💧",
+    color: 0x65aeda,
+    description: "흙과 작물 상태를 살펴 필요한 만큼만 물을 줘요.",
   },
   {
     id: "performance-interpreter",
     label: "AI 공연 통역기",
     emoji: "🎭",
-    color: 0xee9473,
-    description: "공연 속 배우의 말을 다른 나라 말로 알려 줘요.",
-  },
-  {
-    id: "ai-art",
-    label: "AI 그림 만들기",
-    emoji: "🎨",
-    color: 0xe591bd,
-    description: "글로 설명한 모습을 새로운 그림으로 만들어요.",
-  },
-  {
-    id: "pet-care",
-    label: "반려동물 돌봄 로봇",
-    emoji: "🐶",
-    color: 0xf0b35f,
-    description: "집을 비운 동안 반려동물을 살피고 돌봐 줘요.",
-  },
-  {
-    id: "smart-air",
-    label: "스마트 공기청정기",
-    emoji: "🍃",
-    color: 0x6fc9c0,
-    description: "공기 상태가 나빠지면 스스로 공기를 깨끗하게 해요.",
+    color: 0x8e79d0,
+    description: "공연 속 배우의 말을 관객이 원하는 언어로 바로 통역해 줘요.",
   },
 ];
 
+type WorkshopRequestSeed = Omit<
+  WorkshopRequest,
+  | "customerImage"
+  | "customerHappyImage"
+  | "readyDialogue"
+  | "thanks"
+  | "wrongReplies"
+> & {
+  thanks?: string;
+  wrongReplies?: string[];
+};
+
+const makeWorkshopRequest = (request: WorkshopRequestSeed): WorkshopRequest => {
+  const productLabel =
+    WORKSHOP_PRODUCTS.find((product) => product.id === request.productId)?.label ??
+    "이 물건";
+  const productDialogue = WORKSHOP_PRODUCT_DIALOGUES[request.productId];
+
+  return {
+    ...request,
+    customerImage: `/assets/customers/v3-game/${request.id}-worried.webp`,
+    customerHappyImage: `/assets/customers/v3-game/${request.id}-happy.webp`,
+    readyDialogue:
+      productDialogue?.ready ?? `${productLabel}가 완성됐군요!`,
+    thanks:
+      request.thanks ??
+      productDialogue?.thanks ??
+      `${productLabel}, 바로 제가 찾던 물건이에요!`,
+    wrongReplies: request.wrongReplies ?? [
+      "제가 말한 어려움과는 조금 다른 물건 같아요. 부탁을 다시 들어 봐 주세요.",
+      "이 물건으로는 문제가 해결되지 않을 것 같아요. 다른 상품을 골라 주세요.",
+    ],
+  };
+};
+
 export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
-  {
-    id: "walking-grandparent",
-    customerRole: "운동을 즐기는 어르신",
-    customerEmoji: "🚶",
-    customerImage: "/assets/customers/walking-grandparent.png",
-    productId: "smart-band",
-    dialogue:
-      "산책은 제가 할 테니, 심박수랑 걸음 수 계산은 기계에게 맡기고 싶어요.",
-    thanks: "이제 만 보를 채웠는지 손가락으로 셀 필요가 없겠군요!",
-    wrongReplies: [
-      "이걸 손목에 차면 조금 무거울 것 같은데요?",
-      "제 걸음 수를 세어 줄 물건을 부탁했답니다.",
-    ],
-  },
-  {
-    id: "rain-student",
-    customerRole: "등교 준비가 바쁜 학생",
+  makeWorkshopRequest({
+    id: "school-prep-student",
+    customerRole: "등교 준비를 하는 학생",
     customerEmoji: "🎒",
-    customerImage: "/assets/customers/student-troubled-standing-v3.png",
     productId: "ai-speaker",
+    dialogue: "하늘이 수상한데, 우산을 챙길지 말로 물어보고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "foreign-call-student",
+    customerRole: "외국 친구와 통화하는 학생",
+    customerEmoji: "📱",
+    productId: "call-translator",
     dialogue:
-      "양말 신으면서 오늘 비가 오는지 말로 물어볼 수 있으면 좋겠어요!",
-    thanks: "우산도 챙기고 지각도 피했어요. 완벽한 아침이에요!",
-    wrongReplies: [
-      "앗, 이건 제 질문에 말로 대답하기 어려워 보여요.",
-      "손을 쓰지 않고 물어볼 수 있는 기계를 찾고 있어요!",
-    ],
-  },
-  {
-    id: "hungry-traveler",
-    customerRole: "메뉴판 앞에서 배고픈 여행객",
+      "외국 친구와 수다 떨고 싶은데, 친구의 말을 바로 우리말로 듣고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "foreign-restaurant-traveler",
+    customerRole: "외국 식당에 간 여행객",
     customerEmoji: "🧳",
-    customerImage: "/assets/customers/hungry-traveler.png",
     productId: "photo-translator",
     dialogue:
-      "메뉴판은 멋진데 한 글자도 모르겠어요. 사진만 찍으면 번역되는 건 없나요?",
-    thanks: "드디어 주문할 수 있겠어요! 제 배가 먼저 감사하대요.",
-    wrongReplies: [
-      "이걸로 메뉴판을 찍어도 번역은 안 될 것 같아요.",
-      "제가 필요한 건 사진 속 글자를 번역하는 기계예요!",
-    ],
-  },
-  {
-    id: "busy-cleaner",
-    customerRole: "청소할 시간이 없는 직장인",
-    customerEmoji: "💼",
-    customerImage: "/assets/customers/office-worker-no-time-clean.png",
-    productId: "robot-vacuum",
-    dialogue:
-      "퇴근하면 저도 바닥처럼 누워 버려요. 대신 먼지를 찾아다닐 친구가 필요해요.",
-    thanks: "집에 가면 바닥과 숨바꼭질하던 먼지가 사라져 있겠네요!",
-    wrongReplies: [
-      "좋은 물건이지만 바닥을 돌아다니지는 못하겠네요.",
-      "스스로 움직이며 청소하는 기계를 부탁했어요.",
-    ],
-  },
-  {
-    id: "fridge-parent",
-    customerRole: "저녁 메뉴를 고민하는 보호자",
-    customerEmoji: "🍳",
-    customerImage: "/assets/customers/dinner-parent.png",
-    productId: "smart-fridge",
-    dialogue:
-      "냉장고 문을 열 때마다 재료들이 저한테 메뉴를 물어봐요. 반대였으면 좋겠어요!",
-    thanks: "오늘 저녁 메뉴 회의는 냉장고가 진행하겠군요!",
-    wrongReplies: [
-      "이 물건은 냉장고 속 재료를 살펴보지는 못할 것 같아요.",
-      "남은 재료로 요리를 추천해 주는 냉장고를 찾고 있어요.",
-    ],
-  },
-  {
-    id: "math-student",
-    customerRole: "수학 문제와 씨름하는 학생",
-    customerEmoji: "📐",
-    customerImage: "/assets/customers/math-student.png",
-    productId: "study-helper",
-    dialogue:
-      "문제가 자꾸 저를 이겨요. 제가 왜 틀렸는지 차근차근 설명해 줄 친구가 필요해요.",
-    thanks: "이번에는 제가 문제를 이길 차례예요!",
-    wrongReplies: [
-      "이 기계도 똑똑하지만 제 오답을 설명해 주진 않겠어요.",
-      "공부를 도와주고 문제를 설명하는 AI를 부탁했어요.",
-    ],
-  },
-  {
-    id: "flower-student",
-    customerRole: "꽃 이름이 궁금한 학생",
-    customerEmoji: "🌷",
-    customerImage: "/assets/customers/flower-student.png",
+      "맛있는 냄새는 나는데 메뉴판을 못 읽겠어요, 찍어서 우리말로 보고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "science-homework-student",
+    customerRole: "과학 숙제를 하는 학생",
+    customerEmoji: "🌼",
     productId: "plant-camera",
     dialogue:
-      "꽃에게 이름을 물어봤는데 대답이 없어요. 사진으로 찾아 주는 카메라가 필요해요!",
-    thanks: "이제 길가의 꽃들과 제대로 인사할 수 있겠어요!",
-    wrongReplies: [
-      "이걸 꽃에게 보여 줘도 이름은 알려 주지 않을 것 같아요.",
-      "사진 속 식물의 이름을 찾아 주는 카메라를 부탁했어요.",
-    ],
-  },
-  {
-    id: "hot-student",
-    customerRole: "더운 방에서 공부하는 학생",
-    customerEmoji: "🥵",
-    customerImage: "/assets/customers/hot-student.png",
-    productId: "smart-home",
+      "예쁜 꽃을 찾았는데 이름표가 없어요, 사진을 찍어 이름을 알고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "phone-parent",
+    customerRole: "휴대 전화를 사용하는 보호자",
+    customerEmoji: "🔐",
+    productId: "face-lock",
     dialogue:
-      "공부보다 에어컨 리모컨 찾기가 더 어려워요. 방을 알아서 시원하게 해 주세요!",
-    thanks: "이제 집중력도 온도도 딱 알맞겠어요!",
-    wrongReplies: [
-      "이 물건은 방의 온도와 습도를 조절하지 못하겠네요.",
-      "집 안 기기를 알아서 조절하는 장치가 필요해요.",
-    ],
-  },
-  {
-    id: "careful-doctor",
-    customerRole: "꼼꼼한 의사",
+      "비밀번호가 자꾸 머릿속에서 숨바꼭질해요, 제 얼굴로 잠금을 풀고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "diary-student",
+    customerRole: "일기를 쓰는 학생",
+    customerEmoji: "📔",
+    productId: "spell-checker",
+    dialogue:
+      "일기는 멋지게 썼는데 맞춤법이 걱정돼요, 틀린 곳을 찾고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "dinner-parent",
+    customerRole: "저녁을 준비하는 보호자",
+    customerEmoji: "🍳",
+    productId: "smart-fridge",
+    dialogue:
+      "냉장고에는 재료가 가득한데 메뉴가 떠오르지 않아요, 만들 음식을 알고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "busy-cleaner",
+    customerRole: "청소할 시간이 없는 사람",
+    customerEmoji: "🧹",
+    productId: "robot-vacuum",
+    dialogue:
+      "먼지는 매일 놀러 오는데 청소할 시간이 없어요, 스스로 청소하는 기기가 필요해요.",
+  }),
+  makeWorkshopRequest({
+    id: "pet-owner",
+    customerRole: "반려견을 키우는 사람",
+    customerEmoji: "🐕",
+    productId: "pet-care-robot",
+    dialogue:
+      "제가 나가면 강아지가 심심할까 걱정돼요, 곁에서 돌봐 줄 로봇이 필요해요.",
+  }),
+  makeWorkshopRequest({
+    id: "elderly-home-alone",
+    customerRole: "혼자 사는 어르신",
+    customerEmoji: "🏠",
+    productId: "security-camera",
+    dialogue:
+      "낯선 손님은 반갑지 않아요, 모르는 사람이 들어오면 바로 알고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "stuffy-air-resident",
+    customerRole: "공기가 답답한 집의 주민",
+    customerEmoji: "🌬️",
+    productId: "smart-air-purifier",
+    dialogue:
+      "집 안 공기가 답답해서 숨을 크게 쉬기 어려워요, 스스로 깨끗하게 하고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "frequent-laundry-person",
+    customerRole: "세탁을 자주 하는 사람",
+    customerEmoji: "👕",
+    productId: "smart-washer",
+    dialogue:
+      "옷마다 세탁법이 달라 세탁기가 시험 문제 같아요, 알맞게 세탁하고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "wrong-answer-student",
+    customerRole: "문제를 틀린 학생",
+    customerEmoji: "📝",
+    productId: "study-helper",
+    dialogue:
+      "답은 틀렸는데 이유는 꼭꼭 숨었어요, 어디서 잘못했는지 쉽게 알고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "cafeteria-student",
+    customerRole: "급식을 먹는 학생",
+    customerEmoji: "🍱",
+    productId: "nutrition-kiosk",
+    dialogue:
+      "오늘 급식이 맛있는데 어떤 영양소가 들었는지, 급식판을 찍어 알고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "xray-doctor",
+    customerRole: "엑스레이를 보는 의사",
     customerEmoji: "🧑‍⚕️",
-    customerImage: "/assets/customers/careful-doctor.png",
     productId: "medical-reader",
     dialogue:
-      "영상에서 살펴볼 부분을 빠르게 표시해 주면, 제가 더 꼼꼼히 판단할 수 있겠어요.",
-    thanks: "좋아요. 진단은 제가, 빠른 확인은 이 장치가 도와주겠군요!",
-    wrongReplies: [
-      "이건 환자의 영상을 살펴보는 데 쓰는 장치가 아니에요.",
-      "의료 영상에서 확인할 부분을 표시해 주는 도구가 필요합니다.",
-    ],
-  },
-  {
-    id: "parking-driver",
-    customerRole: "주차만 하면 긴장하는 운전자",
-    customerEmoji: "🚙",
-    customerImage: "/assets/customers/driver-nervous-parking-v2.png",
-    productId: "auto-parking",
+      "엑스레이 사진 속 작은 이상도 놓치고 싶지 않아요, 빠르게 찾아보고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "exercising-elderly",
+    customerRole: "운동하는 어르신",
+    customerEmoji: "🚶",
+    productId: "smart-band",
     dialogue:
-      "주차선이 저만 보면 좁아지는 것 같아요. 빈 공간을 찾아 안전하게 세워 주세요!",
-    thanks: "이제 주차장에서도 어깨에 힘을 뺄 수 있겠어요!",
-    wrongReplies: [
-      "차를 안전하게 세워 주는 물건은 아닌 것 같아요.",
-      "주변을 살피며 자동으로 주차해 주는 장치를 찾고 있어요.",
-    ],
-  },
-  {
-    id: "field-farmer",
-    customerRole: "넓은 밭을 돌보는 농부",
+      "오늘은 제가 얼마나 씩씩하게 움직였는지, 심박수와 걸음 수로 확인하고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "mobility-patient",
+    customerRole: "혼자 이동하기 힘든 환자",
+    customerEmoji: "♿",
+    productId: "ai-wheelchair",
+    dialogue:
+      "병원 복도가 미로처럼 느껴져요, 가고 싶은 곳까지 스스로 이동하고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "crosswalk-police",
+    customerRole: "횡단보도를 관리하는 경찰",
+    customerEmoji: "👮",
+    productId: "road-safety-cctv",
+    dialogue:
+      "횡단보도에서는 작은 위험도 놓치면 안 돼요, 위험한 상황을 빠르게 알아차리고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "novice-driver",
+    customerRole: "운전이 서툰 사람",
+    customerEmoji: "🚗",
+    productId: "autonomous-car",
+    dialogue:
+      "운전할 때 눈이 네 개였으면 좋겠어요, 차 주변을 살피며 안전하게 운전하고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "courier",
+    customerRole: "택배 기사",
+    customerEmoji: "📦",
+    productId: "delivery-robot",
+    dialogue:
+      "좁은 골목만 만나면 배달차가 쩔쩔매요, 집 앞까지 스스로 가는 로봇이 필요해요.",
+  }),
+  makeWorkshopRequest({
+    id: "long-distance-traveler",
+    customerRole: "멀리 이동하려는 사람",
+    customerEmoji: "🧳",
+    productId: "drone-taxi",
+    dialogue:
+      "도로 위 차들이 거북이처럼 움직여요, 하늘로 빠르게 이동하고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "wide-field-farmer",
+    customerRole: "넓은 밭을 관리하는 농부",
     customerEmoji: "🧑‍🌾",
-    customerImage: "/assets/customers/field-farmer.png",
     productId: "crop-drone",
     dialogue:
-      "밭이 너무 넓어서 제 두 눈이 야근 중이에요. 하늘에서 병든 곳을 찾아 주세요!",
-    thanks: "이제 제 눈도 퇴근 시간을 지킬 수 있겠군요!",
-    wrongReplies: [
-      "이 물건은 하늘에서 밭을 살펴보기 어렵겠어요.",
-      "농작물을 찍어 병든 곳을 찾는 드론을 부탁했어요.",
-    ],
-  },
-  {
-    id: "theater-traveler",
-    customerRole: "한국 공연을 보고 싶은 외국인",
-    customerEmoji: "🎟️",
-    customerImage: "/assets/customers/theater-traveler.png",
+      "밭이 너무 넓어 병든 작물이 숨으면 찾기 어려워요, 하늘에서 찍어 찾고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "orchard-farmer",
+    customerRole: "과수원을 운영하는 농부",
+    customerEmoji: "🍎",
+    productId: "harvest-robot",
+    dialogue:
+      "과일마다 익는 속도가 달라 눈이 빙글빙글해요, 잘 익은 과일만 따고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "greenhouse-farmer",
+    customerRole: "온실을 운영하는 농부",
+    customerEmoji: "🌱",
+    productId: "greenhouse-computer",
+    dialogue:
+      "온실 날씨가 자꾸 변덕을 부려요, 온도와 습도, 햇빛의 양을 알맞게 맞추고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "water-saving-farmer",
+    customerRole: "물을 아껴 쓰고 싶은 농부",
+    customerEmoji: "💧",
+    productId: "smart-watering",
+    dialogue:
+      "작물은 목마른 만큼만 물을 마셔야 해요, 흙을 살펴 필요한 만큼만 주고 싶어요.",
+  }),
+  makeWorkshopRequest({
+    id: "foreign-theatergoer",
+    customerRole: "한국 공연을 보는 외국인",
+    customerEmoji: "🎭",
     productId: "performance-interpreter",
     dialogue:
-      "배우의 표정은 이해했는데 대사는 놓쳤어요. 공연을 바로 통역해 주세요!",
-    thanks: "이제 웃어야 할 장면에서 제대로 웃을 수 있겠어요!",
-    wrongReplies: [
-      "이 기계로는 배우의 말을 바로 알아듣기 어렵겠네요.",
-      "공연 중 대사를 실시간으로 통역하는 장치가 필요해요.",
-    ],
-  },
-  {
-    id: "poster-student",
-    customerRole: "상상력이 넘치는 학생",
-    customerEmoji: "🖼️",
-    customerImage: "/assets/customers/imaginative-student.png",
-    productId: "ai-art",
-    dialogue:
-      "제 머릿속에는 멋진 발명품이 있어요. 이 발명품을 그리는데 도움이 될 만한 AI가 필요해요!",
-    thanks: "제 상상이 드디어 화면 밖으로 나왔어요!",
-    wrongReplies: [
-      "이건 제가 설명한 그림을 만들어 주는 도구가 아니에요.",
-      "글로 설명한 모습을 그림으로 만드는 AI를 부탁했어요.",
-    ],
-  },
-  {
-    id: "pet-owner",
-    customerRole: "강아지가 걱정되는 보호자",
-    customerEmoji: "🐕",
-    customerImage: "/assets/customers/worried-pet-owner.png",
-    productId: "pet-care",
-    dialogue:
-      "제가 없는 동안 강아지가 소파를 지키는지, 소파를 먹는지 살펴봐 주세요!",
-    thanks: "이제 외출해도 우리 강아지 소식을 바로 알 수 있겠어요!",
-    wrongReplies: [
-      "이 물건은 집에 있는 강아지를 돌봐 주기 어렵겠어요.",
-      "반려동물을 살피고 돌봐 주는 로봇이 필요해요.",
-    ],
-  },
-  {
-    id: "fresh-air-resident",
-    customerRole: "맑은 공기를 원하는 주민",
-    customerEmoji: "😷",
-    customerImage: "/assets/customers/fresh-air-resident.png",
-    productId: "smart-air",
-    dialogue:
-      "공기가 답답해지기 전에 알아서 눈치채고 깨끗하게 해 주면 좋겠어요.",
-    thanks: "좋은 공기는 티가 안 나서 더 좋죠. 숨이 벌써 가벼워졌어요!",
-    wrongReplies: [
-      "이 기계는 공기 상태를 살펴 깨끗하게 하지는 못하겠어요.",
-      "공기가 나빠지면 스스로 작동하는 기계를 찾고 있어요.",
-    ],
-  },
+      "배우의 표정은 알겠는데 대사는 모르겠어요, 제 나라 말로 바로 듣고 싶어요.",
+  }),
 ];
 
 export const WORKSHOP_PRODUCT_BY_ID = new Map(
