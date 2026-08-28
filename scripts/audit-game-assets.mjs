@@ -14,15 +14,79 @@ const CUSTOMER_RUNTIME_SPEC = {
   width: 454,
   height: 680,
 };
+const WORKSHOP_PRODUCT_IDS = [
+  "ai-speaker",
+  "call-translator",
+  "photo-translator",
+  "plant-camera",
+  "face-lock",
+  "spell-checker",
+  "smart-fridge",
+  "robot-vacuum",
+  "pet-care-robot",
+  "security-camera",
+  "smart-air-purifier",
+  "smart-washer",
+  "study-helper",
+  "nutrition-kiosk",
+  "medical-reader",
+  "smart-band",
+  "ai-wheelchair",
+  "road-safety-cctv",
+  "autonomous-car",
+  "delivery-robot",
+  "drone-taxi",
+  "crop-drone",
+  "harvest-robot",
+  "greenhouse-computer",
+  "smart-watering",
+  "performance-interpreter",
+];
 
 const RUNTIME_SPECS = new Map([
+  [
+    "ui/game-return-button-house-v2.webp",
+    { format: "webp", width: 720, height: 237 },
+  ],
+  [
+    "ui/game-status-panel-blank-v1.webp",
+    { format: "webp", width: 1200, height: 194 },
+  ],
+  [
+    "ui/village-entry-button-v1.webp",
+    { format: "webp", width: 720, height: 184 },
+  ],
+  [
+    "ui/game-start-panel-v1.webp",
+    { format: "webp", width: 1800, height: 1200 },
+  ],
+  [
+    "ui/game-start-button-v1.webp",
+    { format: "webp", width: 819, height: 172 },
+  ],
+  [
+    "ui/village-activity-star-empty-v1.webp",
+    { format: "webp", width: 88, height: 84 },
+  ],
+  [
+    "ui/village-activity-star-filled-v1.webp",
+    { format: "webp", width: 88, height: 85 },
+  ],
   ["intro/gem-board.webp", { format: "webp", width: 1920, height: 1080 }],
   ["world/village-ground.webp", { format: "webp", width: 1280, height: 720 }],
-  ["world/village-ai-shop.webp", { format: "webp", width: 292, height: 264 }],
-  ["world/village-airport.webp", { format: "webp", width: 269, height: 275 }],
-  ["world/village-ethics-office.webp", { format: "webp", width: 251, height: 240 }],
-  ["world/village-ai-world-gate.webp", { format: "webp", width: 324, height: 328 }],
-  ["world/village-fountain.webp", { format: "webp", width: 211, height: 218 }],
+  ["world/village-ai-shop.webp", { format: "webp", width: 584, height: 555 }],
+  ["world/village-airport.webp", { format: "webp", width: 538, height: 504 }],
+  ["world/village-ethics-office.webp", { format: "webp", width: 502, height: 542 }],
+  ["world/village-ai-world-gate.webp", { format: "webp", width: 648, height: 616 }],
+  ["world/village-fountain.webp", { format: "webp", width: 422, height: 445 }],
+  [
+    "world/village-fountain-water-overlay-v1.webp",
+    { format: "webp", width: 238, height: 240 },
+  ],
+  [
+    "world/village-fountain-water-frames-v1.webp",
+    { format: "webp", width: 1252, height: 1252 },
+  ],
   ["characters/midi_front_game.png", { format: "png", width: 176, height: 226 }],
   ["characters/midi_back_game.png", { format: "png", width: 176, height: 226 }],
   ["characters/midi_left_game.png", { format: "png", width: 176, height: 226 }],
@@ -30,23 +94,43 @@ const RUNTIME_SPECS = new Map([
   ["characters/midi_fly.webp", { format: "webp", width: 512, height: 238 }],
   [
     "shop/ai-workshop-interior-v6.webp",
-    { format: "webp", width: 1280, height: 720 },
+    { format: "webp", width: 1672, height: 941 },
   ],
   [
     "shop/ai-workbench-foreground-v2.webp",
-    { format: "webp", width: 820, height: 212 },
+    { format: "webp", width: 1640, height: 424 },
+  ],
+  [
+    "shop/workshop-crafting-machine-v1.webp",
+    { format: "webp", width: 760, height: 440 },
+  ],
+  [
+    "shop/workshop-crafting-panel-v2.webp",
+    { format: "webp", width: 1624, height: 818 },
   ],
   [
     "shop/workshop-item-panel-4.webp",
-    { format: "webp", width: 680, height: 188 },
+    { format: "webp", width: 1429, height: 448 },
   ],
   [
     "shop/workshop-item-panel-5.webp",
-    { format: "webp", width: 720, height: 165 },
+    { format: "webp", width: 1722, height: 448 },
   ],
-  ["airport/bg_sky.webp", { format: "webp", width: 1600, height: 720 }],
-  ["airport/bg_city.webp", { format: "webp", width: 1600, height: 720 }],
-  ["airport/bg_ground.webp", { format: "webp", width: 1600, height: 720 }],
+  [
+    "shop/workshop-customer-nameplate-v4.webp",
+    { format: "webp", width: 360, height: 90 },
+  ],
+  [
+    "shop/workshop-dialogue-bubble-v2.webp",
+    { format: "webp", width: 420, height: 231 },
+  ],
+  ...WORKSHOP_PRODUCT_IDS.map((productId) => [
+    `shop/products-v2/${productId}.webp`,
+    { format: "webp", width: 256, height: 256 },
+  ]),
+  ["airport/bg_sky.webp", { format: "webp", width: 3200, height: 1440 }],
+  ["airport/bg_city.webp", { format: "webp", width: 3200, height: 1440 }],
+  ["airport/bg_ground.webp", { format: "webp", width: 3200, height: 1440 }],
   ["airport/data_doc.webp", { format: "webp", width: 256, height: 256 }],
   ["airport/data_image.webp", { format: "webp", width: 256, height: 256 }],
   ["airport/data_sound.webp", { format: "webp", width: 256, height: 256 }],
@@ -64,20 +148,24 @@ const RUNTIME_SPECS = new Map([
   ["airport/public_data_safety.webp", { format: "webp", width: 256, height: 256 }],
   ["airport/public_data_environment.webp", { format: "webp", width: 256, height: 256 }],
   [
-    "airport/corrupted-data-tower-v1.webp",
-    { format: "webp", width: 1024, height: 1536 },
+    "airport/corrupted-data-cloud-top-v1.webp",
+    { format: "webp", width: 512, height: 768 },
+  ],
+  [
+    "airport/corrupted-data-vortex-bottom-v1.webp",
+    { format: "webp", width: 512, height: 768 },
   ],
   [
     "ethics-review/office-v2.webp",
-    { format: "webp", width: 1279, height: 720 },
+    { format: "webp", width: 1672, height: 941 },
   ],
   [
     "ethics-review/briefing-sheet-v2.webp",
-    { format: "webp", width: 1080, height: 608 },
+    { format: "webp", width: 1672, height: 941 },
   ],
   [
     "ethics-review/case-file-v2.webp",
-    { format: "webp", width: 860, height: 484 },
+    { format: "webp", width: 1640, height: 924 },
   ],
 ]);
 const RUNTIME_FILES = new Set(RUNTIME_SPECS.keys());
@@ -133,6 +221,18 @@ const runtimeMetadata = new Map(
   ),
 );
 const validationErrors = [];
+const unexpectedPublicFiles = measured.filter(
+  (file) =>
+    !RUNTIME_FILES.has(file.asset) &&
+    !(
+      file.asset.startsWith(CUSTOMER_RUNTIME_PREFIX) &&
+      file.asset.endsWith(".webp")
+    ),
+);
+
+for (const file of unexpectedPublicFiles) {
+  validationErrors.push(`Unexpected public asset: ${file.asset}`);
+}
 
 function validateMetadata(asset, expected) {
   const metadata = runtimeMetadata.get(asset);

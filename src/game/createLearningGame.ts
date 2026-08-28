@@ -1,19 +1,20 @@
 import Phaser from "phaser";
 import { GAME_SIZE } from "./assets";
+import { selectRenderScale } from "./core/runtime/renderResolution";
 import { createRegisteredScenes } from "./sceneRegistry";
 
 export function createLearningGame(
   parent: HTMLElement,
   onReady: () => void,
 ) {
-  const deviceScale =
-    typeof window === "undefined" ? 1 : Math.min(window.devicePixelRatio, 2);
-  const pixelDemand =
-    Math.max(
-      parent.clientWidth / GAME_SIZE.width,
-      parent.clientHeight / GAME_SIZE.height,
-    ) * deviceScale;
-  const renderScale = pixelDemand > 1.25 ? 1.5 : pixelDemand > 1 ? 1.25 : 1;
+  const renderScale = selectRenderScale({
+    parentWidth: parent.clientWidth,
+    parentHeight: parent.clientHeight,
+    gameWidth: GAME_SIZE.width,
+    gameHeight: GAME_SIZE.height,
+    devicePixelRatio:
+      typeof window === "undefined" ? 1 : window.devicePixelRatio,
+  });
   const renderWidth = GAME_SIZE.width * renderScale;
   const renderHeight = GAME_SIZE.height * renderScale;
 

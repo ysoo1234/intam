@@ -11,6 +11,7 @@ export type {
   EthicsPrinciple,
   EthicsReviewCase,
   EthicsReviewDecision,
+  EthicsReviewEndReason,
   EthicsReviewPhase,
   EthicsVerdict,
 } from "./types";

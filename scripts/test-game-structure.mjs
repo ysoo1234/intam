@@ -19,6 +19,10 @@ const villageScenery = await readFile(
   "src/game/features/world/scene/villageScenery.ts",
   "utf8",
 );
+const worldTouchDirection = await readFile(
+  "src/game/features/world/scene/worldTouchDirection.ts",
+  "utf8",
+);
 const floatingJoystick = await readFile(
   "src/game/core/input/floatingJoystick.ts",
   "utf8",
@@ -107,8 +111,28 @@ const workshopView = await readFile(
   "src/game/features/ai-workshop/scene/workshopView.ts",
   "utf8",
 );
+const workshopDialogue = await readFile(
+  "src/game/features/ai-workshop/scene/workshopDialogue.ts",
+  "utf8",
+);
 const workshopStatus = await readFile(
   "src/game/features/ai-workshop/scene/workshopStatus.ts",
+  "utf8",
+);
+const workshopControls = await readFile(
+  "src/game/features/ai-workshop/scene/workshopControls.ts",
+  "utf8",
+);
+const workshopLayout = await readFile(
+  "src/game/features/ai-workshop/scene/layout.ts",
+  "utf8",
+);
+const workshopPlayer = await readFile(
+  "src/game/features/ai-workshop/scene/workshopPlayer.ts",
+  "utf8",
+);
+const workshopCustomerVisual = await readFile(
+  "src/game/features/ai-workshop/scene/workshopCustomerVisual.ts",
   "utf8",
 );
 const workshopRandomFiles = await Promise.all(
@@ -200,19 +224,18 @@ assert.equal(
 );
 assert.match(
   villageMap,
-  /label: "윤리 심사소",[\s\S]*?available: true,[\s\S]*?featureId: "ethics-review"/,
+  /label: "윤리 심사소",[\s\S]*?availability: \{ kind: "always" \},[\s\S]*?featureId: "ethics-review"/,
   "The approved village portal must lead to Ethics Review.",
 );
 assert.match(
   villageMap,
-  /id: "fountain",[\s\S]*?center: \{ x: 636, y: 364 \},[\s\S]*?radiusX: 164,[\s\S]*?radiusY: 120,[\s\S]*?boundary: "inclusive",[\s\S]*?maskBypassPadding: \{ x: 42, y: 34 \}/,
+  /id: "fountain",[\s\S]*?center: \{ x: 636, y: 372 \},[\s\S]*?radiusX: 166,[\s\S]*?radiusY: 122,[\s\S]*?boundary: "inclusive",[\s\S]*?maskBypassPadding: \{ x: 18, y: 14 \}/,
   "The fountain collision must cover its full visible base.",
 );
 for (const guideId of [
   "northwest-garden",
   "northeast-garden",
   "southwest-garden",
-  "southeast-garden",
   "ethics-office-footprint",
 ]) {
   assert.match(
@@ -223,7 +246,7 @@ for (const guideId of [
 }
 assert.match(
   villageMap,
-  /id: "ethics-office-building",[\s\S]*?\{ x: 132, y: 538 \}/,
+  /id: "ethics-office-building",[\s\S]*?\{ x: 149, y: 500 \}/,
   "The Ethics Review collision must begin at its physical base, not its roof.",
 );
 for (const sceneryKey of [
@@ -245,7 +268,7 @@ assert.match(worldScene, /resolveVillageMovement\(/);
 assert.match(worldScene, /WORLD_CURVED_MOVEMENT_GUIDES/);
 assert.match(worldScene, /projectToBoundary: false/);
 assert.match(worldScene, /lastSafePosition/);
-assert.match(worldScene, /createFloatingJoystick\(this/);
+assert.match(worldScene, /createWorldTouchDirection\(this/);
 assert.match(
   worldScene,
   /방향키 또는 화면을 터치하여 움직여 보세요!/,
@@ -262,7 +285,24 @@ assert.match(
   "Pointer input must be translated through the active camera before gameplay uses it.",
 );
 assert.match(floatingJoystick, /getPointerWorldPoint\(scene, pointer/);
+assert.match(worldTouchDirection, /pointerdown/);
+assert.match(worldTouchDirection, /pointermove/);
+assert.match(worldTouchDirection, /pointerupoutside/);
+assert.match(worldTouchDirection, /Scenes\.Events\.SHUTDOWN/);
+assert.match(worldTouchDirection, /getPointerWorldPoint\(scene, pointer/);
+assert.match(worldTouchDirection, /hasTarget/);
+assert.match(worldTouchDirection, /cancel/);
+assert.match(worldTouchDirection, /nonImprovingFrames >= 14/);
+assert.match(worldScene, /shop: "AI 제작소 입장하기"/);
+assert.match(worldScene, /library: "데이터 비행장 입장하기"/);
+assert.match(worldScene, /workshop: "윤리 심사소 입장하기"/);
+assert.match(worldScene, /"village-entry-button"/);
+assert.doesNotMatch(worldScene, /enterButton\?\.setVisible/);
+assert.doesNotMatch(worldScene, /label: "톡!"/);
+assert.doesNotMatch(worldScene, /fillRect\(0, 0, WORLD_MAP\.size\.width, 52\)/);
 assert.match(villageMovement, /maxStepDistance: 4/);
+assert.match(villageMovement, /defaultSpeedMultiplier: 1\.5/);
+assert.match(villageMovement, /playerSpeed: 230 \* 1\.5/);
 assert.match(villageMovement, /recoverVillagePosition/);
 assert.match(villageMovement, /trySlideAlongCurvedObstacle/);
 assert.match(villageMovement, /perfectly head-on input/);
@@ -274,7 +314,7 @@ assert.doesNotMatch(villageCollision, /Phaser|TextureManager|getPixel|getFrame/)
 assert.doesNotMatch(worldScene, /WORLD_COLLISION\.isBlocked\(this\.textures/);
 assert.match(
   villageMap,
-  /id: "workshop",[\s\S]*?featureId: "ethics-review",[\s\S]*?interactionRadius: 105/,
+  /id: "workshop",[\s\S]*?featureId: "ethics-review",[\s\S]*?interactionRadius: 205/,
   "The Ethics Review entrance must be reachable outside the building collision edge.",
 );
 assert.doesNotMatch(
@@ -332,7 +372,8 @@ for (const textureKey of [
   "airport-public-data-medical",
   "airport-public-data-safety",
   "airport-public-data-environment",
-  "airport-corrupted-tower",
+  "airport-corrupted-data-cloud-top",
+  "airport-corrupted-data-vortex-bottom",
 ]) {
   assert.match(
     airportTextures,
@@ -411,7 +452,8 @@ assert.match(airportObjects, /출처가 없는/);
 assert.match(airportObjects, /airport-public-data-\$\{publicMeta\.kind\}/);
 assert.match(airportObjects, /과학기술 공공데이터/);
 assert.match(airportObjects, /환경 공공데이터/);
-assert.match(airportObjects, /airport-corrupted-tower/);
+assert.match(airportObjects, /airport-corrupted-data-cloud-top/);
+assert.match(airportObjects, /airport-corrupted-data-vortex-bottom/);
 assert.match(airportObjects, /collisionRadiusY: 112/);
 assert.match(airportObjects, /horizontalBobSpeed: bobSpeed \* 0\.55/);
 assert.match(airportScene, /updateAirportObstacleMotion\(object, this\.elapsedMs\)/);
@@ -481,22 +523,115 @@ assert.equal(
 assert.match(workshopScene, /super\(SCENE_KEYS\.aiWorkshop\)/);
 assert.match(workshopScene, /showWorkshopItemPanel\(this, this\.itemPanel/);
 assert.match(workshopView, /customerShadow/);
-assert.match(workshopView, /setTint\(0x174a52\)/);
-assert.match(workshopView, /setTintMode\(Phaser\.TintModes\.FILL\)/);
-assert.match(workshopView, /syncWorkshopCustomerShadow/);
-assert.match(workshopScene, /syncWorkshopCustomerShadow\(this\.customerShadow/);
-assert.match(workshopScene, /order\.requests\[0\]\.readyDialogue/);
+assert.match(workshopView, /workshop-dialogue-bubble/);
+assert.match(workshopView, /\.image\(/);
+assert.doesNotMatch(workshopView, /\.nineslice\(/);
+assert.doesNotMatch(workshopView, /setTintMode\(Phaser\.TintModes\.FILL\)/);
+assert.match(
+  workshopCustomerVisual,
+  /WORKSHOP_CUSTOMER_TARGET_VISIBLE_HEIGHT = 523/,
+);
+assert.match(
+  workshopCustomerVisual,
+  /WORKSHOP_CUSTOMER_TARGET_OPAQUE_AREA = 70_000/,
+);
+assert.match(
+  workshopCustomerVisual,
+  /Math\.sqrt\(\s*heightScale \* Math\.max\(heightScale, perceivedAreaScale\)/,
+);
+assert.match(workshopCustomerVisual, /CUSTOMER_SOURCE_FOOT_Y = 642/);
+assert.match(workshopCustomerVisual, /applyWorkshopCustomerVisualTransform/);
+assert.match(workshopCustomerVisual, /applyWorkshopCustomerRequestVisual/);
+assert.match(workshopScene, /applyWorkshopCustomerRequestVisual/);
+assert.match(
+  workshopRandomFiles[3],
+  /applyWorkshopCustomerVisualTransform/,
+);
+assert.match(workshopView, /workshop-customer-nameplate/);
+assert.match(workshopView, /syncWorkshopDialoguePanel/);
+assert.match(workshopView, /DIALOGUE_BUBBLE\.top/);
+assert.match(workshopView, /DIALOGUE_BUBBLE\.middle/);
+assert.match(workshopView, /DIALOGUE_BUBBLE\.bottomSlice/);
+assert.match(workshopView, /middleCount = lineCount - 2/);
+assert.match(workshopView, /minWidth: 292/);
+assert.match(workshopView, /width: 360/);
+assert.match(workshopView, /verticalScale: 380 \/ 420/);
+assert.match(workshopView, /dialogue-bottom-tail/);
+assert.match(workshopView, /longestLineWidth/);
+assert.match(workshopView, /layoutDialogueBottomSlice/);
+assert.match(workshopView, /left: 22/);
+assert.match(workshopView, /right: 22/);
+assert.match(workshopView, /top: 20/);
+assert.match(workshopView, /bottom: 20/);
+assert.match(workshopView, /intrinsicTextTop: 12/);
+assert.match(workshopView, /plateY: 160/);
+assert.match(workshopView, /textY: 164/);
+assert.match(workshopDialogue, /balanceWorkshopDialogueLines/);
+assert.match(workshopDialogue, /maxWidth \*\* 2 \* 4/);
+assert.match(workshopDialogue, /dialogue-layout-text/);
+assert.match(
+  workshopCustomerVisual,
+  /syncWorkshopNormalizedCustomerShadow\(/,
+);
+assert.match(workshopScene, /returnWorkshopProductToPanel/);
+assert.match(workshopScene, /carriedOrigins/);
+assert.doesNotMatch(workshopScene, /order\.requests\[0\]\.readyDialogue/);
+assert.doesNotMatch(workshopScene, /맞아요, 바로 그거예요/);
+assert.match(
+  workshopScene,
+  /this\.spawnProductChoices\(\);\s*this\.typeDialogue\(firstRequest\.dialogue\)/,
+);
+assert.match(
+  workshopScene,
+  /customerContainer\?\.setVisible\(false\);\s*syncWorkshopDialoguePanel\(this\.dialoguePanel, this\.dialogueText\?\.setText\(""\)\)/,
+);
 assert.doesNotMatch(workshopScene, /기계에서 반짝이는 빛이 나요/);
 assert.doesNotMatch(workshopScene, /workshop-hanger/);
 assert.match(workshopRandomFiles[0], /workshop-item-panel-4/);
 assert.match(workshopRandomFiles[0], /workshop-item-panel-5/);
 assert.match(workshopRandomFiles[0], /customerNumber >= 4 \? 5 : 4/);
-assert.match(workshopRandomFiles[2], /✨ 상품 제작 중/);
+assert.match(workshopRandomFiles[0], /availableLabelWidth/);
+assert.doesNotMatch(workshopRandomFiles[0], /maxLines: 2/);
+assert.match(workshopRandomFiles[0], /createWorkshopCarriedIcon/);
+assert.doesNotMatch(workshopRandomFiles[0], /workshop-carried-product-card/);
+assert.doesNotMatch(workshopRandomFiles[0], /repeat: -1/);
+assert.match(workshopRandomFiles[2], /"상품 제작 중"/);
+assert.match(workshopRandomFiles[2], /workshop-crafting-panel/);
+assert.match(workshopRandomFiles[2], /WORKSHOP_STAR_CATCH_TUNING/);
+assert.match(workshopRandomFiles[2], /성공 횟수 0/);
 assert.doesNotMatch(workshopRandomFiles[2], /STAR CATCH/);
+assert.doesNotMatch(workshopControls, /createFloatingJoystick/);
+assert.match(workshopControls, /scene\.input\.on\("pointerdown"/);
+assert.match(workshopControls, /scene\.input\.on\("pointermove"/);
+assert.match(workshopControls, /scene\.input\.on\("pointerupoutside"/);
+assert.match(workshopControls, /Scenes\.Events\.SHUTDOWN/);
+assert.match(workshopControls, /stopPropagation: true/);
+assert.match(workshopControls, /getPointerWorldPoint\(scene, pointer/);
+assert.match(workshopControls, /updateTouchDirection/);
+assert.doesNotMatch(workshopControls, /pointer\.x > 1_090/);
+assert.match(workshopLayout, /playerBounds: \{ left: 300, right: 1180/);
+assert.match(
+  workshopLayout,
+  /\{ x: 400, radiusX: 34, bumpY: 20 \}/,
+  "Workshop planter collision must remain a compact smooth ceiling bump.",
+);
+assert.match(
+  workshopPlayer,
+  /return projectWorkshopPointToWalkableArea\(desiredX, desiredY, out\)/,
+  "Workshop slope movement must project onto the curved floor boundary.",
+);
+assert.doesNotMatch(
+  workshopPlayer,
+  /const canMove[XY]/,
+  "Workshop slope movement must not reintroduce zero-distance axis stalls.",
+);
+assert.match(workshopStatus, /actionButton\?\.setVisible\(false\)/);
+assert.match(workshopStatus, /findNearestWorkshopProductOrigin/);
+assert.match(workshopStatus, /"돌려놓기"/);
 assert.match(
   workshopStatus,
-  /container\.x,\s*container\.y,\s*\) < 220/s,
-  "Workshop product pickup must preserve the original 220px center-distance rule.",
+  /container\.x,\s*container\.y,\s*\) < 240/s,
+  "Workshop product pickup must preserve the reachable 240px center-distance rule.",
 );
 const workshopLineCount = workshopScene.split(/\r?\n/).length;
 assert.ok(
@@ -510,7 +645,7 @@ const countWorkshop = (pattern) =>
 assert.equal(countWorkshop(/Phaser\.Utils\.Array\.Shuffle\(/g), 5);
 assert.equal(countWorkshop(/Phaser\.Utils\.Array\.GetRandom\(/g), 1);
 assert.equal(countWorkshop(/Phaser\.Math\.FloatBetween\(/g), 1);
-assert.equal(countWorkshop(/Phaser\.Math\.Between\(/g), 25);
+assert.equal(countWorkshop(/Phaser\.Math\.Between\(/g), 11);
 
 const orderedWorkshopSceneMarkers = [
   "Phaser.Utils.Array.Shuffle([\n      ...WORKSHOP_REQUESTS",

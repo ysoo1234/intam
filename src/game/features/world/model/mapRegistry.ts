@@ -46,7 +46,10 @@ export function validateMapRegistry(
         knownPortalIds.add(portal.id);
       }
 
-      if (!isKnownFeatureId(portal.destination.featureId)) {
+      if (
+        portal.destination.kind === "feature" &&
+        !isKnownFeatureId(portal.destination.featureId)
+      ) {
         issues.push({
           code: "unknown-feature",
           mapId: definition.id,

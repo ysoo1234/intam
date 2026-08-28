@@ -36,8 +36,11 @@ export type EthicsReviewDecision = Readonly<{
 
 export type EthicsReviewPhase =
   | "briefing"
+  | "countdown"
   | "entering"
   | "reviewing"
   | "feedback"
   | "exiting"
   | "result";
+
+export type EthicsReviewEndReason = "time" | "lives" | "cases";

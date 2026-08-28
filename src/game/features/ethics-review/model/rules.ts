@@ -80,9 +80,9 @@ export function getNextEthicsReviewCombo(
   return correct ? Math.max(0, Math.floor(comboBeforeDecision)) + 1 : 0;
 }
 
-export function getEthicsReviewStars(mistakeCount: number): 1 | 2 | 3 {
-  if (mistakeCount <= 1) return 3;
-  if (mistakeCount <= 3) return 2;
+export function getEthicsReviewStars(correctCount: number): 1 | 2 | 3 {
+  if (correctCount >= ETHICS_REVIEW_CONFIG.starThresholds.threeStars) return 3;
+  if (correctCount >= ETHICS_REVIEW_CONFIG.starThresholds.twoStars) return 2;
   return 1;
 }
 

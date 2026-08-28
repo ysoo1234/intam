@@ -1,4 +1,8 @@
-import type { FeatureDestination } from "../../../core/navigation";
+import type {
+  FeatureDestination,
+  WorldActivityId,
+  WORLD_COMPLETION_READY_EVENT,
+} from "../../../core/navigation";
 import type { PlayerFacing } from "../../../core/player/playerFacing";
 
 export type MapId = string;
@@ -33,17 +37,50 @@ export type SceneryDefinition = Readonly<{
   position: Point;
   displaySize: Size;
   occlusionArea: AxisAlignedBounds;
+  progressMarker?:
+    | Readonly<{
+        kind: "activity-stars";
+        featureId: WorldActivityId;
+        position: Point;
+        capacity: 3;
+      }>
+    | Readonly<{
+        kind: "starlight-exit";
+        position: Point;
+        requiredStars: 9;
+      }>;
 }>;
 
-export type PortalDefinition = Readonly<{
+type PortalBase = Readonly<{
   id: PortalId;
   position: Point;
   label: string;
-  available: boolean;
-  destination: FeatureDestination;
   interactionRadius: number;
   interactionComparison: "strictly-less-than";
 }>;
+
+export type FeaturePortalDefinition = PortalBase &
+  Readonly<{
+    availability: Readonly<{ kind: "always" }>;
+    destination: FeatureDestination;
+    returnSpawn: SpawnDefinition;
+  }>;
+
+export type CompletionPortalDefinition = PortalBase &
+  Readonly<{
+    availability: Readonly<{
+      kind: "world-star-total";
+      requiredStars: 9;
+    }>;
+    destination: Readonly<{
+      kind: "world-completion-placeholder";
+      completionEvent: typeof WORLD_COMPLETION_READY_EVENT;
+    }>;
+  }>;
+
+export type PortalDefinition =
+  | FeaturePortalDefinition
+  | CompletionPortalDefinition;
 
 export type PolygonCollisionDefinition = Readonly<{
   id: string;
@@ -88,6 +125,7 @@ export type CollisionDefinition = Readonly<{
   polygons: readonly PolygonCollisionDefinition[];
   ellipses: readonly EllipseCollisionDefinition[];
   curvedMovementGuides: readonly CurvedMovementGuideDefinition[];
+  maskWalkableOverrides?: readonly AxisAlignedBounds[];
   precomputedMask: PrecomputedCollisionMaskDefinition;
 }>;
 

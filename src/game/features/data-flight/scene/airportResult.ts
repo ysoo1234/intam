@@ -15,6 +15,7 @@ export type AirportResult = {
   score: number;
   collected: number;
   correctAnswers: number;
+  stars: 1 | 2 | 3;
   onRetry: () => void;
   onWorld: () => void;
 };
@@ -36,20 +37,26 @@ export function createAirportResultOverlay(
     },
   );
   const icon = scene.add
-    .text(0, -180, result.completed ? "🏆" : "💛", { fontSize: "70px" })
+    .text(0, -190, result.completed ? "🏆" : "💛", { fontSize: "70px" })
     .setOrigin(0.5);
   const title = scene.add
     .text(
       0,
-      -92,
+      -118,
       result.completed ? "데이터 비행 완료!" : "비행을 마쳤어요",
       getTextStyle("display", { fontSize: "39px" }),
     )
     .setOrigin(0.5);
+  const stars = scene.add
+    .text(0, -63, `${"★".repeat(result.stars)}${"☆".repeat(3 - result.stars)}`, getTextStyle("title", {
+      color: "#E9A735",
+      fontSize: "34px",
+    }))
+    .setOrigin(0.5);
   const stats = scene.add
     .text(
       0,
-      8,
+      24,
       `최종 점수  ${result.score.toLocaleString()}점\n수집한 데이터  ${result.collected}개   ·   맞힌 문제  ${result.correctAnswers}개`,
       getTextStyle("heading", {
         color: TEXT_COLORS.accent,
@@ -77,7 +84,7 @@ export function createAirportResultOverlay(
     variant: "positive",
     onPress: result.onWorld,
   }).container;
-  overlay.add([shade, panel, icon, title, stats, retry, world]);
+  overlay.add([shade, panel, icon, title, stars, stats, retry, world]);
   overlay.setScale(0.9).setAlpha(0);
   scene.tweens.add({
     targets: overlay,

@@ -77,7 +77,7 @@ export class ShopScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image("ai-shop-interior", GAME_ASSETS.shop.interior);
+    this.load.image("ai-shop-interior", GAME_ASSETS.shop.workshop);
     AI_TOOLS.forEach((tool) => {
       this.load.image(`ai-tool-${tool.id}`, tool.image);
     });

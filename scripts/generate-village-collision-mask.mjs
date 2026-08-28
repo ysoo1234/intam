@@ -3,14 +3,20 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 
-const SOURCE_PATH = path.resolve("assets-source/world/village-ground.png");
+const SOURCE_PATH = path.resolve(
+  "assets-source/world/ai-village-main-background-v3.png",
+);
 const OUTPUT_PATH = path.resolve(
   "src/game/features/world/model/villageCollisionMask.ts",
 );
 const CELL_SIZE = 4;
 
 function isLegacyPixelBlocked(red, green, blue) {
-  const vegetation = green > red + 4 && green > blue + 20;
+  // The current village art uses a deliberately soft, yellow-green lawn. It
+  // is less saturated than the old background, so hue alone no longer finds
+  // the visible flowerbed edge. The red ceiling separates it from the warm
+  // cream paving while retaining the muted grass and surrounding foliage.
+  const vegetation = red < 235 && green > blue + 20 && green >= red - 35;
   const blueSurface = blue > red + 8 && green > red - 20;
   const redRoof = red > green + 72 && green < 185 && blue < 155;
   return vegetation || blueSurface || redRoof;

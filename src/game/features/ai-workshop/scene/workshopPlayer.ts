@@ -18,6 +18,91 @@ export type WorkshopPlayerUpdate = {
   delta: number;
 };
 
+type WorkshopBoundaryPoint = Readonly<{ x: number; y: number }>;
+const WORKSHOP_NEXT_POSITION = new Phaser.Math.Vector2();
+
+function sampleWorkshopBoundary(
+  x: number,
+  points: readonly WorkshopBoundaryPoint[],
+) {
+  if (x <= points[0].x) return points[0].y;
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const current = points[index];
+    if (x <= current.x) {
+      return Phaser.Math.Linear(
+        previous.y,
+        current.y,
+        Phaser.Math.Percent(x, previous.x, current.x),
+      );
+    }
+  }
+  return points[points.length - 1].y;
+}
+
+export function getWorkshopMinimumY(x: number) {
+  const baseMinimumY = sampleWorkshopBoundary(
+    x,
+    AI_WORKSHOP_LAYOUT.walkableCeiling,
+  );
+  let minimumY = baseMinimumY;
+  for (const obstacle of AI_WORKSHOP_LAYOUT.ceilingObstacles) {
+    const normalizedX = (x - obstacle.x) / obstacle.radiusX;
+    if (Math.abs(normalizedX) >= 1) continue;
+    const obstacleBottom =
+      baseMinimumY + obstacle.bumpY * (1 - normalizedX ** 2);
+    minimumY = Math.max(minimumY, obstacleBottom);
+  }
+  return minimumY;
+}
+
+export function getWorkshopMaximumY(x: number) {
+  return sampleWorkshopBoundary(x, AI_WORKSHOP_LAYOUT.walkableFloor);
+}
+
+export function isWorkshopPointWalkable(x: number, y: number) {
+  const bounds = AI_WORKSHOP_LAYOUT.playerBounds;
+  if (
+    x < bounds.left ||
+    x > bounds.right ||
+    y < getWorkshopMinimumY(x) ||
+    y > getWorkshopMaximumY(x)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+export function projectWorkshopPointToWalkableArea(
+  x: number,
+  y: number,
+  out = new Phaser.Math.Vector2(),
+) {
+  const projectedX = Phaser.Math.Clamp(
+    x,
+    AI_WORKSHOP_LAYOUT.playerBounds.left,
+    AI_WORKSHOP_LAYOUT.playerBounds.right,
+  );
+  const projectedY = Phaser.Math.Clamp(
+    y,
+    getWorkshopMinimumY(projectedX),
+    getWorkshopMaximumY(projectedX),
+  );
+
+  return out.set(projectedX, projectedY);
+}
+
+function moveWorkshopPointWithinWalkableArea(
+  desiredX: number,
+  desiredY: number,
+  out: Phaser.Math.Vector2,
+) {
+  // Keep the requested axis and apply only the boundary's orthogonal
+  // correction. This makes the two sloped floor edges behave like smooth
+  // ramps rather than invisible steps.
+  return projectWorkshopPointToWalkableArea(desiredX, desiredY, out);
+}
+
 export function updateWorkshopPlayer(
   state: WorkshopPlayerUpdate,
 ): PlayerFacing {
@@ -47,20 +132,13 @@ export function updateWorkshopPlayer(
       playerFacing,
       direction,
     );
-    player.x +=
-      direction.x * AI_WORKSHOP_LAYOUT.playerSpeed * (state.delta / 1000);
-    player.y +=
-      direction.y * AI_WORKSHOP_LAYOUT.playerSpeed * (state.delta / 1000);
-    player.x = Phaser.Math.Clamp(
-      player.x,
-      AI_WORKSHOP_LAYOUT.playerBounds.left,
-      AI_WORKSHOP_LAYOUT.playerBounds.right,
+    const travel = AI_WORKSHOP_LAYOUT.playerSpeed * (state.delta / 1000);
+    const nextPosition = moveWorkshopPointWithinWalkableArea(
+      player.x + direction.x * travel,
+      player.y + direction.y * travel,
+      WORKSHOP_NEXT_POSITION,
     );
-    player.y = Phaser.Math.Clamp(
-      player.y,
-      AI_WORKSHOP_LAYOUT.playerBounds.top,
-      AI_WORKSHOP_LAYOUT.playerBounds.bottom,
-    );
+    player.setPosition(nextPosition.x, nextPosition.y);
     player.rotation = Phaser.Math.Linear(
       player.rotation,
       direction.x * 0.035,
@@ -71,13 +149,8 @@ export function updateWorkshopPlayer(
     player.rotation *= 0.82;
     playerSprite?.setY(0);
   }
-  state.carriedVisuals.forEach((visual, index) => {
-    visual.setPosition(
-      player.x + (index - (state.carriedVisuals.length - 1) / 2) * 72,
-      player.y - 92,
-    );
-  });
   updateWorkshopPlayerPerspective(player, state.carriedVisuals);
+  syncWorkshopCarriedVisualPositions(player, state.carriedVisuals);
   updateWorkshopPlayerDepth(player, state.carriedVisuals);
   return playerFacing;
 }
@@ -98,7 +171,32 @@ export function updateWorkshopPlayerPerspective(
   );
   const scale = Phaser.Math.Linear(0.9, 1.2, perspective);
   player.setScale(scale);
-  carriedVisuals.forEach((visual) => visual.setScale(0.52 * scale));
+  carriedVisuals.forEach((visual) =>
+    visual.setScale(AI_WORKSHOP_LAYOUT.playerVisual.carriedBaseScale * scale),
+  );
+}
+
+export function syncWorkshopCarriedVisualPositions(
+  player: Phaser.GameObjects.Container | undefined,
+  carriedVisuals: Phaser.GameObjects.Container[],
+) {
+  if (!player) return;
+  const visual = AI_WORKSHOP_LAYOUT.playerVisual;
+  const playerScale = player.scaleY;
+  const carriedCenterY =
+    player.y -
+    visual.halfHeight * playerScale -
+    visual.carriedArtHalfSize * visual.carriedBaseScale * playerScale -
+    visual.carriedGap;
+  carriedVisuals.forEach((carried, index) => {
+    carried.setPosition(
+      player.x +
+        (index - (carriedVisuals.length - 1) / 2) *
+          visual.carriedSpacing *
+          playerScale,
+      carriedCenterY,
+    );
+  });
 }
 
 export function updateWorkshopPlayerDepth(

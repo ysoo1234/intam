@@ -1,42 +1,40 @@
 import Phaser from "phaser";
 import { FONT_FAMILY } from "../../../core/visual/theme";
 import { AI_WORKSHOP_LAYOUT } from "./layout";
-import { syncWorkshopCustomerShadow } from "./workshopView";
+import {
+  applyWorkshopCustomerVisualTransform,
+  syncWorkshopNormalizedCustomerShadow,
+} from "./workshopCustomerVisual";
 
 export function animateWorkshopCustomerArtworkJoy(
   scene: Phaser.Scene,
   customerArt: Phaser.GameObjects.Image | undefined,
-  customerShadow: Phaser.GameObjects.Image | undefined,
+  customerShadow: Phaser.GameObjects.Ellipse | undefined,
   happyTexture: string,
+  requestId: string,
 ) {
   if (!customerArt) return;
-  const artLayout = AI_WORKSHOP_LAYOUT.customerArt;
   if (scene.textures.exists(happyTexture)) {
-    customerArt
-      .setTexture(happyTexture)
-      .setDisplaySize(artLayout.width, artLayout.height)
-      .setPosition(artLayout.x, artLayout.y)
-      .setFlipX(true);
-    syncWorkshopCustomerShadow(customerShadow, customerArt);
+    customerArt.setTexture(happyTexture).setFlipX(true);
+    const visualTransform = applyWorkshopCustomerVisualTransform(
+      customerArt,
+      requestId,
+    );
+    syncWorkshopNormalizedCustomerShadow(
+      customerShadow,
+      customerArt,
+      visualTransform,
+    );
   }
+  const restingY = customerArt.y;
   scene.tweens.add({
     targets: customerArt,
-    y: artLayout.y - 15,
+    y: restingY - 15,
     angle: -3,
     duration: 150,
     yoyo: true,
     repeat: 2,
   });
-  if (customerShadow) {
-    scene.tweens.add({
-      targets: customerShadow,
-      y: artLayout.y - 10,
-      angle: -3,
-      duration: 150,
-      yoyo: true,
-      repeat: 2,
-    });
-  }
 }
 
 export function createCustomerJoyEffect(

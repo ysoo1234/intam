@@ -6,22 +6,59 @@ export type AirportBackground = {
   ground: Phaser.GameObjects.TileSprite;
 };
 
+export const AIRPORT_BACKGROUND_TEXTURE_CONTRACT = {
+  viewportWidth: 1280,
+  viewportHeight: 720,
+  logicalTileWidth: 1600,
+  logicalTileHeight: 720,
+  targetTextureWidth: 3200,
+  targetTextureHeight: 1440,
+} as const;
+
 export type AirportPlayerView = {
   player: Phaser.GameObjects.Container;
   playerArt: Phaser.GameObjects.Image;
   playerAura: Phaser.GameObjects.Ellipse;
 };
 
+function createAirportBackgroundLayer(
+  scene: Phaser.Scene,
+  textureKey: string,
+  depth: number,
+) {
+  const frame = scene.textures.getFrame(textureKey);
+  const textureWidth =
+    frame?.width ?? AIRPORT_BACKGROUND_TEXTURE_CONTRACT.targetTextureWidth;
+  const textureHeight =
+    frame?.height ?? AIRPORT_BACKGROUND_TEXTURE_CONTRACT.targetTextureHeight;
+
+  return scene.add
+    .tileSprite(
+      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.viewportWidth / 2,
+      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.viewportHeight / 2,
+      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.viewportWidth,
+      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.viewportHeight,
+      textureKey,
+    )
+    .setTileScale(
+      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.logicalTileWidth / textureWidth,
+      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.logicalTileHeight / textureHeight,
+    )
+    .setDepth(depth);
+}
+
+export function advanceAirportBackgroundTile(
+  layer: Phaser.GameObjects.TileSprite,
+  logicalDistance: number,
+) {
+  // Phaser scales tilePosition with the texture, so keep movement in logical pixels.
+  layer.tilePositionX += logicalDistance / layer.tileScaleX;
+}
+
 export function createAirportBackground(scene: Phaser.Scene): AirportBackground {
-  const sky = scene.add
-    .tileSprite(640, 360, 1280, 720, "airport-sky")
-    .setDepth(0);
-  const city = scene.add
-    .tileSprite(640, 360, 1280, 720, "airport-city")
-    .setDepth(1);
-  const ground = scene.add
-    .tileSprite(640, 360, 1280, 720, "airport-ground")
-    .setDepth(2);
+  const sky = createAirportBackgroundLayer(scene, "airport-sky", 0);
+  const city = createAirportBackgroundLayer(scene, "airport-city", 1);
+  const ground = createAirportBackgroundLayer(scene, "airport-ground", 2);
   return { sky, city, ground };
 }
 

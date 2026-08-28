@@ -32,7 +32,9 @@ export type VillageMovementMemory = {
 };
 
 export const VILLAGE_MOVEMENT_CONFIG = {
-  playerSpeed: 230,
+  baselinePlayerSpeed: 230,
+  defaultSpeedMultiplier: 1.5,
+  playerSpeed: 230 * 1.5,
   sprintMultiplier: 1.5,
   maxFrameDeltaMs: 50,
   maxStepDistance: 4,

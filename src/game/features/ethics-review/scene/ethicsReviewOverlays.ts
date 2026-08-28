@@ -1,5 +1,9 @@
 import Phaser from "phaser";
 import { COLORS, FONT_FAMILY } from "../../../core/visual/theme";
+import {
+  ETHICS_REVIEW_CONFIG,
+  type EthicsReviewEndReason,
+} from "../model";
 
 function addPaperAction(
   scene: Phaser.Scene,
@@ -61,7 +65,7 @@ export function createEthicsBriefingOverlay(
     })
     .setOrigin(0.5);
   const title = scene.add
-    .text(0, -104, "6개의 사건을 판정해 주세요", {
+    .text(0, -104, "2분 30초, 30개 사건에 도전!", {
       color: "#173f43",
       fontFamily: FONT_FAMILY,
       fontSize: "38px",
@@ -74,7 +78,7 @@ export function createEthicsBriefingOverlay(
     .text(
       0,
       -32,
-      "사건 파일을 읽고  →  승인 또는 보완을 선택하고\n왜 그런지 근거를 확인하면 끝!",
+      "사건 파일을 읽고 승인 또는 보완을 선택해요.\n정답을 많이 맞히고 설명에서 안전한 방법을 확인해요!",
       {
         color: "#334d4c",
         fontFamily: FONT_FAMILY,
@@ -94,7 +98,7 @@ export function createEthicsBriefingOverlay(
     })
     .setOrigin(0.5);
   const hint = scene.add
-    .text(0, 111, "시간 제한 없이 천천히 읽어도 괜찮아요", {
+    .text(0, 111, "생명은 3개예요 · 틀리면 생명이 1개 줄어요", {
       color: "#8b7049",
       fontFamily: FONT_FAMILY,
       fontSize: "14px",
@@ -116,26 +120,34 @@ export function createEthicsBriefingOverlay(
 export function createEthicsResultOverlay(
   scene: Phaser.Scene,
   options: {
-    mistakes: number;
     stars: number;
     score: number;
     bestCombo: number;
+    correctCount: number;
+    reviewedCount: number;
+    lives: number;
+    endReason: EthicsReviewEndReason;
     onBack: () => void;
     onReplay: () => void;
   },
 ) {
   const overlay = createDossierOverlay(scene, 0.54).setDepth(95);
   const eyebrow = scene.add
-    .text(0, -151, "RESPONSIBILITY CLEARANCE", {
-      color: "#247a76",
-      fontFamily: FONT_FAMILY,
-      fontSize: "13px",
-      fontStyle: "bold",
-      letterSpacing: 2,
-    })
+    .text(
+      0,
+      -151,
+      `2분 30초 · ${ETHICS_REVIEW_CONFIG.roundCount}개 사건 · 생명 ${ETHICS_REVIEW_CONFIG.startingLives}개`,
+      {
+        color: "#247a76",
+        fontFamily: FONT_FAMILY,
+        fontSize: "13px",
+        fontStyle: "bold",
+        letterSpacing: 2,
+      },
+    )
     .setOrigin(0.5);
   const title = scene.add
-    .text(0, -108, "오늘의 윤리 심사 완료!", {
+    .text(0, -108, "윤리 심사 도전 완료!", {
       color: "#173f43",
       fontFamily: FONT_FAMILY,
       fontSize: "37px",
@@ -158,7 +170,11 @@ export function createEthicsResultOverlay(
     .text(
       0,
       44,
-      `신뢰 점수  ${options.score}점\n최고 콤보  ${options.bestCombo}연속   ·   놓친 판정  ${options.mistakes}회`,
+      [
+        `정답 ${options.correctCount}개 · 심사 ${options.reviewedCount}개 / ${ETHICS_REVIEW_CONFIG.roundCount}개`,
+        `점수 ${options.score}점 · 남은 생명 ${options.lives}개 · 최고 콤보 ${options.bestCombo}연속`,
+        getEndMessage(options.endReason),
+      ].join("\n"),
       {
         color: "#334d4c",
         fontFamily: FONT_FAMILY,
@@ -186,4 +202,10 @@ export function createEthicsResultOverlay(
     ease: "Back.easeOut",
   });
   return overlay;
+}
+
+function getEndMessage(reason: EthicsReviewEndReason) {
+  if (reason === "time") return "시간이 다 되었어요. 배운 원칙으로 다시 도전해요!";
+  if (reason === "lives") return "생명을 모두 사용했어요. 설명을 떠올려 다시 도전해요!";
+  return "준비된 30개 사건을 모두 심사했어요!";
 }

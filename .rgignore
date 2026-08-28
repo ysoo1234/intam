@@ -1,0 +1,6 @@
+/.next/
+/node_modules/
+/assets-source/
+/public/assets/
+/tmp/
+*.tsbuildinfo

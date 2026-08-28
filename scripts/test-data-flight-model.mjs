@@ -438,8 +438,10 @@ const { ETHICS_REVIEW_CASES } = loadTypeScriptModule(
   "src/game/features/ethics-review/content/cases.ts",
 );
 
-assert.equal(ETHICS_REVIEW_CONFIG.roundCount, 6);
-assert.equal(ETHICS_REVIEW_CASES.length, 12);
+assert.equal(ETHICS_REVIEW_CONFIG.roundCount, 30);
+assert.equal(ETHICS_REVIEW_CONFIG.durationMs, 150_000);
+assert.equal(ETHICS_REVIEW_CONFIG.startingLives, 3);
+assert.equal(ETHICS_REVIEW_CASES.length, 30);
 assert.equal(
   new Set(ETHICS_REVIEW_CASES.map((reviewCase) => reviewCase.id)).size,
   ETHICS_REVIEW_CASES.length,
@@ -467,12 +469,12 @@ function seededRandom(seed) {
 
 const firstShift = ethicsRules.createReviewShift(
   ETHICS_REVIEW_CASES,
-  6,
+  ETHICS_REVIEW_CONFIG.roundCount,
   seededRandom(42),
 );
 const repeatedShift = ethicsRules.createReviewShift(
   ETHICS_REVIEW_CASES,
-  6,
+  ETHICS_REVIEW_CONFIG.roundCount,
   seededRandom(42),
 );
 assert.deepEqual(
@@ -480,16 +482,19 @@ assert.deepEqual(
   repeatedShift.map((reviewCase) => reviewCase.id),
   "Ethics review shifts must be reproducible with the same random source.",
 );
-assert.equal(firstShift.length, 6);
+assert.equal(firstShift.length, ETHICS_REVIEW_CONFIG.roundCount);
 assert.equal(
   firstShift.filter((reviewCase) => reviewCase.verdict === "approve").length,
-  3,
+  15,
 );
 assert.equal(
   firstShift.filter((reviewCase) => reviewCase.verdict === "reject").length,
-  3,
+  15,
 );
-assert.equal(new Set(firstShift.map((reviewCase) => reviewCase.id)).size, 6);
+assert.equal(
+  new Set(firstShift.map((reviewCase) => reviewCase.id)).size,
+  ETHICS_REVIEW_CONFIG.roundCount,
+);
 
 const sampleCase = ETHICS_REVIEW_CASES[0];
 const correctDecision = ethicsRules.evaluateReviewDecision(
@@ -511,9 +516,9 @@ assert.equal(ethicsRules.getEthicsReviewPoints(correctDecision, 0), 100);
 assert.equal(ethicsRules.getEthicsReviewPoints(correctDecision, 3), 175);
 assert.equal(ethicsRules.getNextEthicsReviewCombo(2, true), 3);
 assert.equal(ethicsRules.getNextEthicsReviewCombo(4, false), 0);
-assert.equal(ethicsRules.getEthicsReviewStars(0), 3);
-assert.equal(ethicsRules.getEthicsReviewStars(2), 2);
-assert.equal(ethicsRules.getEthicsReviewStars(4), 1);
+assert.equal(ethicsRules.getEthicsReviewStars(0), 1);
+assert.equal(ethicsRules.getEthicsReviewStars(8), 2);
+assert.equal(ethicsRules.getEthicsReviewStars(15), 3);
 assert.equal(ethicsRules.getEthicsReviewProgress(-1, 6), 0);
 assert.equal(ethicsRules.getEthicsReviewProgress(3, 6), 0.5);
 assert.equal(ethicsRules.getEthicsReviewProgress(9, 6), 1);
@@ -893,19 +898,22 @@ function assertSmoothGardenApproach(label, guideId, start, displacement) {
 }
 
 for (const route of [
-  ["northwest east", "northwest-garden", { x: 511, y: 214 }, { x: -3.84, y: 0 }],
-  ["northwest south", "northwest-garden", { x: 280, y: 348 }, { x: 0, y: -3.84 }],
-  ["northeast west", "northeast-garden", { x: 769, y: 214 }, { x: 3.84, y: 0 }],
-  ["northeast south", "northeast-garden", { x: 1_000, y: 348 }, { x: 0, y: -3.84 }],
-  ["southwest east", "southwest-garden", { x: 496, y: 600 }, { x: -3.84, y: 0 }],
-  ["southwest north", "southwest-garden", { x: 184, y: 432 }, { x: 0, y: 3.84 }],
-  ["southeast west", "southeast-garden", { x: 758, y: 612 }, { x: 3.84, y: 0 }],
-  ["southeast north", "southeast-garden", { x: 1_088, y: 432 }, { x: 0, y: 3.84 }],
+  ["northwest east", "northwest-garden", { x: 480, y: 207 }, { x: -3.84, y: 0 }],
+  ["northwest south", "northwest-garden", { x: 255, y: 350 }, { x: 0, y: -3.84 }],
+  ["northeast west", "northeast-garden", { x: 736, y: 205 }, { x: 3.84, y: 0 }],
+  ["northeast south", "northeast-garden", { x: 1_005, y: 350 }, { x: 0, y: -3.84 }],
+  ["southwest east", "southwest-garden", { x: 460, y: 600 }, { x: -3.84, y: 0 }],
+  ["southwest north", "southwest-garden", { x: 184, y: 390 }, { x: 0, y: 3.84 }],
 ]) {
   assertSmoothGardenApproach(...route);
 }
 
-function advanceVillagePosition(position, displacement, memory) {
+function advanceVillagePosition(
+  position,
+  displacement,
+  memory,
+  label = "Direction changes",
+) {
   const nextPosition = villageMovement.resolveVillageMovement(
     position,
     displacement,
@@ -922,7 +930,7 @@ function advanceVillagePosition(position, displacement, memory) {
   assert.ok(
     Math.hypot(nextPosition.x - position.x, nextPosition.y - position.y) <=
       Math.hypot(displacement.x, displacement.y) + 0.01,
-    "Direction changes must never move farther than one frame.",
+    `${label}: movement must never move farther than one frame.`,
   );
   return nextPosition;
 }
@@ -944,6 +952,7 @@ function assertSmoothDirectionChange(
       contactPosition,
       firstDisplacement,
       rememberedMemory,
+      label,
     );
   }
   assert.ok(
@@ -955,6 +964,7 @@ function assertSmoothDirectionChange(
       contactPosition,
       firstDisplacement,
       rememberedMemory,
+      label,
     );
   }
 
@@ -998,11 +1008,13 @@ function assertSmoothDirectionChange(
       rememberedPosition,
       nextDisplacement,
       rememberedMemory,
+      label,
     );
     const freshRequiresGlide = requiresCurvedGlide(
       freshPosition,
       nextDisplacement,
       freshMemory,
+      label,
     );
     const rememberedNext = advanceVillagePosition(
       rememberedPosition,
@@ -1112,16 +1124,15 @@ function assertSmoothDirectionChange(
 }
 
 for (const transition of [
-  ["fountain bottom up-right", { x: 636, y: 494 }, { x: 0, y: -3.84 }, { x: 3.84, y: 0 }],
-  ["fountain bottom up-right diagonal", { x: 636, y: 494 }, { x: 0, y: -3.84 }, { x: Math.SQRT1_2 * 3.84, y: -Math.SQRT1_2 * 3.84 }],
-  ["fountain bottom exact 60-degree turn", { x: 636, y: 494 }, { x: 0, y: -3.84 }, { x: Math.sqrt(3) * 1.92, y: -1.92 }],
-  ["fountain west right-down", { x: 462, y: 364 }, { x: 3.84, y: 0 }, { x: 0, y: 3.84 }],
-  ["fountain east left-down", { x: 810, y: 364 }, { x: -3.84, y: 0 }, { x: 0, y: 3.84 }],
-  ["fountain north down-right", { x: 636, y: 234 }, { x: 0, y: 3.84 }, { x: 3.84, y: 0 }],
-  ["southwest east left-up", { x: 496, y: 600 }, { x: -3.84, y: 0 }, { x: 0, y: -3.84 }],
-  ["northwest east left-up", { x: 511, y: 214 }, { x: -3.84, y: 0 }, { x: 0, y: -3.84 }],
-  ["northeast west right-up", { x: 769, y: 214 }, { x: 3.84, y: 0 }, { x: 0, y: -3.84 }],
-  ["southeast west right-down", { x: 758, y: 612 }, { x: 3.84, y: 0 }, { x: 0, y: 3.84 }],
+  ["fountain bottom up-right", { x: 636, y: 508 }, { x: 0, y: -3.84 }, { x: 3.84, y: 0 }],
+  ["fountain bottom up-right diagonal", { x: 636, y: 508 }, { x: 0, y: -3.84 }, { x: Math.SQRT1_2 * 3.84, y: -Math.SQRT1_2 * 3.84 }],
+  ["fountain bottom exact 60-degree turn", { x: 636, y: 508 }, { x: 0, y: -3.84 }, { x: Math.sqrt(3) * 1.92, y: -1.92 }],
+  ["fountain west right-down", { x: 456, y: 372 }, { x: 3.84, y: 0 }, { x: 0, y: 3.84 }],
+  ["fountain east left-down", { x: 816, y: 372 }, { x: -3.84, y: 0 }, { x: 0, y: 3.84 }],
+  ["fountain north down-right", { x: 636, y: 236 }, { x: 0, y: 3.84 }, { x: 3.84, y: 0 }],
+  ["southwest east left-up", { x: 460, y: 600 }, { x: -3.84, y: 0 }, { x: 0, y: -3.84 }],
+  ["northwest east left-up", { x: 480, y: 207 }, { x: -3.84, y: 0 }, { x: 0, y: -3.84 }],
+  ["northeast west right-up", { x: 736, y: 205 }, { x: 3.84, y: 0 }, { x: 0, y: -3.84 }],
 ]) {
   assertSmoothDirectionChange(...transition);
 }
@@ -1130,7 +1141,7 @@ function assertSmoothGradualDirectionChange(rampFrames) {
   const label = `fountain gradual 90-degree turn over ${rampFrames} frames`;
   const firstDisplacement = { x: 0, y: -3.84 };
   const rememberedMemory = villageMovement.createVillageMovementMemory();
-  let contactPosition = { x: 636, y: 494 };
+  let contactPosition = { x: 636, y: 508 };
   for (
     let frame = 0;
     frame < 48 && !rememberedMemory.obstacleKey;
@@ -1346,7 +1357,7 @@ for (const rampFrames of [6, 12, 18, 30]) {
 {
   const memory = villageMovement.createVillageMovementMemory();
   const displacement = { x: 0, y: -3.84 };
-  let position = { x: 636, y: 494 };
+  let position = { x: 636, y: 508 };
   let positionTwoFramesAgo = null;
   let previousMovement = null;
   let severeReversals = 0;

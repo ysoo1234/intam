@@ -1,5 +1,7 @@
 export const ETHICS_REVIEW_CONFIG = {
-  roundCount: 6,
+  roundCount: 30,
+  durationMs: 150_000,
+  startingLives: 3,
   stations: {
     approve: { x: 175 },
     reject: { x: 1105 },
@@ -12,6 +14,10 @@ export const ETHICS_REVIEW_CONFIG = {
     correctDecision: 100,
     comboBonus: 25,
     maxComboBonusSteps: 4,
+  },
+  starThresholds: {
+    twoStars: 8,
+    threeStars: 15,
   },
 } as const;
 

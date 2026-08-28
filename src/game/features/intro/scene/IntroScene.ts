@@ -26,7 +26,7 @@ export class IntroScene extends Phaser.Scene {
 
   create() {
     configureSceneCamera(this, this.renderScale);
-    this.add.rectangle(640, 360, 1280, 720, 0x06181d).setDepth(0);
+    this.add.rectangle(640, 360, 1280, 720, 0x17386f).setDepth(0);
 
     const halo = this.add
       .circle(640, 350, 315, 0x37d8ff, 0.12)
@@ -42,10 +42,8 @@ export class IntroScene extends Phaser.Scene {
       ease: "Sine.easeInOut",
     });
 
-    this.board = this.add
-      .image(640, 360, "gem-board")
-      .setDisplaySize(1280, 720)
-      .setDepth(2);
+    this.board = this.add.image(640, 360, "gem-board").setDepth(2);
+    this.board.setScale(Math.min(1280 / this.board.width, 720 / this.board.height));
 
     const sparklePoints = [
       [395, 294],
@@ -195,7 +193,8 @@ export class IntroScene extends Phaser.Scene {
     });
     this.tweens.add({
       targets: board,
-      scale: 1.055,
+      scaleX: board.scaleX * 1.055,
+      scaleY: board.scaleY * 1.055,
       alpha: 0.72,
       duration: 760,
       ease: "Sine.easeIn",

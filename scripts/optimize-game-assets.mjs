@@ -8,99 +8,296 @@ const ROOT = process.cwd();
 const SOURCE_ROOT = path.join(ROOT, "assets-source");
 const RUNTIME_ROOT = path.join(ROOT, "public", "assets");
 
+// Large-screen rendering can demand up to 2x the 1280 x 720 logical game size.
+// Full-screen images and large panels therefore keep enough source pixels for
+// that physical canvas whenever the editable original can provide them. We
+// never enlarge a smaller source: an offline upscale would add bytes without
+// restoring detail. Tile backgrounds are a separate profile because their
+// texture dimensions are also their world-space repeat scale.
+const HIGH_RESOLUTION_ASSET_POLICY = Object.freeze({
+  maxRenderScale: 2,
+  fullScreen: Object.freeze({
+    logicalWidth: 1280,
+    logicalHeight: 720,
+    quality: 94,
+  }),
+  largePanel: Object.freeze({ quality: 94 }),
+  tiledBackground: Object.freeze({
+    logicalWidth: 1600,
+    logicalHeight: 720,
+    quality: 98,
+  }),
+});
+
+function fullScreenAsset(asset) {
+  const profile = HIGH_RESOLUTION_ASSET_POLICY.fullScreen;
+  return {
+    ...asset,
+    width: Math.round(
+      profile.logicalWidth * HIGH_RESOLUTION_ASSET_POLICY.maxRenderScale,
+    ),
+    height: Math.round(
+      profile.logicalHeight * HIGH_RESOLUTION_ASSET_POLICY.maxRenderScale,
+    ),
+    fit: "inside",
+    quality: asset.quality ?? profile.quality,
+    resolutionProfile: "full-screen",
+  };
+}
+
+function highDpiPanelAsset(asset, displaySize) {
+  return {
+    ...asset,
+    width:
+      displaySize.width === undefined
+        ? undefined
+        : Math.round(
+            displaySize.width * HIGH_RESOLUTION_ASSET_POLICY.maxRenderScale,
+          ),
+    height:
+      displaySize.height === undefined
+        ? undefined
+        : Math.round(
+            displaySize.height * HIGH_RESOLUTION_ASSET_POLICY.maxRenderScale,
+          ),
+    fit: asset.fit ?? "inside",
+    quality:
+      asset.quality ?? HIGH_RESOLUTION_ASSET_POLICY.largePanel.quality,
+    resolutionProfile: "large-panel",
+  };
+}
+
+function tiledBackgroundAsset(asset) {
+  const profile = HIGH_RESOLUTION_ASSET_POLICY.tiledBackground;
+  return {
+    ...asset,
+    width: Math.round(
+      profile.logicalWidth * HIGH_RESOLUTION_ASSET_POLICY.maxRenderScale,
+    ),
+    height: Math.round(
+      profile.logicalHeight * HIGH_RESOLUTION_ASSET_POLICY.maxRenderScale,
+    ),
+    fit: "fill",
+    // All three parallax layers must share one physical repeat grid. The city
+    // original is smaller than 2x, so a deterministic Lanczos resize is the
+    // one deliberate exception to the no-upscale rule.
+    allowEnlargement: true,
+    quality: asset.quality ?? profile.quality,
+    resolutionProfile: "tiled-background",
+  };
+}
+
+const onlyAssetArgument = process.argv.find(
+  (argument) =>
+    argument.startsWith("--asset=") || argument.startsWith("--only="),
+);
+const positionalAsset = process.argv
+  .slice(2)
+  .find((argument) => !argument.startsWith("-"));
+const onlyAsset =
+  onlyAssetArgument?.slice(onlyAssetArgument.indexOf("=") + 1) ??
+  positionalAsset;
+
+const WORKSHOP_PRODUCT_IDS = [
+  "ai-speaker",
+  "call-translator",
+  "photo-translator",
+  "plant-camera",
+  "face-lock",
+  "spell-checker",
+  "smart-fridge",
+  "robot-vacuum",
+  "pet-care-robot",
+  "security-camera",
+  "smart-air-purifier",
+  "smart-washer",
+  "study-helper",
+  "nutrition-kiosk",
+  "medical-reader",
+  "smart-band",
+  "ai-wheelchair",
+  "road-safety-cctv",
+  "autonomous-car",
+  "delivery-robot",
+  "drone-taxi",
+  "crop-drone",
+  "harvest-robot",
+  "greenhouse-computer",
+  "smart-watering",
+  "performance-interpreter",
+];
+
 const ASSETS = [
-  { source: "intro/gem-board.png", quality: 86 },
-  {
-    source: "world/village-ground.png",
-    width: 1280,
-    height: 720,
-    fit: "fill",
-    quality: 86,
-  },
-  {
-    source: "world/village-ai-shop.png",
-    trim: true,
-    width: 292,
-    quality: 90,
+  fullScreenAsset({
+    source: "intro/gem-board.png",
     alphaQuality: 100,
-  },
+  }),
   {
-    source: "world/village-airport.png",
-    trim: true,
-    width: 269,
-    quality: 90,
-    alphaQuality: 100,
-  },
-  {
-    source: "world/village-ethics-office.png",
-    trim: true,
-    width: 251,
-    quality: 90,
-    alphaQuality: 100,
-  },
-  {
-    source: "world/village-ai-world-gate.png",
-    trim: true,
-    width: 324,
-    quality: 90,
-    alphaQuality: 100,
-  },
-  {
-    source: "world/village-fountain.png",
-    trim: true,
-    width: 211,
-    quality: 90,
-    alphaQuality: 100,
-  },
-  {
-    source: "shop/ai-workshop-interior-v6.png",
-    width: 1280,
-    height: 720,
-    fit: "fill",
-    quality: 86,
-  },
-  {
-    source: "shop/ai-workbench-foreground-v2.png",
-    trim: true,
-    width: 820,
-    quality: 90,
-    alphaQuality: 100,
-  },
-  {
-    source: "shop/workshop-item-panel-4.png",
-    trim: true,
-    width: 680,
-    quality: 90,
-    alphaQuality: 100,
-  },
-  {
-    source: "shop/workshop-item-panel-5.png",
+    source: "ui/game-return-button-house-v2.png",
+    output: "ui/game-return-button-house-v2.webp",
     trim: true,
     width: 720,
-    quality: 90,
+    quality: 94,
     alphaQuality: 100,
   },
   {
+    source: "ui/game-status-panel-blank-v1.png",
+    width: 1200,
+    height: 194,
+    fit: "fill",
+    quality: 92,
+    alphaQuality: 100,
+  },
+  highDpiPanelAsset({
+    source: "ui/village-entry-button-v1.png",
+    trim: true,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 360, height: 120 }),
+  highDpiPanelAsset({
+    source: "ui/village-activity-star-empty-v1.png",
+    trim: true,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 44, height: 44 }),
+  highDpiPanelAsset({
+    source: "ui/village-activity-star-filled-v1.png",
+    trim: true,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 44, height: 44 }),
+  fullScreenAsset({
+    source: "world/ai-village-main-background-v3.png",
+    output: "world/village-ground.webp",
+    lossless: true,
+    modulate: { saturation: 1.28 },
+    linear: [1.06, -11.52],
+  }),
+  highDpiPanelAsset({
+    source: "world/village-ai-shop-v3.png",
+    output: "world/village-ai-shop.webp",
+    trim: true,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 292 }),
+  highDpiPanelAsset({
+    source: "world/village-airport-v3.png",
+    output: "world/village-airport.webp",
+    trim: true,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 269 }),
+  highDpiPanelAsset({
+    source: "world/village-ethics-office-v3.png",
+    output: "world/village-ethics-office.webp",
+    trim: true,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 251 }),
+  highDpiPanelAsset({
+    source: "world/village-ai-world-gate-v3.png",
+    output: "world/village-ai-world-gate.webp",
+    trim: true,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 324 }),
+  highDpiPanelAsset({
+    source: "world/village-fountain-v3.png",
+    output: "world/village-fountain.webp",
+    trim: true,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 211 }),
+  highDpiPanelAsset({
+    source: "world/village-fountain-water-overlay-v1.png",
+    output: "world/village-fountain-water-overlay-v1.webp",
+    trim: true,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 119 }),
+  {
+    source: "world/village-fountain-water-frames-v1.png",
+    output: "world/village-fountain-water-frames-v1.webp",
+    width: 1252,
+    height: 1252,
+    fit: "fill",
+    lossless: true,
+    alphaQuality: 100,
+  },
+  fullScreenAsset({
+    source: "shop/ai-workshop-interior-v6.png",
+    output: "shop/ai-workshop-interior-v6.webp",
+    lossless: true,
+  }),
+  highDpiPanelAsset({
+    source: "shop/ai-workbench-foreground-v2.png",
+    trim: true,
+    alphaQuality: 100,
+  }, { width: 820 }),
+  highDpiPanelAsset({
+    source: "shop/workshop-crafting-machine-v1.png",
+    output: "shop/workshop-crafting-machine-v1.webp",
+    trim: true,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 380 }),
+  highDpiPanelAsset({
+    source: "shop/workshop-crafting-panel-v2.png",
+    output: "shop/workshop-crafting-panel-v2.webp",
+    trim: true,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 860 }),
+  highDpiPanelAsset({
+    source: "shop/itembox4.png",
+    output: "shop/workshop-item-panel-4.webp",
+    trim: true,
+    lossless: true,
+    quality: 90,
+    alphaQuality: 100,
+  }, { height: 224 }),
+  highDpiPanelAsset({
+    source: "shop/itembox5.png",
+    output: "shop/workshop-item-panel-5.webp",
+    trim: true,
+    lossless: true,
+    quality: 90,
+    alphaQuality: 100,
+  }, { height: 224 }),
+  {
+    source: "shop/workshop-customer-nameplate-v4.png",
+    output: "shop/workshop-customer-nameplate-v4.webp",
+    trim: true,
+    width: 360,
+    height: 90,
+    fit: "fill",
+    quality: 94,
+    alphaQuality: 100,
+  },
+  {
+    source: "shop/workshop-dialogue-bubble-v2.png",
+    output: "shop/workshop-dialogue-bubble-v2.webp",
+    trim: true,
+    width: 420,
+    quality: 92,
+    alphaQuality: 100,
+  },
+  ...WORKSHOP_PRODUCT_IDS.map((productId) => ({
+    source: `shop/products-v2/${productId}.png`,
+    width: 256,
+    height: 256,
+    quality: 92,
+    alphaQuality: 100,
+  })),
+  tiledBackgroundAsset({
     source: "airport/bg_sky.png",
-    width: 1600,
-    height: 720,
-    fit: "fill",
-    quality: 84,
-  },
-  {
+  }),
+  tiledBackgroundAsset({
     source: "airport/bg_city.png",
-    width: 1600,
-    height: 720,
-    fit: "fill",
-    quality: 84,
-  },
-  {
+  }),
+  tiledBackgroundAsset({
     source: "airport/bg_ground.png",
-    width: 1600,
-    height: 720,
-    fit: "fill",
-    quality: 84,
-  },
+  }),
   {
     source: "airport/data_doc.png",
     width: 256,
@@ -214,8 +411,19 @@ const ASSETS = [
     alphaQuality: 100,
   },
   {
-    source: "airport/corrupted-data-tower-v1.png",
-    quality: 90,
+    source: "airport/corrupted-data-cloud-top-v1.png",
+    width: 512,
+    height: 768,
+    fit: "contain",
+    quality: 88,
+    alphaQuality: 100,
+  },
+  {
+    source: "airport/corrupted-data-vortex-bottom-v1.png",
+    width: 512,
+    height: 768,
+    fit: "contain",
+    quality: 88,
     alphaQuality: 100,
   },
   {
@@ -225,64 +433,20 @@ const ASSETS = [
     quality: 90,
     alphaQuality: 100,
   },
-  {
-    source: "ethics-review/office.png",
-    width: 1280,
-    height: 720,
-    quality: 84,
-  },
-  {
-    source: "ethics-review/briefing-dossier.png",
-    width: 1120,
-    height: 630,
-    quality: 90,
-    alphaQuality: 100,
-  },
-  {
-    source: "ethics-review/case-dossier.png",
-    width: 900,
-    height: 600,
-    quality: 90,
-    alphaQuality: 100,
-  },
-  {
-    source: "ethics-review/verdict-consoles.png",
-    output: "ethics-review/approve-console.webp",
-    extract: { left: 0, top: 0, width: 700, height: 941 },
-    width: 430,
-    height: 578,
-    quality: 90,
-    alphaQuality: 100,
-  },
-  {
-    source: "ethics-review/verdict-consoles.png",
-    output: "ethics-review/revise-console.webp",
-    extract: { left: 972, top: 0, width: 700, height: 941 },
-    width: 430,
-    height: 578,
-    quality: 90,
-    alphaQuality: 100,
-  },
-  {
+  fullScreenAsset({
     source: "ethics-review/office-v2.png",
-    width: 1280,
-    height: 720,
-    quality: 86,
-  },
-  {
+    lossless: true,
+  }),
+  highDpiPanelAsset({
     source: "ethics-review/briefing-sheet-v2.png",
-    width: 1080,
-    height: 608,
-    quality: 90,
     alphaQuality: 100,
-  },
-  {
+    fit: "fill",
+  }, { width: 1050, height: 590 }),
+  highDpiPanelAsset({
     source: "ethics-review/case-file-v2.png",
-    width: 860,
-    height: 484,
-    quality: 90,
     alphaQuality: 100,
-  },
+    fit: "fill",
+  }, { width: 820, height: 462 }),
 ];
 
 const customerFiles = await readdir(
@@ -325,12 +489,22 @@ async function optimizeAsset(asset) {
   if (asset.width || asset.height) {
     pipeline = pipeline.resize(asset.width, asset.height, {
       fit: asset.fit ?? "inside",
-      withoutEnlargement: true,
+      withoutEnlargement: asset.allowEnlargement !== true,
+      // Transparent artwork using `contain` must not inherit Sharp's default
+      // opaque-black padding; those pixels show up as dark edge bars in-game.
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
     });
+  }
+  if (asset.modulate) {
+    pipeline = pipeline.modulate(asset.modulate);
+  }
+  if (asset.linear) {
+    pipeline = pipeline.linear(...asset.linear);
   }
 
   await pipeline
     .webp({
+      lossless: asset.lossless ?? false,
       quality: asset.quality,
       alphaQuality: asset.alphaQuality ?? 100,
       effort: 6,
@@ -350,8 +524,20 @@ async function optimizeAsset(asset) {
   };
 }
 
+const selectedAssets = onlyAsset
+  ? ASSETS.filter((asset) =>
+      [asset.source, asset.output].some((candidate) =>
+        candidate?.includes(onlyAsset),
+      ),
+    )
+  : ASSETS;
+
+if (selectedAssets.length === 0) {
+  throw new Error(`No game asset matched --asset=${onlyAsset}`);
+}
+
 const results = [];
-for (const asset of ASSETS) {
+for (const asset of selectedAssets) {
   results.push(await optimizeAsset(asset));
 }
 

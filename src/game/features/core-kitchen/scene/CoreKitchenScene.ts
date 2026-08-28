@@ -101,7 +101,7 @@ export class CoreKitchenScene extends Phaser.Scene {
 
   preload() {
     if (!this.textures.exists("ai-shop-interior")) {
-      this.load.image("ai-shop-interior", GAME_ASSETS.shop.interior);
+      this.load.image("ai-shop-interior", GAME_ASSETS.shop.workshop);
     }
   }
 

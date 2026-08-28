@@ -47,8 +47,12 @@ export function preloadAirportAssets(scene: Phaser.Scene) {
     GAME_ASSETS.airport.publicData.environment,
   );
   scene.load.image(
-    "airport-corrupted-tower",
-    GAME_ASSETS.airport.corruptedDataTower,
+    "airport-corrupted-data-cloud-top",
+    GAME_ASSETS.airport.corruptedDataCloudTop,
+  );
+  scene.load.image(
+    "airport-corrupted-data-vortex-bottom",
+    GAME_ASSETS.airport.corruptedDataVortexBottom,
   );
 }
 
@@ -74,6 +78,7 @@ export function releaseAirportTextures(scene: Phaser.Scene) {
     "airport-public-data-medical",
     "airport-public-data-safety",
     "airport-public-data-environment",
-    "airport-corrupted-tower",
+    "airport-corrupted-data-cloud-top",
+    "airport-corrupted-data-vortex-bottom",
   ].forEach((key) => scene.textures.remove(key));
 }

@@ -3,6 +3,7 @@ export {
   createWorkshopOrder,
   getStarCatchDifficulty,
   getWorkshopReward,
+  getWorkshopStars,
   isWorkshopDeliveryCorrect,
 } from "./rules";
 export type {

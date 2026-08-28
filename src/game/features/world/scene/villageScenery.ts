@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { applyArtTone } from "../../../core/visual/artTone";
+import { GAME_ASSETS } from "../../../assets";
 import type {
   MapDefinition,
   Point,
@@ -9,16 +9,6 @@ import type {
 export const VILLAGE_SCENERY_DEPTH_BASE = 100;
 export const VILLAGE_UI_DEPTH = 2_000;
 
-const VILLAGE_SATURATION_ADJUSTMENT = -0.2;
-const VILLAGE_BRIGHTNESS_MULTIPLIER = 1.01;
-
-function applyVillageArtTone(image: Phaser.GameObjects.Image) {
-  return applyArtTone(image, {
-    saturation: VILLAGE_SATURATION_ADJUSTMENT,
-    brightness: VILLAGE_BRIGHTNESS_MULTIPLIER,
-  });
-}
-
 export function getVillagePlayerDepth(playerY: number) {
   return VILLAGE_SCENERY_DEPTH_BASE + Math.round(playerY);
 }
@@ -26,7 +16,47 @@ export function getVillagePlayerDepth(playerY: number) {
 export type VillageSceneryLayer = Readonly<{
   definition: SceneryDefinition;
   image: Phaser.GameObjects.Image;
+  depthFollowers: readonly DepthFollower[];
 }>;
+
+type DepthFollower = Phaser.GameObjects.GameObject & {
+  setDepth(depth: number): unknown;
+};
+
+const FOUNTAIN_WATER_TEXTURE = "village-fountain-water-frames";
+const FOUNTAIN_WATER_ANIMATION = "village-fountain-water-flow";
+const FOUNTAIN_WATER_FRAME_SIZE = 313;
+const FOUNTAIN_WATER_FRAME_COUNT = 16;
+
+function ensureFountainWaterAnimation(scene: Phaser.Scene) {
+  if (scene.anims.exists(FOUNTAIN_WATER_ANIMATION)) return;
+  scene.anims.create({
+    key: FOUNTAIN_WATER_ANIMATION,
+    frames: scene.anims.generateFrameNumbers(FOUNTAIN_WATER_TEXTURE, {
+      start: 0,
+      end: FOUNTAIN_WATER_FRAME_COUNT - 1,
+    }),
+    frameRate: 10,
+    repeat: -1,
+  });
+}
+
+function createFountainFlow(
+  scene: Phaser.Scene,
+  scenery: SceneryDefinition,
+): DepthFollower[] {
+  if (scenery.id !== "fountain") return [];
+  const { x, y } = scenery.position;
+  ensureFountainWaterAnimation(scene);
+  const water = scene.add
+    .sprite(x, y - 1, FOUNTAIN_WATER_TEXTURE, 0)
+    .setDisplaySize(scenery.displaySize.width, scenery.displaySize.height)
+    .setAlpha(0.72)
+    .setBlendMode(Phaser.BlendModes.ADD)
+    .play(FOUNTAIN_WATER_ANIMATION);
+
+  return [water];
+}
 
 export function isPointWithinSceneryOcclusionArea(
   scenery: SceneryDefinition,
@@ -46,12 +76,14 @@ export function updateVillageSceneryDepths(
   playerPosition: Point,
 ) {
   const playerDepth = getVillagePlayerDepth(playerPosition.y);
-  layers.forEach(({ definition, image }) => {
+  layers.forEach(({ definition, image, depthFollowers }) => {
     const occludesPlayer = isPointWithinSceneryOcclusionArea(
       definition,
       playerPosition,
     );
-    image.setDepth(playerDepth + (occludesPlayer ? 1 : -1));
+    const depth = playerDepth + (occludesPlayer ? 1 : -1);
+    image.setDepth(depth);
+    depthFollowers.forEach((target) => target.setDepth(depth + 0.01));
   });
 }
 
@@ -63,13 +95,24 @@ export function preloadVillageScenery(
   assets.forEach(({ assetKey, url }) => {
     if (!scene.textures.exists(assetKey)) scene.load.image(assetKey, url);
   });
+  if (!scene.textures.exists(FOUNTAIN_WATER_TEXTURE)) {
+    scene.load.spritesheet(
+      FOUNTAIN_WATER_TEXTURE,
+      GAME_ASSETS.world.fountainWaterFrames,
+      {
+        frameWidth: FOUNTAIN_WATER_FRAME_SIZE,
+        frameHeight: FOUNTAIN_WATER_FRAME_SIZE,
+        endFrame: FOUNTAIN_WATER_FRAME_COUNT - 1,
+      },
+    );
+  }
 }
 
 export function createVillageScenery(
   scene: Phaser.Scene,
   mapDefinition: MapDefinition,
 ) {
-  const background = scene.add
+  scene.add
     .image(
       mapDefinition.size.width / 2,
       mapDefinition.size.height / 2,
@@ -77,14 +120,16 @@ export function createVillageScenery(
     )
     .setDisplaySize(mapDefinition.size.width, mapDefinition.size.height)
     .setDepth(0);
-  applyVillageArtTone(background);
 
   return mapDefinition.scenery.map((scenery) => {
     const image = scene.add
       .image(scenery.position.x, scenery.position.y, scenery.assetKey)
       .setDisplaySize(scenery.displaySize.width, scenery.displaySize.height)
       .setDepth(VILLAGE_SCENERY_DEPTH_BASE);
-    applyVillageArtTone(image);
-    return { definition: scenery, image };
+    const depthFollowers = [
+      ...createFountainFlow(scene, scenery),
+    ];
+    depthFollowers.forEach((target) => target.setDepth(VILLAGE_SCENERY_DEPTH_BASE));
+    return { definition: scenery, image, depthFollowers };
   });
 }

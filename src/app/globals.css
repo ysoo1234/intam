@@ -54,11 +54,7 @@ canvas {
   aspect-ratio: 16 / 9;
   overflow: hidden;
   background: #f8d792;
-  border: clamp(4px, 0.65vw, 10px) solid #173f43;
   border-radius: clamp(18px, 2.2vw, 34px);
-  box-shadow:
-    0 8px 0 #0f3033,
-    0 22px 50px rgb(52 42 39 / 35%);
   isolation: isolate;
 }
 

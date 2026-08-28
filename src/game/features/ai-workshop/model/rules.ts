@@ -45,6 +45,12 @@ export function getWorkshopReward(
   return { baseReward, perfectBonus, reward: baseReward + perfectBonus };
 }
 
+export function getWorkshopStars(completedCustomers: number): 1 | 2 | 3 {
+  if (completedCustomers >= AI_WORKSHOP_CONFIG.starThresholds.threeStars) return 3;
+  if (completedCustomers >= AI_WORKSHOP_CONFIG.starThresholds.twoStars) return 2;
+  return 1;
+}
+
 export function getStarCatchDifficulty(
   customerNumber: number,
 ): StarCatchDifficulty {

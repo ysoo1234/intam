@@ -43,15 +43,6 @@ export type EthicsReviewStationView = Readonly<{
   indicator: Phaser.GameObjects.Triangle;
 }>;
 
-export type EthicsReviewHud = Readonly<{
-  progressText: Phaser.GameObjects.Text;
-  mistakeText: Phaser.GameObjects.Text;
-  scoreText: Phaser.GameObjects.Text;
-  comboText: Phaser.GameObjects.Text;
-  promptText: Phaser.GameObjects.Text;
-  progressFill: Phaser.GameObjects.Rectangle;
-}>;
-
 export type EthicsReviewFeedbackView = Readonly<{
   container: Phaser.GameObjects.Container;
   titleText: Phaser.GameObjects.Text;
@@ -59,76 +50,15 @@ export type EthicsReviewFeedbackView = Readonly<{
   actionText: Phaser.GameObjects.Text;
 }>;
 
-export function createEthicsOffice(scene: Phaser.Scene, onBack: () => void) {
+export function createEthicsOffice(scene: Phaser.Scene) {
   scene.add
     .image(GAME_SIZE.width / 2, GAME_SIZE.height / 2, "ethics-office")
     .setDisplaySize(GAME_SIZE.width, GAME_SIZE.height);
   scene.add.rectangle(640, 360, 1280, 720, 0x173f43, 0.035).setDepth(1);
-  const back = scene.add
-    .text(1218, 36, "← 마을", {
-      color: "#fff9e9",
-      fontFamily: FONT_FAMILY,
-      fontSize: "18px",
-      fontStyle: "bold",
-      stroke: "#173f43",
-      strokeThickness: 6,
-    })
-    .setOrigin(0.5)
-    .setDepth(72)
-    .setInteractive({ useHandCursor: true });
-  back.on("pointerdown", onBack);
-  back.on("pointerover", () => back.setScale(1.06));
-  back.on("pointerout", () => back.setScale(1));
 }
 
-export function createEthicsReviewHud(scene: Phaser.Scene): EthicsReviewHud {
-  const panel = scene.add
-    .graphics()
-    .fillStyle(COLORS.paper, 0.93)
-    .lineStyle(2, COLORS.ink, 0.18)
-    .fillRoundedRect(1070, 72, 180, 142, 18)
-    .strokeRoundedRect(1070, 72, 180, 142, 18)
-    .setDepth(70);
-  const progressTrack = scene.add
-    .rectangle(1160, 196, 142, 7, COLORS.ink, 0.12)
-    .setDepth(71);
-  const progressFill = scene.add
-    .rectangle(1089, 196, 0, 7, COLORS.mint, 1)
-    .setOrigin(0, 0.5)
-    .setDepth(72);
-  const progressText = scene.add
-    .text(1090, 86, "심사 준비", {
-      color: "#173f43",
-      fontFamily: FONT_FAMILY,
-      fontSize: "18px",
-      fontStyle: "bold",
-    })
-    .setDepth(72);
-  const mistakeText = scene.add
-    .text(1090, 148, "놓친 판정 0", {
-      color: "#b85c52",
-      fontFamily: FONT_FAMILY,
-      fontSize: "14px",
-      fontStyle: "bold",
-    })
-    .setDepth(72);
-  const scoreText = scene.add
-    .text(1090, 118, "신뢰 점수 0", {
-      color: "#247a76",
-      fontFamily: FONT_FAMILY,
-      fontSize: "15px",
-      fontStyle: "bold",
-    })
-    .setDepth(72);
-  const comboText = scene.add
-    .text(1090, 174, "", {
-      color: "#9b6d18",
-      fontFamily: FONT_FAMILY,
-      fontSize: "12px",
-      fontStyle: "bold",
-    })
-    .setDepth(72);
-  const promptText = scene.add
+export function createEthicsReviewPrompt(scene: Phaser.Scene) {
+  return scene.add
     .text(640, 683, "사건 파일을 읽어 주세요", {
       color: "#fff9e9",
       fontFamily: FONT_FAMILY,
@@ -138,17 +68,10 @@ export function createEthicsReviewHud(scene: Phaser.Scene): EthicsReviewHud {
       strokeThickness: 7,
     })
     .setOrigin(0.5)
-    .setDepth(73);
-  void panel;
-  void progressTrack;
-  return {
-    progressText,
-    mistakeText,
-    scoreText,
-    comboText,
-    promptText,
-    progressFill,
-  };
+    .setDepth(73)
+    // The start panel now carries the instructions. Keep the existing
+    // status channel for scene state, without drawing duplicate bottom tips.
+    .setAlpha(0);
 }
 
 export function createEthicsReviewStations(

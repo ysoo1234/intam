@@ -28,6 +28,10 @@ export const DATA_FLIGHT_CONFIG = {
   dataScore: 10,
   feverDataScore: 20,
   correctAnswerScore: 150,
+  starThresholds: {
+    twoStars: 1_800,
+    threeStars: 3_200,
+  },
   dataSpeed: 355,
   questionChoiceSpeed: 390,
   obstacleAmplitude: {

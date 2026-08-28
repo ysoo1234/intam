@@ -1,4 +1,15 @@
 export const GAME_ASSETS = {
+  ui: {
+    villageReturnButton: "/assets/ui/game-return-button-house-v2.webp",
+    statusPanel: "/assets/ui/game-status-panel-blank-v1.webp",
+    gameStartPanel: "/assets/ui/game-start-panel-v1.webp",
+    gameStartButton: "/assets/ui/game-start-button-v1.webp",
+    villageEntryButton: "/assets/ui/village-entry-button-v1.webp",
+    villageActivityStarEmpty:
+      "/assets/ui/village-activity-star-empty-v1.webp",
+    villageActivityStarFilled:
+      "/assets/ui/village-activity-star-filled-v1.webp",
+  },
   intro: {
     board: "/assets/intro/gem-board.webp",
   },
@@ -9,6 +20,10 @@ export const GAME_ASSETS = {
     ethicsOffice: "/assets/world/village-ethics-office.webp",
     aiWorldGate: "/assets/world/village-ai-world-gate.webp",
     fountain: "/assets/world/village-fountain.webp",
+    fountainWaterOverlay:
+      "/assets/world/village-fountain-water-overlay-v1.webp",
+    fountainWaterFrames:
+      "/assets/world/village-fountain-water-frames-v1.webp",
   },
   characters: {
     player: {
@@ -20,11 +35,43 @@ export const GAME_ASSETS = {
     },
   },
   shop: {
-    interior: "/assets/shop/ai-shop-interior.png",
     workshop: "/assets/shop/ai-workshop-interior-v6.webp",
     workbench: "/assets/shop/ai-workbench-foreground-v2.webp",
+    craftingMachine: "/assets/shop/workshop-crafting-machine-v1.webp",
+    craftingPanel: "/assets/shop/workshop-crafting-panel-v2.webp",
     itemPanel4: "/assets/shop/workshop-item-panel-4.webp",
     itemPanel5: "/assets/shop/workshop-item-panel-5.webp",
+    customerNameplate: "/assets/shop/workshop-customer-nameplate-v4.webp",
+    dialogueBubble: "/assets/shop/workshop-dialogue-bubble-v2.webp",
+    products: {
+      "ai-speaker": "/assets/shop/products-v2/ai-speaker.webp",
+      "call-translator": "/assets/shop/products-v2/call-translator.webp",
+      "photo-translator": "/assets/shop/products-v2/photo-translator.webp",
+      "plant-camera": "/assets/shop/products-v2/plant-camera.webp",
+      "face-lock": "/assets/shop/products-v2/face-lock.webp",
+      "spell-checker": "/assets/shop/products-v2/spell-checker.webp",
+      "smart-fridge": "/assets/shop/products-v2/smart-fridge.webp",
+      "robot-vacuum": "/assets/shop/products-v2/robot-vacuum.webp",
+      "pet-care-robot": "/assets/shop/products-v2/pet-care-robot.webp",
+      "security-camera": "/assets/shop/products-v2/security-camera.webp",
+      "smart-air-purifier": "/assets/shop/products-v2/smart-air-purifier.webp",
+      "smart-washer": "/assets/shop/products-v2/smart-washer.webp",
+      "study-helper": "/assets/shop/products-v2/study-helper.webp",
+      "nutrition-kiosk": "/assets/shop/products-v2/nutrition-kiosk.webp",
+      "medical-reader": "/assets/shop/products-v2/medical-reader.webp",
+      "smart-band": "/assets/shop/products-v2/smart-band.webp",
+      "ai-wheelchair": "/assets/shop/products-v2/ai-wheelchair.webp",
+      "road-safety-cctv": "/assets/shop/products-v2/road-safety-cctv.webp",
+      "autonomous-car": "/assets/shop/products-v2/autonomous-car.webp",
+      "delivery-robot": "/assets/shop/products-v2/delivery-robot.webp",
+      "drone-taxi": "/assets/shop/products-v2/drone-taxi.webp",
+      "crop-drone": "/assets/shop/products-v2/crop-drone.webp",
+      "harvest-robot": "/assets/shop/products-v2/harvest-robot.webp",
+      "greenhouse-computer": "/assets/shop/products-v2/greenhouse-computer.webp",
+      "smart-watering": "/assets/shop/products-v2/smart-watering.webp",
+      "performance-interpreter":
+        "/assets/shop/products-v2/performance-interpreter.webp",
+    },
   },
   airport: {
     sky: "/assets/airport/bg_sky.webp",
@@ -42,7 +89,10 @@ export const GAME_ASSETS = {
       sound: "/assets/airport/bad_data_sound.webp",
       video: "/assets/airport/bad_data_video.webp",
     },
-    corruptedDataTower: "/assets/airport/corrupted-data-tower-v1.webp",
+    corruptedDataCloudTop:
+      "/assets/airport/corrupted-data-cloud-top-v1.webp",
+    corruptedDataVortexBottom:
+      "/assets/airport/corrupted-data-vortex-bottom-v1.webp",
     publicData: {
       scienceTechnology:
         "/assets/airport/public_data_science_technology.webp",

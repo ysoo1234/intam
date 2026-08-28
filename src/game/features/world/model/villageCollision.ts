@@ -157,6 +157,18 @@ export function createVillageCollision(mapDefinition: MapDefinition) {
       });
       if (blockedByEllipse) return true;
 
+      if (
+        collision.maskWalkableOverrides?.some(
+          (area) =>
+            x >= area.minX &&
+            x <= area.maxX &&
+            y >= area.minY &&
+            y <= area.maxY,
+        )
+      ) {
+        return false;
+      }
+
       const bypassesMaskCollision = collision.ellipses.some((ellipse) => {
         const padding = ellipse.maskBypassPadding;
         if (!padding) return false;

@@ -7,6 +7,10 @@ export const AI_WORKSHOP_CONFIG = {
   laterCustomerReward: 130,
   laterCustomerNumber: 4,
   perfectCraftingBonus: 50,
+  starThresholds: {
+    twoStars: 4,
+    threeStars: 8,
+  },
 } as const;
 
 export const STAR_CATCH_DIFFICULTIES = [

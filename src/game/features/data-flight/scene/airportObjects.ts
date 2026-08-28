@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { COLORS, FONT_FAMILY } from "../../../core/visual/theme";
+import { FONT_FAMILY } from "../../../core/visual/theme";
 import {
   FLIGHT_DATA_KINDS,
   FLIGHT_DATA_META,
@@ -264,21 +264,13 @@ export function createAirportEdgeObstacles(
     const top = side === "top";
     const y = top ? 112 : 608;
     const container = scene.add.container(1360, y).setDepth(16);
+    const texture = top
+      ? "airport-corrupted-data-cloud-top"
+      : "airport-corrupted-data-vortex-bottom";
     const image = scene.add
-      .image(0, 0, "airport-corrupted-tower")
-      .setDisplaySize(150, 248)
-      .setFlipY(top);
-    const warning = scene.add
-      .rectangle(0, top ? 98 : -98, 92, 8, COLORS.danger, 0.82)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    container.add([image, warning]);
-    scene.tweens.add({
-      targets: warning,
-      alpha: { from: 0.35, to: 1 },
-      duration: 380,
-      yoyo: true,
-      repeat: -1,
-    });
+      .image(0, 0, texture)
+      .setDisplaySize(top ? 164 : 154, 248);
+    container.add(image);
     return {
       kind: "obstacle",
       container,

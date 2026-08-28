@@ -1,6 +1,9 @@
 import Phaser from "phaser";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
+import { createWorldReturnSceneData } from "../../../core/navigation";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
+import { preloadGameChromeAssets } from "../../../core/visual/gameChrome";
+import { createGameStartOverlay, isGameStartOverlayOpen, preloadGameStartOverlayAssets } from "../../../core/visual/gameStartOverlay";
 import { COLORS, FONT_FAMILY } from "../../../core/visual/theme";
 import {
   FLIGHT_DATA_KINDS,
@@ -17,6 +20,7 @@ import {
   getCollectedDifficultyPoints,
   getDifficultyProfile,
   getDifficultyTier,
+  getDataFlightStars,
   getObjectBaseSpeed,
   getObstacleSpawnIntervalBounds,
   isFeverActive,
@@ -39,21 +43,11 @@ import { updateAirportPlayer } from "./airportPlayer";
 import { createAirportResultOverlay } from "./airportResult";
 import { showAirportLevelUp, showAirportNotice } from "./airportOverlays";
 import { updateAirportObstacleMotion } from "./airportObjectMotion";
-import {
-  preloadAirportAssets,
-  releaseAirportTextures,
-} from "./airportTextures";
-import {
-  createAirportDataObject,
-  createAirportEdgeObstacles,
-  createAirportMovingObstacle,
-} from "./airportObjects";
-import {
-  createAirportBackground,
-  createAirportPlayer,
-} from "./airportView";
+import { preloadAirportAssets, releaseAirportTextures } from "./airportTextures";
+import { createAirportDataObject, createAirportEdgeObstacles, createAirportMovingObstacle } from "./airportObjects";
+import { advanceAirportBackgroundTile, createAirportBackground, createAirportPlayer } from "./airportView";
 import type { FlightObject } from "./flightObject";
-
+const DATA_FLIGHT_START = { placeName: "데이터 비행 공항", playDescription: "좋은 데이터를 모으며 장애물을 피하고, 질문에 맞는 공공데이터를 골라요." } as const;
 export class AirportScene extends Phaser.Scene {
   private sky?: Phaser.GameObjects.TileSprite;
   private city?: Phaser.GameObjects.TileSprite;
@@ -86,16 +80,18 @@ export class AirportScene extends Phaser.Scene {
   private nextFeverSparkAtMs = 0;
   private feverFormationIndex = 0;
   private controls?: AirportControls;
+  private failurePending = false;
   private finished = false;
+  private earnedStars?: 1 | 2 | 3;
 
   constructor(private readonly renderScale: number) {
     super(SCENE_KEYS.airport);
   }
-
   preload() {
     preloadAirportAssets(this);
+    preloadGameChromeAssets(this);
+    preloadGameStartOverlayAssets(this);
   }
-
   create() {
     configureSceneCamera(this, this.renderScale);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -113,10 +109,11 @@ export class AirportScene extends Phaser.Scene {
       () => this.finished,
       () => this.scene.restart(),
     );
+    createGameStartOverlay(this, DATA_FLIGHT_START);
     this.cameras.main.fadeIn(350, 220, 250, 255);
   }
-
   private resetState() {
+    this.earnedStars = undefined;
     this.objects = [];
     this.elapsedMs = 0;
     this.remainingMs = DATA_FLIGHT_CONFIG.gameDurationMs;
@@ -141,6 +138,7 @@ export class AirportScene extends Phaser.Scene {
     this.controls = undefined;
     this.nextFeverSparkAtMs = 0;
     this.feverFormationIndex = 0;
+    this.failurePending = false;
     this.finished = false;
   }
 
@@ -353,6 +351,7 @@ export class AirportScene extends Phaser.Scene {
         COLORS.danger,
       );
       if (this.hearts <= 0) {
+        this.failurePending = true;
         this.time.delayedCall(
           DATA_FLIGHT_CONFIG.failedQuestionFinishDelayMs,
           () => this.finishGame(false),
@@ -560,7 +559,9 @@ export class AirportScene extends Phaser.Scene {
 
   private finishGame(completed: boolean) {
     if (this.finished) return;
+    this.failurePending = false;
     this.finished = true;
+    this.earnedStars = getDataFlightStars(this.score);
     if (this.controls) this.controls.pointer.active = false;
     this.clearObjects();
     this.activeQuestion = undefined;
@@ -574,6 +575,7 @@ export class AirportScene extends Phaser.Scene {
       score: this.score,
       collected: this.collected,
       correctAnswers: this.correctAnswers,
+      stars: this.earnedStars,
       onRetry: () => this.scene.restart(),
       onWorld: () => this.returnToWorld(),
     });
@@ -583,10 +585,14 @@ export class AirportScene extends Phaser.Scene {
   private returnToWorld() {
     if (!this.scene.isActive()) return;
     this.cameras.main.fadeOut(220, 230, 250, 255);
-    this.time.delayedCall(220, () => this.scene.start(SCENE_KEYS.world));
+    this.time.delayedCall(220, () => this.scene.start(
+      SCENE_KEYS.world,
+      createWorldReturnSceneData("data-flight", this.earnedStars),
+    ));
   }
 
   update(_time: number, delta: number) {
+    if (isGameStartOverlayOpen(this)) return;
     const safeDelta = clampFrameDelta(delta);
     const difficultyProfile = getDifficultyProfile(this.difficultyScore);
     const speedMultiplier =
@@ -594,9 +600,9 @@ export class AirportScene extends Phaser.Scene {
       (isFeverActive(this.elapsedMs, this.feverUntilMs) && !this.finished
         ? 1.25
         : 1);
-    if (this.sky) this.sky.tilePositionX += 16 * speedMultiplier * (safeDelta / 1000);
-    if (this.city) this.city.tilePositionX += 65 * speedMultiplier * (safeDelta / 1000);
-    if (this.ground) this.ground.tilePositionX += 249 * speedMultiplier * (safeDelta / 1000);
+    if (this.sky) advanceAirportBackgroundTile(this.sky, 16 * speedMultiplier * (safeDelta / 1000));
+    if (this.city) advanceAirportBackgroundTile(this.city, 65 * speedMultiplier * (safeDelta / 1000));
+    if (this.ground) advanceAirportBackgroundTile(this.ground, 249 * speedMultiplier * (safeDelta / 1000));
 
     if (this.finished) return;
     if (this.countdownMs > 0) {
@@ -610,6 +616,10 @@ export class AirportScene extends Phaser.Scene {
 
     this.elapsedMs += safeDelta;
     this.remainingMs = Math.max(0, this.remainingMs - safeDelta);
+    if (this.failurePending) {
+      this.renderHud();
+      return;
+    }
     updateAirportPlayer(this.player, this.controls, this.finished, safeDelta);
 
     const fever = isFeverActive(this.elapsedMs, this.feverUntilMs);

@@ -4,8 +4,17 @@ import {
   makeControlKeys,
   type ControlKeys,
 } from "../../../core/input/controlKeys";
-import { createFloatingJoystick } from "../../../core/input/floatingJoystick";
-import { resolveFeatureSceneKey } from "../../../core/navigation";
+import {
+  createWorldCompletionReadyDetail,
+  getWorldExitState,
+  getWorldTotalStars,
+  mergeWorldActivityResult,
+  readWorldProgressSnapshot,
+  readWorldReturnRequest,
+  resolveFeatureSceneKey,
+  WORLD_PROGRESS_REGISTRY_KEY,
+  type WorldProgressSnapshot,
+} from "../../../core/navigation";
 import type { PlayerFacing } from "../../../core/player/playerFacing";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
@@ -17,12 +26,7 @@ import {
   TEXT_COLORS,
   UI_RADII,
 } from "../../../core/visual/theme";
-import {
-  addUiButton,
-  addUiSurface,
-  addFlowerBadge,
-  addSpeechBubble,
-} from "../../../core/visual/uiPrimitives";
+import { addUiSurface } from "../../../core/visual/uiPrimitives";
 import { mapRegistry } from "../model/mapRegistry";
 import {
   clampVillageFrameDelta,
@@ -41,6 +45,15 @@ import {
   updateVillageSceneryDepths,
   VILLAGE_UI_DEPTH,
 } from "./villageScenery";
+import {
+  createVillageProgressPresentation,
+  preloadVillageProgressPresentationAssets,
+} from "./villageProgressPresentation";
+import { createVillageEndingOverlay } from "./villageEndingOverlay";
+import {
+  createWorldTouchDirection,
+  type WorldTouchDirection,
+} from "./worldTouchDirection";
 
 function getWorldMapDefinition() {
   const definition = mapRegistry.get("world");
@@ -64,6 +77,26 @@ const WORLD_CURVED_MOVEMENT_GUIDES = [
 ];
 type WorldPortal = (typeof WORLD_MAP.portals)[number];
 
+const WORLD_PORTAL_ENTRY_LABELS: Partial<Record<WorldPortal["id"], string>> = {
+  shop: "AI 제작소 입장하기",
+  library: "데이터 비행장 입장하기",
+  workshop: "윤리 심사소 입장하기",
+};
+
+const WORLD_ENTRY_PROMPT_LAYOUT = {
+  width: 220,
+  height: 56,
+  centerX: 110,
+  centerY: 28,
+  textWidth: 190,
+  fontSize: "14px",
+  centerOffsetY: -144,
+} as const;
+
+function getWorldPortalEntryLabel(portal: WorldPortal) {
+  return WORLD_PORTAL_ENTRY_LABELS[portal.id] ?? `${portal.label} 입장하기`;
+}
+
 export class WorldScene extends Phaser.Scene {
   private player?: Phaser.GameObjects.Container;
   private playerSprite?: Phaser.GameObjects.Image;
@@ -76,11 +109,16 @@ export class WorldScene extends Phaser.Scene {
   private prompt?: Phaser.GameObjects.Container;
   private promptText?: Phaser.GameObjects.Text;
   private onboarding?: Phaser.GameObjects.Container;
-  private joystick = new Phaser.Math.Vector2();
+  private touchDirection = new Phaser.Math.Vector2();
+  private touchMovement?: WorldTouchDirection;
+  private interactionFeedbackText?: string;
+  private interactionFeedbackUntil = 0;
   private actionQueued = false;
   private hasMoved = false;
+  private progress: WorldProgressSnapshot = readWorldProgressSnapshot(null);
   private lastSafePosition: WorldPosition = WORLD_MAP.defaultSpawn.position;
   private movementMemory = createVillageMovementMemory();
+  private endingOverlay?: Phaser.GameObjects.Container;
 
   constructor(private readonly renderScale: number) {
     super(SCENE_KEYS.world);
@@ -88,6 +126,13 @@ export class WorldScene extends Phaser.Scene {
 
   preload() {
     preloadVillageScenery(this, WORLD_MAP);
+    preloadVillageProgressPresentationAssets(this);
+    if (!this.textures.exists("village-entry-button")) {
+      this.load.image(
+        "village-entry-button",
+        GAME_ASSETS.ui.villageEntryButton,
+      );
+    }
     if (!this.textures.exists("player-front")) {
       this.load.image("player-front", GAME_ASSETS.characters.player.front);
       this.load.image("player-back", GAME_ASSETS.characters.player.back);
@@ -96,17 +141,48 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
-  create() {
+  create(data?: unknown) {
     configureSceneCamera(this, this.renderScale);
     generatePlayerTexture(this);
-    this.lastSafePosition = WORLD_MAP.defaultSpawn.position;
+    const returnRequest = readWorldReturnRequest(data);
+    this.progress = readWorldProgressSnapshot(
+      this.registry.get(WORLD_PROGRESS_REGISTRY_KEY),
+    );
+    if (returnRequest?.result) {
+      this.progress = mergeWorldActivityResult(
+        this.progress,
+        returnRequest.result,
+      );
+      this.registry.set(WORLD_PROGRESS_REGISTRY_KEY, this.progress);
+    }
+    const returnPortal = returnRequest
+      ? WORLD_MAP.portals.find(
+          (portal) =>
+            portal.destination.kind === "feature" &&
+            portal.destination.featureId === returnRequest.sourceFeatureId,
+        )
+      : undefined;
+    const requestedSpawn =
+      returnPortal && "returnSpawn" in returnPortal
+        ? returnPortal.returnSpawn
+        : WORLD_MAP.defaultSpawn;
+    const spawn = this.isWorldPositionBlocked(
+      requestedSpawn.position.x,
+      requestedSpawn.position.y,
+    )
+      ? WORLD_MAP.defaultSpawn
+      : requestedSpawn;
+    this.playerFacing = spawn.facing;
+    this.lastSafePosition = spawn.position;
     resetVillageMovementMemory(this.movementMemory);
 
     this.sceneryLayers = createVillageScenery(this, WORLD_MAP);
-
-    const shade = this.add.graphics().setDepth(VILLAGE_UI_DEPTH);
-    shade.fillStyle(0x173f43, 0.1);
-    shade.fillRect(0, 0, WORLD_MAP.size.width, 52);
+    createVillageProgressPresentation(
+      this,
+      WORLD_MAP,
+      this.sceneryLayers,
+      this.progress,
+    );
 
     this.add
       .text(38, 22, "배움마을", {
@@ -116,12 +192,8 @@ export class WorldScene extends Phaser.Scene {
       })
       .setDepth(VILLAGE_UI_DEPTH + 1);
 
-    addFlowerBadge(this, 1220, 64, "★", COLORS.yellow).setDepth(
-      VILLAGE_UI_DEPTH + 1,
-    );
-
     this.playerShadow = this.add.ellipse(0, 38, 72, 19, COLORS.ink, 0.22);
-    const initialTextureKey = `player-${WORLD_MAP.defaultSpawn.facing}`;
+    const initialTextureKey = `player-${spawn.facing}`;
     const textureKey = this.textures.exists(initialTextureKey)
       ? initialTextureKey
       : "player-fallback";
@@ -130,39 +202,87 @@ export class WorldScene extends Phaser.Scene {
       .setDisplaySize(88, 113)
       .setOrigin(0.5, 0.84);
     this.player = this.add.container(
-      WORLD_MAP.defaultSpawn.position.x,
-      WORLD_MAP.defaultSpawn.position.y,
+      spawn.position.x,
+      spawn.position.y,
       [this.playerShadow, this.playerSprite],
     );
     this.player.setDepth(
-      getVillagePlayerDepth(WORLD_MAP.defaultSpawn.position.y),
+      getVillagePlayerDepth(spawn.position.y),
     );
     updateVillageSceneryDepths(
       this.sceneryLayers,
-      WORLD_MAP.defaultSpawn.position,
+      spawn.position,
     );
 
     this.cursors = this.input.keyboard?.createCursorKeys();
     this.keys = makeControlKeys(this);
     this.createInteractionPrompt();
-    this.createOnboarding();
+    if (!returnRequest) this.createOnboarding();
     this.createTouchControls();
 
     this.cameras.main.fadeIn(350, 255, 245, 220);
   }
 
   private createInteractionPrompt() {
-    const bubble = addSpeechBubble(this, 330, 66);
+    const button = this.add
+      .image(
+        WORLD_ENTRY_PROMPT_LAYOUT.centerX,
+        WORLD_ENTRY_PROMPT_LAYOUT.centerY,
+        "village-entry-button",
+      )
+      .setDisplaySize(
+        WORLD_ENTRY_PROMPT_LAYOUT.width,
+        WORLD_ENTRY_PROMPT_LAYOUT.height,
+      )
+      .setInteractive({ useHandCursor: true });
     this.promptText = this.add
-      .text(165, 32, "", {
-        ...getTextStyle("body", { fontSize: "20px" }),
-        align: "center",
-      })
+      .text(
+        WORLD_ENTRY_PROMPT_LAYOUT.centerX,
+        WORLD_ENTRY_PROMPT_LAYOUT.centerY,
+        "",
+        {
+          ...getTextStyle("heading", {
+            fontSize: WORLD_ENTRY_PROMPT_LAYOUT.fontSize,
+          }),
+          align: "center",
+          wordWrap: {
+            width: WORLD_ENTRY_PROMPT_LAYOUT.textWidth,
+            useAdvancedWrap: true,
+          },
+        },
+      )
       .setOrigin(0.5);
     this.prompt = this.add
-      .container(0, 0, [bubble, this.promptText])
+      .container(0, 0, [button, this.promptText])
       .setDepth(VILLAGE_UI_DEPTH + 10)
       .setVisible(false);
+
+    button.on(
+      "pointerdown",
+      (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData,
+      ) => {
+        event.stopPropagation();
+        this.prompt?.setScale(0.97);
+      },
+    );
+    button.on(
+      "pointerup",
+      (
+        _pointer: Phaser.Input.Pointer,
+        _localX: number,
+        _localY: number,
+        event: Phaser.Types.Input.EventData,
+      ) => {
+        event.stopPropagation();
+        this.prompt?.setScale(1);
+        this.actionQueued = true;
+      },
+    );
+    button.on("pointerout", () => this.prompt?.setScale(1));
   }
 
   private createOnboarding() {
@@ -203,28 +323,10 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private createTouchControls() {
-    createFloatingJoystick(this, {
-      direction: this.joystick,
-      radius: 48,
-      depth: VILLAGE_UI_DEPTH + 30,
-      canStart: (pointer) => !(pointer.x > 1080 && pointer.y > 510),
-    });
-
-    addUiButton(this, {
-      x: 1173,
-      y: 610,
-      width: 110,
-      height: 110,
-      radius: 55,
-      label: "톡!",
-      variant: "caution",
-      fontSize: "24px",
-      borderWidth: 6,
-      depth: VILLAGE_UI_DEPTH + 30,
-      stopPropagation: false,
-      onPress: () => {
-        this.actionQueued = true;
-      },
+    this.touchMovement = createWorldTouchDirection(this, {
+      direction: this.touchDirection,
+      getOrigin: () =>
+        this.player ? { x: this.player.x, y: this.player.y } : undefined,
     });
   }
 
@@ -275,9 +377,33 @@ export class WorldScene extends Phaser.Scene {
   private tryInteraction() {
     if (!this.nearestBuilding) return;
 
-    if (!this.nearestBuilding.available) {
-      this.promptText?.setText("아직 준비 중이에요. 곧 만나요!");
+    if (!this.isPortalAvailable(this.nearestBuilding)) {
+      const exitState = getWorldExitState(this.progress);
+      this.showInteractionFeedback(
+        exitState.kind === "locked"
+          ? `별이 부족합니다. ${exitState.missingStars}개를 더 모아 보세요.`
+          : "아직 준비 중이에요.",
+      );
       this.cameras.main.shake(110, 0.003);
+      return;
+    }
+
+    if (this.nearestBuilding.destination.kind === "world-completion-placeholder") {
+      const detail = createWorldCompletionReadyDetail(this.progress);
+      this.events.emit(
+        this.nearestBuilding.destination.completionEvent,
+        detail,
+      );
+      this.game.events.emit(
+        this.nearestBuilding.destination.completionEvent,
+        detail,
+      );
+      this.touchMovement?.cancel();
+      this.endingOverlay?.destroy(true);
+      this.endingOverlay = createVillageEndingOverlay(this, () => {
+        this.endingOverlay?.destroy(true);
+        this.endingOverlay = undefined;
+      });
       return;
     }
 
@@ -288,8 +414,37 @@ export class WorldScene extends Phaser.Scene {
     this.time.delayedCall(230, () => this.scene.start(destination));
   }
 
+  private isPortalAvailable(portal: WorldPortal) {
+    switch (portal.availability.kind) {
+      case "always":
+        return true;
+      case "world-star-total":
+        return getWorldTotalStars(this.progress) >= portal.availability.requiredStars;
+    }
+  }
+
+  private showInteractionFeedback(message: string) {
+    this.interactionFeedbackText = message;
+    this.interactionFeedbackUntil = this.time.now + 1_600;
+    this.promptText?.setText(message);
+  }
+
   update(_time: number, delta: number) {
     if (!this.player) return;
+    if (this.endingOverlay) return;
+
+    const keyboardMoving = Boolean(
+      this.cursors?.left.isDown ||
+        this.cursors?.right.isDown ||
+        this.cursors?.up.isDown ||
+        this.cursors?.down.isDown ||
+        this.keys?.left.isDown ||
+        this.keys?.right.isDown ||
+        this.keys?.up.isDown ||
+        this.keys?.down.isDown,
+    );
+    if (keyboardMoving) this.touchMovement?.cancel();
+    else this.touchMovement?.update();
 
     const recoveredPosition = resolveVillageMovement(
       { x: this.player.x, y: this.player.y },
@@ -303,7 +458,10 @@ export class WorldScene extends Phaser.Scene {
       this.lastSafePosition = { x: this.player.x, y: this.player.y };
     }
 
-    const direction = new Phaser.Math.Vector2(this.joystick.x, this.joystick.y);
+    const direction = new Phaser.Math.Vector2(
+      this.touchDirection.x,
+      this.touchDirection.y,
+    );
     if (this.cursors?.left.isDown || this.keys?.left.isDown) direction.x -= 1;
     if (this.cursors?.right.isDown || this.keys?.right.isDown) direction.x += 1;
     if (this.cursors?.up.isDown || this.keys?.up.isDown) direction.y -= 1;
@@ -375,11 +533,27 @@ export class WorldScene extends Phaser.Scene {
     });
 
     if (this.nearestBuilding && this.prompt && this.promptText) {
+      const hasInteractionFeedback = Boolean(
+        this.interactionFeedbackText &&
+          this.time.now < this.interactionFeedbackUntil,
+      );
+      const isLockedExit =
+        this.nearestBuilding.destination.kind ===
+          "world-completion-placeholder" &&
+        !this.isPortalAvailable(this.nearestBuilding);
       this.prompt
-        .setVisible(true)
-        .setPosition(this.player.x - 165, this.player.y - 165);
+        .setVisible(!isLockedExit || hasInteractionFeedback)
+        .setPosition(
+          this.player.x - WORLD_ENTRY_PROMPT_LAYOUT.centerX,
+          this.player.y +
+            WORLD_ENTRY_PROMPT_LAYOUT.centerOffsetY -
+            WORLD_ENTRY_PROMPT_LAYOUT.centerY,
+        );
+      const defaultPrompt = getWorldPortalEntryLabel(this.nearestBuilding);
       this.promptText.setText(
-        `${this.nearestBuilding.label}  ·  SPACE`,
+        hasInteractionFeedback
+          ? (this.interactionFeedbackText ?? defaultPrompt)
+          : defaultPrompt,
       );
     } else {
       this.prompt?.setVisible(false);

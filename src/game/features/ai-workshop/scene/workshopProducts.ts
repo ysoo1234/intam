@@ -5,43 +5,153 @@ import {
 } from "../../../content/aiWorkshop";
 import { COLORS, FONT_FAMILY } from "../../../core/visual/theme";
 import type { WorkshopOrder } from "../model";
+import {
+  syncWorkshopCarriedVisualPositions,
+  updateWorkshopPlayerDepth,
+  updateWorkshopPlayerPerspective,
+} from "./workshopPlayer";
 
 export type WorkshopProductChoice = {
   product: WorkshopProduct;
   container: Phaser.GameObjects.Container;
+  origin: WorkshopProductOrigin;
 };
+
+export type WorkshopProductOrigin = Readonly<{
+  x: number;
+  y: number;
+  scale: number;
+  artSize: number;
+  labelOffsetY: number;
+  labelWidth: number;
+}>;
 
 export type WorkshopItemPanelView = Phaser.GameObjects.Image;
 
-type WorkshopItemPanelLayout = Readonly<{
+export function getWorkshopProductTextureKey(productId: string) {
+  return `workshop-product-${productId}`;
+}
+
+export function createWorkshopProductArt(
+  scene: Phaser.Scene,
+  product: WorkshopProduct,
+  size: number,
+) {
+  const textureKey = getWorkshopProductTextureKey(product.id);
+  if (scene.textures.exists(textureKey)) {
+    return scene.add.image(0, -2, textureKey).setDisplaySize(size, size);
+  }
+  return scene.add
+    .text(0, -2, product.emoji, {
+      fontSize: `${Math.round(size * 0.54)}px`,
+    })
+    .setOrigin(0.5);
+}
+
+type WorkshopItemPanelArtworkContract = Readonly<{
   texture: "workshop-item-panel-4" | "workshop-item-panel-5";
+  /** Pixel dimensions after removing the transparent PNG margin. */
+  trimmedWidth: number;
+  trimmedHeight: number;
+  /** Pixel coordinates inside the trimmed artwork. */
+  slotCenterXs: readonly number[];
+  slotY: number;
+  labelY: number;
+  labelWidth: number;
+  /** Final display measurements in the 1280 x 720 game coordinate space. */
+  displayHeight: number;
+  artSize: number;
+  panelY: number;
+}>;
+
+type WorkshopItemPanelLayout = Readonly<{
+  texture: WorkshopItemPanelArtworkContract["texture"];
   width: number;
   height: number;
   openX: number;
   peekX: number;
   y: number;
   slotXs: readonly number[];
+  slotY: number;
+  labelY: number;
+  labelWidth: number;
+  artSize: number;
 }>;
 
-const FOUR_SLOT_LAYOUT: WorkshopItemPanelLayout = {
-  texture: "workshop-item-panel-4",
-  width: 680,
-  height: 188,
-  openX: 885,
-  peekX: 1_565,
-  y: 198,
-  slotXs: [710, 865, 1_020, 1_175],
-};
+// Simple visual knobs for the item panel. These values use the 1280 x 720
+// game coordinate space, so they can be adjusted without re-measuring the PNG.
+export const WORKSHOP_ITEM_PANEL_TUNING = {
+  rightMargin: 18,
+  itemSize: 80,
+  itemOffsetY: 0,
+  labelOffsetY: 0,
+} as const;
 
-const FIVE_SLOT_LAYOUT: WorkshopItemPanelLayout = {
+const PANEL_OPEN_RIGHT_EDGE = 1_280 - WORKSHOP_ITEM_PANEL_TUNING.rightMargin;
+
+function createWorkshopItemPanelLayout(
+  artwork: WorkshopItemPanelArtworkContract,
+): WorkshopItemPanelLayout {
+  const displayScale = artwork.displayHeight / artwork.trimmedHeight;
+  const width = artwork.trimmedWidth * displayScale;
+  const openX = PANEL_OPEN_RIGHT_EDGE - width / 2;
+  const artworkCenterX = artwork.trimmedWidth / 2;
+  const artworkCenterY = artwork.trimmedHeight / 2;
+
+  return {
+    texture: artwork.texture,
+    width,
+    height: artwork.displayHeight,
+    openX,
+    peekX: openX + width,
+    y: artwork.panelY,
+    slotXs: artwork.slotCenterXs.map(
+      (slotX) => openX + (slotX - artworkCenterX) * displayScale,
+    ),
+    slotY:
+      artwork.panelY +
+      (artwork.slotY - artworkCenterY) * displayScale +
+      WORKSHOP_ITEM_PANEL_TUNING.itemOffsetY,
+    labelY:
+      artwork.panelY +
+      (artwork.labelY - artworkCenterY) * displayScale +
+      WORKSHOP_ITEM_PANEL_TUNING.labelOffsetY,
+    labelWidth: artwork.labelWidth * displayScale,
+    artSize: artwork.artSize,
+  };
+}
+
+// itembox4.png is 1560 x 584. Its non-transparent artwork begins at
+// (26, 47), measures 1499 x 470, and the white card centres in source pixels
+// are x=[367, 675, 984, 1293], icon y=250, label y=400.
+const FOUR_SLOT_LAYOUT = createWorkshopItemPanelLayout({
+  texture: "workshop-item-panel-4",
+  trimmedWidth: 1_499,
+  trimmedHeight: 470,
+  slotCenterXs: [341, 649, 958, 1_267],
+  slotY: 203,
+  labelY: 353,
+  labelWidth: 218,
+  displayHeight: 224,
+  artSize: WORKSHOP_ITEM_PANEL_TUNING.itemSize,
+  panelY: 205,
+});
+
+// itembox5.png uses the same card geometry. Its trimmed artwork is wider, so
+// it deliberately has an independent contract instead of inheriting the
+// four-slot coordinates.
+const FIVE_SLOT_LAYOUT = createWorkshopItemPanelLayout({
   texture: "workshop-item-panel-5",
-  width: 720,
-  height: 165,
-  openX: 865,
-  peekX: 1_585,
-  y: 198,
-  slotXs: [650, 780, 910, 1_040, 1_170],
-};
+  trimmedWidth: 1_807,
+  trimmedHeight: 470,
+  slotCenterXs: [341, 649, 958, 1_267, 1_575],
+  slotY: 203,
+  labelY: 353,
+  labelWidth: 218,
+  displayHeight: 224,
+  artSize: WORKSHOP_ITEM_PANEL_TUNING.itemSize,
+  panelY: 205,
+});
 
 function getWorkshopItemPanelLayout(customerNumber: number) {
   return customerNumber >= 4 ? FIVE_SLOT_LAYOUT : FOUR_SLOT_LAYOUT;
@@ -117,21 +227,35 @@ export function createWorkshopProductChoices(
 
   return choices.map((product, index) => {
     const targetX = layout.slotXs[index];
+    const scale = 1;
+    const origin = {
+      x: targetX,
+      y: layout.slotY,
+      scale,
+      artSize: layout.artSize,
+      labelOffsetY: layout.labelY - layout.slotY,
+      labelWidth: layout.labelWidth,
+    };
+    const panelTravelX = layout.peekX - layout.openX;
     const container = createWorkshopProductVisual(
       scene,
       product,
-      targetX + 720,
-      layout.y - 2,
-      choiceCount === 5 ? 0.88 : 0.96,
+      targetX + panelTravelX,
+      origin.y,
+      scale,
+      {
+        artSize: origin.artSize,
+        labelOffsetY: origin.labelOffsetY,
+        labelWidth: origin.labelWidth,
+      },
     ).setDepth(20);
     scene.tweens.add({
       targets: container,
       x: targetX,
       duration: 560,
-      delay: 45 + index * 35,
       ease: "Cubic.easeOut",
     });
-    return { product, container };
+    return { product, container, origin };
   });
 }
 
@@ -141,59 +265,128 @@ export function createWorkshopProductVisual(
   x: number,
   y: number,
   scale: number,
+  options: Readonly<{
+    showLabel?: boolean;
+    artSize?: number;
+    labelOffsetY?: number;
+    labelWidth?: number;
+  }> = {},
 ) {
   const container = scene.add.container(x, y).setScale(scale);
-  const shadow = scene.add.ellipse(4, 5, 76, 70, COLORS.ink, 0.16);
-  const badge = scene.add.circle(0, 0, 39, COLORS.paper, 0.98);
-  badge.setStrokeStyle(4, COLORS.ink, 0.94);
-  const accent = scene.add.circle(0, 0, 33, product.color, 0.2);
-  accent.setStrokeStyle(4, product.color, 0.78);
-  const emoji = scene.add
-    .text(0, -2, product.emoji, { fontSize: "39px" })
-    .setOrigin(0.5);
-  const labelPlate = scene.add.graphics();
-  labelPlate.fillStyle(COLORS.paper, 0.98);
-  labelPlate.lineStyle(3, COLORS.ink, 0.9);
-  labelPlate.fillRoundedRect(-64, 42, 128, 38, 12);
-  labelPlate.strokeRoundedRect(-64, 42, 128, 38, 12);
+  const hasProductArt = scene.textures.exists(
+    getWorkshopProductTextureKey(product.id),
+  );
+  const artSize = options.artSize ?? 74;
+  const showLabel = options.showLabel ?? true;
+  const labelWidth = options.labelWidth ?? 112;
+  const productArt = createWorkshopProductArt(scene, product, artSize).setY(0);
+  const labelFontSize = 13;
   const label = scene.add
-    .text(0, 61, product.label, {
-      color: "#173f43",
+    .text(0, options.labelOffsetY ?? 76, product.label, {
+      color: "#111111",
       fontFamily: FONT_FAMILY,
-      fontSize: "13px",
+      fontSize: `${labelFontSize}px`,
       fontStyle: "bold",
       align: "center",
-      wordWrap: { width: 116 },
     })
-    .setOrigin(0.5);
-  container.add([shadow, badge, accent, emoji, labelPlate, label]);
-  scene.tweens.add({
-    targets: accent,
-    alpha: { from: 0.7, to: 1 },
-    scale: { from: 0.94, to: 1.04 },
-    duration: 780 + Phaser.Math.Between(0, 180),
-    yoyo: true,
-    repeat: -1,
-    ease: "Sine.easeInOut",
-  });
+    .setOrigin(0.5)
+    .setResolution(3);
+  const availableLabelWidth = labelWidth - 12;
+  let fittedFontSize = labelFontSize;
+  while (label.width > availableLabelWidth && fittedFontSize > 9) {
+    fittedFontSize -= 0.5;
+    label.setFontSize(fittedFontSize);
+  }
+  if (showLabel && scale !== 0) {
+    label
+      .setY((options.labelOffsetY ?? 76) / scale)
+      .setScale(1 / scale);
+  }
+  label.setVisible(showLabel);
+  if (hasProductArt) {
+    container.add(showLabel ? [productArt, label] : [productArt]);
+  } else {
+    const badgeRadius = Math.max(39, Math.round(artSize * 0.49));
+    const shadow = scene.add.ellipse(
+      4,
+      5,
+      badgeRadius * 2,
+      badgeRadius * 1.8,
+      COLORS.ink,
+      0.16,
+    );
+    const badge = scene.add.circle(0, 0, badgeRadius, COLORS.paper, 0.98);
+    badge.setStrokeStyle(4, COLORS.ink, 0.94);
+    const accent = scene.add.circle(0, 0, badgeRadius - 6, product.color, 0.2);
+    accent.setStrokeStyle(4, product.color, 0.78);
+    container.add(
+      showLabel
+        ? [shadow, badge, accent, productArt, label]
+        : [shadow, badge, accent, productArt],
+    );
+  }
   return container;
+}
+
+function createWorkshopCarriedIcon(
+  scene: Phaser.Scene,
+  product: WorkshopProduct,
+  x: number,
+  y: number,
+) {
+  const container = scene.add.container(x, y);
+  container.add(createWorkshopProductArt(scene, product, 110));
+  return container;
+}
+
+export function rebuildWorkshopCarriedVisuals(
+  scene: Phaser.Scene,
+  player: Phaser.GameObjects.Container | undefined,
+  products: readonly WorkshopProduct[],
+  previousVisuals: readonly Phaser.GameObjects.Container[],
+) {
+  previousVisuals.forEach((visual) => visual.destroy(true));
+  if (!player) return [];
+  const visuals = products.map((product, index) =>
+    createWorkshopCarriedIcon(
+      scene,
+      product,
+      player.x + (index - (products.length - 1) / 2) * 72,
+      player.y - 92,
+    )
+      .setDepth(34)
+      .setData("carried", true),
+  );
+  updateWorkshopPlayerPerspective(player, visuals);
+  syncWorkshopCarriedVisualPositions(player, visuals);
+  updateWorkshopPlayerDepth(player, visuals);
+  return visuals;
 }
 
 export function returnWorkshopProductToPanel(
   scene: Phaser.Scene,
   product: WorkshopProduct,
-  x: number,
-  y: number,
-  scale: number,
+  origin: WorkshopProductOrigin,
 ): WorkshopProductChoice {
-  const container = createWorkshopProductVisual(scene, product, x, y, scale)
+  const container = createWorkshopProductVisual(
+    scene,
+    product,
+    origin.x,
+    origin.y,
+    origin.scale,
+    {
+      artSize: origin.artSize,
+      labelOffsetY: origin.labelOffsetY,
+      labelWidth: origin.labelWidth,
+    },
+  )
     .setDepth(20)
-    .setScale(scale * 0.72);
+    .setScale(origin.scale * 0.72);
   scene.tweens.add({
     targets: container,
-    scale,
+    scale: origin.scale,
     duration: 220,
     ease: "Back.easeOut",
   });
-  return { product, container };
+  return { product, container, origin };
 }

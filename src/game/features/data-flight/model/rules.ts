@@ -86,3 +86,9 @@ export function createFlightResult(
     remainingHearts,
   };
 }
+
+export function getDataFlightStars(score: number): 1 | 2 | 3 {
+  if (score >= DATA_FLIGHT_CONFIG.starThresholds.threeStars) return 3;
+  if (score >= DATA_FLIGHT_CONFIG.starThresholds.twoStars) return 2;
+  return 1;
+}
