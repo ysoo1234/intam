@@ -1,9 +1,7 @@
 import Phaser from "phaser";
+import { createGameResultOverlay } from "../../../core/visual/gameResultOverlay";
 import { COLORS, FONT_FAMILY } from "../../../core/visual/theme";
-import {
-  ETHICS_REVIEW_CONFIG,
-  type EthicsReviewEndReason,
-} from "../model";
+import type { EthicsReviewEndReason } from "../model";
 
 function addPaperAction(
   scene: Phaser.Scene,
@@ -131,81 +129,12 @@ export function createEthicsResultOverlay(
     onReplay: () => void;
   },
 ) {
-  const overlay = createDossierOverlay(scene, 0.54).setDepth(95);
-  const eyebrow = scene.add
-    .text(
-      0,
-      -151,
-      `2분 30초 · ${ETHICS_REVIEW_CONFIG.roundCount}개 사건 · 생명 ${ETHICS_REVIEW_CONFIG.startingLives}개`,
-      {
-        color: "#247a76",
-        fontFamily: FONT_FAMILY,
-        fontSize: "13px",
-        fontStyle: "bold",
-        letterSpacing: 2,
-      },
-    )
-    .setOrigin(0.5);
-  const title = scene.add
-    .text(0, -108, "윤리 심사 도전 완료!", {
-      color: "#173f43",
-      fontFamily: FONT_FAMILY,
-      fontSize: "37px",
-      fontStyle: "bold",
-      stroke: "#fffaf0",
-      strokeThickness: 3,
-    })
-    .setOrigin(0.5);
-  const starLine = scene.add
-    .text(0, -42, "★".repeat(options.stars) + "☆".repeat(3 - options.stars), {
-      color: "#e4a92f",
-      fontFamily: FONT_FAMILY,
-      fontSize: "48px",
-      fontStyle: "bold",
-      stroke: "#815d20",
-      strokeThickness: 2,
-    })
-    .setOrigin(0.5);
-  const summary = scene.add
-    .text(
-      0,
-      44,
-      [
-        `정답 ${options.correctCount}개 · 심사 ${options.reviewedCount}개 / ${ETHICS_REVIEW_CONFIG.roundCount}개`,
-        `점수 ${options.score}점 · 남은 생명 ${options.lives}개 · 최고 콤보 ${options.bestCombo}연속`,
-        getEndMessage(options.endReason),
-      ].join("\n"),
-      {
-        color: "#334d4c",
-        fontFamily: FONT_FAMILY,
-        fontSize: "19px",
-        fontStyle: "bold",
-        align: "center",
-        lineSpacing: 10,
-      },
-    )
-    .setOrigin(0.5);
-  overlay.add([
-    eyebrow,
-    title,
-    starLine,
-    summary,
-    addPaperAction(scene, -138, 157, "↻ 다시 심사", options.onReplay),
-    addPaperAction(scene, 138, 157, "마을로  ›", options.onBack),
-  ]);
-  overlay.setScale(0.93).setAlpha(0);
-  scene.tweens.add({
-    targets: overlay,
-    scale: 1,
-    alpha: 1,
-    duration: 340,
-    ease: "Back.easeOut",
+  return createGameResultOverlay(scene, {
+    title: "심사를 마쳤어요.",
+    stars: options.stars,
+    summary: `사건 ${options.reviewedCount}건을 심사하고 ${options.score.toLocaleString()}점을 얻었어요!\n${options.correctCount}건을 바르게 판단했어요.`,
+    retryLabel: "다시 심사하기",
+    onRetry: options.onReplay,
+    onWorld: options.onBack,
   });
-  return overlay;
-}
-
-function getEndMessage(reason: EthicsReviewEndReason) {
-  if (reason === "time") return "시간이 다 되었어요. 배운 원칙으로 다시 도전해요!";
-  if (reason === "lives") return "생명을 모두 사용했어요. 설명을 떠올려 다시 도전해요!";
-  return "준비된 30개 사건을 모두 심사했어요!";
 }

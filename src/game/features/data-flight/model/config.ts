@@ -16,7 +16,10 @@ export const DATA_FLIGHT_CONFIG = {
     maxY: 635,
   },
   maxFrameDeltaMs: 50,
-  dataSpawnIntervalMs: 800,
+  dataSpawnInterval: {
+    minMs: 100,
+    maxMs: 700,
+  },
   feverFormationIntervalMs: 3_700,
   questionMissDataDelayMs: 450,
   questionMissObstacleDelayMs: 1_600,
@@ -26,7 +29,7 @@ export const DATA_FLIGHT_CONFIG = {
   failedQuestionFinishDelayMs: 900,
   feverObstacleResumeDelayMs: 1_200,
   dataScore: 10,
-  feverDataScore: 20,
+  feverDataScore: 30,
   correctAnswerScore: 150,
   starThresholds: {
     twoStars: 1_800,

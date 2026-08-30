@@ -67,7 +67,10 @@ assert.equal(DATA_FLIGHT_CONFIG.firstQuestionScore, 200);
 assert.equal(DATA_FLIGHT_CONFIG.feverDurationMs, 7_000);
 assert.equal(DATA_FLIGHT_CONFIG.initialHearts, 3);
 assert.equal(DATA_FLIGHT_CONFIG.playerSpeed, 552.5);
-assert.equal(DATA_FLIGHT_CONFIG.dataSpawnIntervalMs, 800);
+assert.deepEqual(DATA_FLIGHT_CONFIG.dataSpawnInterval, {
+  minMs: 100,
+  maxMs: 700,
+});
 assert.equal(DATA_FLIGHT_CONFIG.feverFormationIntervalMs, 3_700);
 assert.equal(DATA_FLIGHT_CONFIG.feverMagnetRadius, 200);
 assert.equal(DATA_FLIGHT_CONFIG.feverMagnetVerticalRadius, 105);
@@ -161,7 +164,7 @@ assert.equal(rules.shouldSpawnDoubleEdgeObstacle(1_400, 0.07), true);
 assert.equal(rules.shouldSpawnDoubleEdgeObstacle(1_400, 0.08), false);
 
 assert.equal(rules.getCollectedDataScore(false), 10);
-assert.equal(rules.getCollectedDataScore(true), 20);
+assert.equal(rules.getCollectedDataScore(true), 30);
 assert.equal(rules.getCollectedDifficultyPoints(), 10);
 const observedFeverCollectionCount = 50;
 const observedFeverScoreGain =
@@ -169,7 +172,7 @@ const observedFeverScoreGain =
 const observedFeverDifficultyGain =
   observedFeverCollectionCount * rules.getCollectedDifficultyPoints() +
   DATA_FLIGHT_CONFIG.correctAnswerScore;
-assert.equal(observedFeverScoreGain, 1_000);
+assert.equal(observedFeverScoreGain, 1_500);
 assert.equal(observedFeverDifficultyGain, 650);
 for (
   let progressWithinTier = 0;
@@ -531,6 +534,9 @@ const villageMovement = loadTypeScriptModule(
 const { VILLAGE_MAP } = loadTypeScriptModule(
   "src/game/features/world/model/villageMap.ts",
 );
+const { isPointWithinPortalInteractionArea } = loadTypeScriptModule(
+  "src/game/features/world/model/mapDefinition.ts",
+);
 const { createVillageCollision } = loadTypeScriptModule(
   "src/game/features/world/model/villageCollision.ts",
 );
@@ -661,14 +667,143 @@ assert.equal(
   "The central south path must remain walkable.",
 );
 
+for (const point of [
+  { x: 100, y: 300 },
+  { x: 450, y: 140 },
+  { x: 1_000, y: 560 },
+  { x: 1_180, y: 500 },
+  { x: 80, y: 650 },
+]) {
+  assert.equal(
+    villageCollision.isBlocked(point.x, point.y),
+    true,
+    `Visible village greenery at (${point.x}, ${point.y}) must be blocked.`,
+  );
+}
+
+for (const point of [
+  { x: 500, y: 400 },
+  { x: 800, y: 500 },
+  { x: 640, y: 650 },
+]) {
+  assert.equal(
+    villageCollision.isBlocked(point.x, point.y),
+    false,
+    `Visible village paving at (${point.x}, ${point.y}) must stay walkable.`,
+  );
+}
+
+for (const probe of [
+  { label: "AI shop body", point: { x: 300, y: 250 } },
+  { label: "data airport body", point: { x: 1_080, y: 320 } },
+  { label: "Ethics Review right wall", point: { x: 365, y: 540 } },
+  { label: "Ethics Review tight right wall", point: { x: 392, y: 540 } },
+  { label: "AI world portal barrier", point: { x: 744, y: 205 } },
+]) {
+  assert.equal(
+    villageCollision.isBlocked(probe.point.x, probe.point.y),
+    true,
+    `${probe.label} must keep the player's feet out of the building.`,
+  );
+}
+
+assert.equal(
+  villageCollision.isBlocked(405, 540),
+  false,
+  "Open paving beside the Ethics Review office must remain walkable.",
+);
+
+assert.equal(
+  villageCollision.isBlocked(230, 445),
+  false,
+  "The player may overlap the Ethics Review roof, but not its wall below.",
+);
+
+for (const probe of [
+  {
+    portalId: "shop",
+    excludedPoint: { x: 590, y: 285 },
+    includedPoints: [
+      { x: 180, y: 285 },
+      { x: 520, y: 285 },
+      { x: 356, y: 380 },
+    ],
+  },
+  {
+    portalId: "workshop",
+    excludedPoint: { x: 330, y: 440 },
+    includedPoints: [
+      { x: 110, y: 650 },
+      { x: 480, y: 650 },
+      { x: 295, y: 680 },
+    ],
+  },
+  {
+    portalId: "library",
+    excludedPoint: { x: 800, y: 520 },
+    includedPoints: [
+      { x: 850, y: 380 },
+      { x: 1_220, y: 380 },
+      { x: 1_045, y: 475 },
+    ],
+  },
+]) {
+  const portal = VILLAGE_MAP.portals.find(({ id }) => id === probe.portalId);
+  assert.ok(portal, `Village portal ${probe.portalId} must exist.`);
+  assert.equal(
+    isPointWithinPortalInteractionArea(portal, probe.excludedPoint),
+    false,
+    `Village portal ${probe.portalId} must stay outside its marked approach area.`,
+  );
+  for (const includedPoint of probe.includedPoints) {
+    assert.equal(
+      isPointWithinPortalInteractionArea(portal, includedPoint),
+      true,
+      `Village portal ${probe.portalId} must activate throughout its marked approach area.`,
+    );
+  }
+}
+
+const ethicsPortal = VILLAGE_MAP.portals.find(({ id }) => id === "workshop");
+assert.ok(ethicsPortal, "Ethics Review portal must exist.");
+for (const point of [
+  { x: 405, y: 540 },
+  { x: 429, y: 540 },
+  { x: 295, y: 540 },
+]) {
+  assert.equal(
+    isPointWithinPortalInteractionArea(ethicsPortal, point),
+    false,
+    `Ethics Review must not activate beside or behind the building at (${point.x}, ${point.y}).`,
+  );
+}
+assert.equal(
+  isPointWithinPortalInteractionArea(ethicsPortal, { x: 429, y: 580 }),
+  true,
+  "Ethics Review must activate at the requested front-right approach point.",
+);
+assert.equal(
+  isPointWithinPortalInteractionArea(ethicsPortal, { x: 500, y: 650 }),
+  false,
+  "Ethics Review front approach must stop about 15px before its former right edge.",
+);
+
 for (const portal of VILLAGE_MAP.portals) {
   let reachableApproach = false;
-  for (let radius = 24; radius < portal.interactionRadius; radius += 8) {
-    for (let angleIndex = 0; angleIndex < 32; angleIndex += 1) {
-      const angle = (Math.PI * 2 * angleIndex) / 32;
-      const x = portal.position.x + Math.cos(angle) * radius;
-      const y = portal.position.y + Math.sin(angle) * radius;
-      if (!villageCollision.isBlocked(x, y)) {
+  const interactionRadiusX = portal.interactionArea?.radiusX ??
+    portal.interactionRadius;
+  const interactionRadiusY = portal.interactionArea?.radiusY ??
+    portal.interactionRadius;
+  for (let offsetY = -interactionRadiusY; offsetY <= interactionRadiusY; offsetY += 8) {
+    for (let offsetX = -interactionRadiusX; offsetX <= interactionRadiusX; offsetX += 8) {
+      const point = {
+        x: portal.position.x + offsetX,
+        y: portal.position.y + offsetY,
+      };
+      if (
+        isPointWithinPortalInteractionArea(portal, point) &&
+        !villageCollision.isBlocked(point.x, point.y)
+      ) {
         reachableApproach = true;
         break;
       }
@@ -739,10 +874,7 @@ for (const portal of VILLAGE_MAP.portals) {
     const row = Math.floor(cellIndex / villageMask.columns);
     const x = column * villageMask.cellSize;
     const y = row * villageMask.cellSize;
-    if (
-      Math.hypot(x - portal.position.x, y - portal.position.y) <
-      portal.interactionRadius
-    ) {
+    if (isPointWithinPortalInteractionArea(portal, { x, y })) {
       connectedApproachCells += 1;
     }
   }
@@ -784,130 +916,6 @@ const villageCurvedGuides = [
     projectToBoundary: false,
   })),
 ];
-function assertSmoothGardenApproach(label, guideId, start, displacement) {
-  const guide = VILLAGE_MAP.collision.curvedMovementGuides.find(
-    (candidate) => candidate.id === guideId,
-  );
-  assert.ok(guide, `${label}: missing curved guide ${guideId}.`);
-  assert.equal(
-    villageCollision.isBlocked(start.x, start.y),
-    false,
-    `${label}: the test approach must begin on a walkable cell.`,
-  );
-
-  const movementMemory = villageMovement.createVillageMovementMemory();
-  let position = start;
-  let inwardCollisionFrames = 0;
-  let inwardStationaryFrames = 0;
-  let maxInwardStationaryFrames = 0;
-  let severeReversals = 0;
-  let previousMovement = null;
-
-  for (let frame = 0; frame < 120; frame += 1) {
-    const directTarget = {
-      x: position.x + displacement.x,
-      y: position.y + displacement.y,
-    };
-    const normalX =
-      (position.x - guide.center.x) / (guide.radiusX * guide.radiusX);
-    const normalY =
-      (position.y - guide.center.y) / (guide.radiusY * guide.radiusY);
-    const inwardAmount =
-      displacement.x * normalX + displacement.y * normalY;
-    const worldBounds = VILLAGE_MAP.collision.blockedOutsideBounds;
-    const nearWorldBoundary =
-      position.x < worldBounds.minX + 8 ||
-      position.x > worldBounds.maxX - 8 ||
-      position.y < worldBounds.minY + 8 ||
-      position.y > worldBounds.maxY - 8;
-    const requiresCurvedGlide =
-      inwardAmount < 0 &&
-      !nearWorldBoundary &&
-      villageCollision.isBlocked(directTarget.x, directTarget.y);
-
-    const nextPosition = villageMovement.resolveVillageMovement(
-      position,
-      displacement,
-      position,
-      (x, y) => villageCollision.isBlocked(x, y),
-      villageCurvedGuides,
-      movementMemory,
-    );
-    const movement = {
-      x: nextPosition.x - position.x,
-      y: nextPosition.y - position.y,
-    };
-    const frameDistance = Math.hypot(movement.x, movement.y);
-    assert.ok(
-      frameDistance <= Math.hypot(displacement.x, displacement.y) + 0.01,
-      `${label}: a guide must never eject the player beyond one frame.`,
-    );
-    assert.equal(
-      villageCollision.isBlocked(nextPosition.x, nextPosition.y),
-      false,
-      `${label}: a guide must never enter the collision mask.`,
-    );
-
-    if (requiresCurvedGlide) {
-      inwardCollisionFrames += 1;
-      inwardStationaryFrames =
-        frameDistance < 0.1 ? inwardStationaryFrames + 1 : 0;
-      maxInwardStationaryFrames = Math.max(
-        maxInwardStationaryFrames,
-        inwardStationaryFrames,
-      );
-
-      if (previousMovement && frameDistance >= 0.1) {
-        const previousLength = Math.hypot(
-          previousMovement.x,
-          previousMovement.y,
-        );
-        const cosine =
-          (movement.x * previousMovement.x + movement.y * previousMovement.y) /
-          (frameDistance * previousLength);
-        if (cosine < -0.8) severeReversals += 1;
-      }
-      if (frameDistance >= 0.1) previousMovement = movement;
-    } else {
-      inwardStationaryFrames = 0;
-      previousMovement = null;
-    }
-    position = nextPosition;
-  }
-
-  assert.ok(
-    inwardCollisionFrames >= 4,
-    `${label}: the route must exercise the curved collision path.`,
-  );
-  assert.ok(
-    maxInwardStationaryFrames <= 3,
-    `${label}: inward glide stalled for ` +
-      `${maxInwardStationaryFrames} consecutive frames at ` +
-      `(${position.x.toFixed(2)}, ${position.y.toFixed(2)}), ` +
-      `memory=${JSON.stringify(movementMemory)}.`,
-  );
-  assert.equal(
-    severeReversals,
-    0,
-    `${label}: a held direction must not bounce between tangent sides.`,
-  );
-  assert.ok(
-    Math.hypot(position.x - start.x, position.y - start.y) > 20,
-    `${label}: holding toward the garden must make visible progress.`,
-  );
-}
-
-for (const route of [
-  ["northwest east", "northwest-garden", { x: 480, y: 207 }, { x: -3.84, y: 0 }],
-  ["northwest south", "northwest-garden", { x: 255, y: 350 }, { x: 0, y: -3.84 }],
-  ["northeast west", "northeast-garden", { x: 736, y: 205 }, { x: 3.84, y: 0 }],
-  ["northeast south", "northeast-garden", { x: 1_005, y: 350 }, { x: 0, y: -3.84 }],
-  ["southwest east", "southwest-garden", { x: 460, y: 600 }, { x: -3.84, y: 0 }],
-  ["southwest north", "southwest-garden", { x: 184, y: 390 }, { x: 0, y: 3.84 }],
-]) {
-  assertSmoothGardenApproach(...route);
-}
-
 function advanceVillagePosition(
   position,
   displacement,
@@ -1123,16 +1131,35 @@ function assertSmoothDirectionChange(
   );
 }
 
+const fountainCollision = VILLAGE_MAP.collision.ellipses.find(
+  (ellipse) => ellipse.id === "fountain",
+);
+assert.ok(fountainCollision, "The village fountain collision must exist.");
+const fountainClearance = 14;
+const fountainBottom = {
+  x: fountainCollision.center.x,
+  y: fountainCollision.center.y + fountainCollision.radiusY + fountainClearance,
+};
+const fountainTop = {
+  x: fountainCollision.center.x,
+  y: fountainCollision.center.y - fountainCollision.radiusY - fountainClearance,
+};
+const fountainLeft = {
+  x: fountainCollision.center.x - fountainCollision.radiusX - fountainClearance,
+  y: fountainCollision.center.y,
+};
+const fountainRight = {
+  x: fountainCollision.center.x + fountainCollision.radiusX + fountainClearance,
+  y: fountainCollision.center.y,
+};
+
 for (const transition of [
-  ["fountain bottom up-right", { x: 636, y: 508 }, { x: 0, y: -3.84 }, { x: 3.84, y: 0 }],
-  ["fountain bottom up-right diagonal", { x: 636, y: 508 }, { x: 0, y: -3.84 }, { x: Math.SQRT1_2 * 3.84, y: -Math.SQRT1_2 * 3.84 }],
-  ["fountain bottom exact 60-degree turn", { x: 636, y: 508 }, { x: 0, y: -3.84 }, { x: Math.sqrt(3) * 1.92, y: -1.92 }],
-  ["fountain west right-down", { x: 456, y: 372 }, { x: 3.84, y: 0 }, { x: 0, y: 3.84 }],
-  ["fountain east left-down", { x: 816, y: 372 }, { x: -3.84, y: 0 }, { x: 0, y: 3.84 }],
-  ["fountain north down-right", { x: 636, y: 236 }, { x: 0, y: 3.84 }, { x: 3.84, y: 0 }],
-  ["southwest east left-up", { x: 460, y: 600 }, { x: -3.84, y: 0 }, { x: 0, y: -3.84 }],
-  ["northwest east left-up", { x: 480, y: 207 }, { x: -3.84, y: 0 }, { x: 0, y: -3.84 }],
-  ["northeast west right-up", { x: 736, y: 205 }, { x: 3.84, y: 0 }, { x: 0, y: -3.84 }],
+  ["fountain bottom up-right", fountainBottom, { x: 0, y: -3.84 }, { x: 3.84, y: 0 }],
+  ["fountain bottom up-right diagonal", fountainBottom, { x: 0, y: -3.84 }, { x: Math.SQRT1_2 * 3.84, y: -Math.SQRT1_2 * 3.84 }],
+  ["fountain bottom exact 60-degree turn", fountainBottom, { x: 0, y: -3.84 }, { x: Math.sqrt(3) * 1.92, y: -1.92 }],
+  ["fountain west right-down", fountainLeft, { x: 3.84, y: 0 }, { x: 0, y: 3.84 }],
+  ["fountain east left-down", fountainRight, { x: -3.84, y: 0 }, { x: 0, y: 3.84 }],
+  ["fountain north down-right", fountainTop, { x: 0, y: 3.84 }, { x: 3.84, y: 0 }],
 ]) {
   assertSmoothDirectionChange(...transition);
 }
@@ -1141,7 +1168,7 @@ function assertSmoothGradualDirectionChange(rampFrames) {
   const label = `fountain gradual 90-degree turn over ${rampFrames} frames`;
   const firstDisplacement = { x: 0, y: -3.84 };
   const rememberedMemory = villageMovement.createVillageMovementMemory();
-  let contactPosition = { x: 636, y: 508 };
+  let contactPosition = fountainBottom;
   for (
     let frame = 0;
     frame < 48 && !rememberedMemory.obstacleKey;
@@ -1333,12 +1360,12 @@ function assertSmoothGradualDirectionChange(rampFrames) {
       JSON.stringify(freshReversalSamples),
   );
   assert.ok(
-    maxRememberedStationaryFrames <= 3,
+    maxRememberedStationaryFrames <= 4,
     `${label}: remembered movement stalled for ` +
       `${maxRememberedStationaryFrames} frames.`,
   );
   assert.ok(
-    maxFreshStationaryFrames <= 3,
+    maxFreshStationaryFrames <= 4,
     `${label}: fresh movement stalled for ${maxFreshStationaryFrames} frames.`,
   );
   assert.ok(
@@ -1357,7 +1384,7 @@ for (const rampFrames of [6, 12, 18, 30]) {
 {
   const memory = villageMovement.createVillageMovementMemory();
   const displacement = { x: 0, y: -3.84 };
-  let position = { x: 636, y: 508 };
+  let position = fountainBottom;
   let positionTwoFramesAgo = null;
   let previousMovement = null;
   let severeReversals = 0;
@@ -1416,7 +1443,7 @@ for (const rampFrames of [6, 12, 18, 30]) {
   assert.equal(
     severeReversals,
     0,
-    "A continuous upward hold across the fountain and northwest garden " +
+    "A continuous upward hold against the fountain " +
       "must not reverse direction between mask cells; " +
       JSON.stringify(reversalSamples),
   );

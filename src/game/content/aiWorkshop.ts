@@ -31,35 +31,35 @@ export const WORKSHOP_PRODUCTS: WorkshopProduct[] = [
   },
   {
     id: "call-translator",
-    label: "실시간 통화 번역기",
+    label: "통화 번역 AI",
     emoji: "📞",
     color: 0xef7d7d,
     description: "통화 중인 두 사람의 말을 바로 번역해 들려줘요.",
   },
   {
     id: "photo-translator",
-    label: "사진 번역기",
+    label: "사진 번역 AI",
     emoji: "📷",
     color: 0xf0bc55,
     description: "사진 속 글자를 읽고 원하는 언어로 번역해 줘요.",
   },
   {
     id: "plant-camera",
-    label: "식물 찾기 카메라",
+    label: "식물 찾기 AI",
     emoji: "🌼",
     color: 0x86c96a,
     description: "식물 사진을 살펴보고 이름과 특징을 찾아 줘요.",
   },
   {
     id: "face-lock",
-    label: "얼굴 인식 잠금",
+    label: "얼굴 인식 AI",
     emoji: "🙂",
     color: 0xe99ab6,
     description: "등록된 얼굴인지 확인한 뒤 안전하게 잠금을 풀어 줘요.",
   },
   {
     id: "spell-checker",
-    label: "맞춤법 도우미",
+    label: "맞춤법 도우미 AI",
     emoji: "✏️",
     color: 0x7aaee5,
     description: "쓴 글을 읽고 맞춤법이 틀린 곳을 찾아 알려 줘요.",
@@ -185,14 +185,14 @@ export const WORKSHOP_PRODUCTS: WorkshopProduct[] = [
   },
   {
     id: "greenhouse-computer",
-    label: "온실 조절 컴퓨터",
+    label: "온실 조절 AI",
     emoji: "🌡️",
     color: 0x66c4a6,
     description: "온도와 습도, 햇빛의 양을 작물에 알맞게 조절해요.",
   },
   {
     id: "smart-watering",
-    label: "스마트 물주기 장치",
+    label: "스마트 물주기 AI",
     emoji: "💧",
     color: 0x65aeda,
     description: "흙과 작물 상태를 살펴 필요한 만큼만 물을 줘요.",
@@ -247,15 +247,15 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerRole: "등교 준비를 하는 학생",
     customerEmoji: "🎒",
     productId: "ai-speaker",
-    dialogue: "하늘이 수상한데, 우산을 챙길지 말로 물어보고 싶어요.",
+    dialogue: "하늘이 수상해요. 집을 나가면서 우산을 챙겨야 하는지 말로 물어보고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "foreign-call-student",
-    customerRole: "외국 친구와 통화하는 학생",
+    customerRole: "외국인 친구와 통화하는 학생",
     customerEmoji: "📱",
     productId: "call-translator",
     dialogue:
-      "외국 친구와 수다 떨고 싶은데, 친구의 말을 바로 우리말로 듣고 싶어요.",
+      "외국인 친구와 수다를 떨고 싶은데 친구의 말을 바로 우리말로 알고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "foreign-restaurant-traveler",
@@ -263,7 +263,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🧳",
     productId: "photo-translator",
     dialogue:
-      "맛있는 냄새는 나는데 메뉴판을 못 읽겠어요, 찍어서 우리말로 보고 싶어요.",
+      "맛있는 냄새는 나는데 메뉴판을 못 읽겠어요. 찍어서 우리말로 보고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "science-homework-student",
@@ -271,7 +271,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🌼",
     productId: "plant-camera",
     dialogue:
-      "예쁜 꽃을 찾았는데 이름표가 없어요, 사진을 찍어 이름을 알고 싶어요.",
+      "예쁜 꽃을 찾았는데 이름표가 없어요. 사진을 찍어 이름을 알고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "phone-parent",
@@ -279,7 +279,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🔐",
     productId: "face-lock",
     dialogue:
-      "비밀번호가 자꾸 머릿속에서 숨바꼭질해요, 제 얼굴로 잠금을 풀고 싶어요.",
+      "비밀번호가 자꾸 머릿속에서 숨바꼭질해요. 제 얼굴로 잠금을 풀고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "diary-student",
@@ -287,7 +287,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "📔",
     productId: "spell-checker",
     dialogue:
-      "일기는 멋지게 썼는데 맞춤법이 걱정돼요, 틀린 곳을 찾고 싶어요.",
+      "일기는 멋지게 썼는데 맞춤법이 걱정돼요. 틀린 곳을 찾아 바르고 고치고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "dinner-parent",
@@ -295,7 +295,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🍳",
     productId: "smart-fridge",
     dialogue:
-      "냉장고에는 재료가 가득한데 메뉴가 떠오르지 않아요, 만들 음식을 알고 싶어요.",
+      "냉장고에는 재료가 가득한데 메뉴가 떠오르지 않아요. 만들 수 있는 음식을 알고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "busy-cleaner",
@@ -303,7 +303,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🧹",
     productId: "robot-vacuum",
     dialogue:
-      "먼지는 매일 놀러 오는데 청소할 시간이 없어요, 스스로 청소하는 기기가 필요해요.",
+      "먼지는 매일 놀러 오는데 청소할 시간이 부족해요. 청소를 도와주는 기기가 필요해요.",
   }),
   makeWorkshopRequest({
     id: "pet-owner",
@@ -311,7 +311,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🐕",
     productId: "pet-care-robot",
     dialogue:
-      "제가 나가면 강아지가 심심할까 걱정돼요, 곁에서 돌봐 줄 로봇이 필요해요.",
+      "제가 나가면 강아지가 심심할까 걱정돼요. 곁에서 돌봐 줄 로봇이 필요해요.",
   }),
   makeWorkshopRequest({
     id: "elderly-home-alone",
@@ -319,7 +319,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🏠",
     productId: "security-camera",
     dialogue:
-      "낯선 손님은 반갑지 않아요, 모르는 사람이 들어오면 바로 알고 싶어요.",
+      "낯선 손님은 반갑지 않아요. 모르는 사람이 들어오면 바로 알고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "stuffy-air-resident",
@@ -327,7 +327,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🌬️",
     productId: "smart-air-purifier",
     dialogue:
-      "집 안 공기가 답답해서 숨을 크게 쉬기 어려워요, 스스로 깨끗하게 하고 싶어요.",
+      "집 안 공기가 답답해서 숨을 크게 쉬기 어려워요. 스스로 공기를 좋게 만들어주면 좋겠어요.",
   }),
   makeWorkshopRequest({
     id: "frequent-laundry-person",
@@ -335,7 +335,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "👕",
     productId: "smart-washer",
     dialogue:
-      "옷마다 세탁법이 달라 세탁기가 시험 문제 같아요, 알맞게 세탁하고 싶어요.",
+      "옷마다 세탁법이 달라 시험 문제를 푸는 것 같아요. 세탁을 도와주면 좋겠어요.",
   }),
   makeWorkshopRequest({
     id: "wrong-answer-student",
@@ -343,7 +343,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "📝",
     productId: "study-helper",
     dialogue:
-      "답은 틀렸는데 이유는 꼭꼭 숨었어요, 어디서 잘못했는지 쉽게 알고 싶어요.",
+      "답은 틀렸는데 이유는 꼭꼭 숨었어요. 어디서 잘못했는지 알고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "cafeteria-student",
@@ -351,7 +351,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🍱",
     productId: "nutrition-kiosk",
     dialogue:
-      "오늘 급식이 맛있는데 어떤 영양소가 들었는지, 급식판을 찍어 알고 싶어요.",
+      "오늘 급식이 맛있는데 어떤 영양소가 들었는지 급식판을 찍어 알고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "xray-doctor",
@@ -359,7 +359,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🧑‍⚕️",
     productId: "medical-reader",
     dialogue:
-      "엑스레이 사진 속 작은 이상도 놓치고 싶지 않아요, 빠르게 찾아보고 싶어요.",
+      "엑스레이 사진 속 작은 이상도 놓치고 싶지 않아요. 도움을 받아 찾아보고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "exercising-elderly",
@@ -367,7 +367,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🚶",
     productId: "smart-band",
     dialogue:
-      "오늘은 제가 얼마나 씩씩하게 움직였는지, 심박수와 걸음 수로 확인하고 싶어요.",
+      "오늘은 제가 얼마나 씩씩하게 움직였는지 심박수와 걸음 수로 확인하고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "mobility-patient",
@@ -375,7 +375,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "♿",
     productId: "ai-wheelchair",
     dialogue:
-      "병원 복도가 미로처럼 느껴져요, 가고 싶은 곳까지 스스로 이동하고 싶어요.",
+      "병원 복도가 미로처럼 느껴져요. 가고 싶은 곳까지 도움을 받아 이동하고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "crosswalk-police",
@@ -383,7 +383,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "👮",
     productId: "road-safety-cctv",
     dialogue:
-      "횡단보도에서는 작은 위험도 놓치면 안 돼요, 위험한 상황을 빠르게 알아차리고 싶어요.",
+      "횡단보도에서는 작은 위험도 놓치면 안 돼요. 위험한 상황을 알아차리고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "novice-driver",
@@ -391,7 +391,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🚗",
     productId: "autonomous-car",
     dialogue:
-      "운전할 때 눈이 네 개였으면 좋겠어요, 차 주변을 살피며 안전하게 운전하고 싶어요.",
+      "운전할 때 눈이 네 개였으면 좋겠어요. 차 주변을 살피며 안전하게 운전하고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "courier",
@@ -399,7 +399,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "📦",
     productId: "delivery-robot",
     dialogue:
-      "좁은 골목만 만나면 배달차가 쩔쩔매요, 집 앞까지 스스로 가는 로봇이 필요해요.",
+      "좁은 골목만 만나면 너무 떨려요. 집 앞까지 택배를 쉽게 배송하고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "long-distance-traveler",
@@ -407,7 +407,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🧳",
     productId: "drone-taxi",
     dialogue:
-      "도로 위 차들이 거북이처럼 움직여요, 하늘로 빠르게 이동하고 싶어요.",
+      "도로 위 차들이 거북이처럼 움직여요. 하늘로 빠르게 이동하고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "wide-field-farmer",
@@ -415,7 +415,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🧑‍🌾",
     productId: "crop-drone",
     dialogue:
-      "밭이 너무 넓어 병든 작물이 숨으면 찾기 어려워요, 하늘에서 찍어 찾고 싶어요.",
+      "밭이 너무 넓어 병든 작물이 숨으면 찾기 어려워요. 하늘에서 찍어 찾고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "orchard-farmer",
@@ -423,7 +423,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🍎",
     productId: "harvest-robot",
     dialogue:
-      "과일마다 익는 속도가 달라 눈이 빙글빙글해요, 잘 익은 과일만 따고 싶어요.",
+      "과일마다 익는 속도가 달라 눈이 빙글빙글해요. 잘 익은 과일만 따고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "greenhouse-farmer",
@@ -431,7 +431,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🌱",
     productId: "greenhouse-computer",
     dialogue:
-      "온실 날씨가 자꾸 변덕을 부려요, 온도와 습도, 햇빛의 양을 알맞게 맞추고 싶어요.",
+      "온실 날씨가 자꾸 변덕을 부려요. 온도와 습도, 햇빛의 양을 알맞게 맞추고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "water-saving-farmer",
@@ -439,7 +439,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "💧",
     productId: "smart-watering",
     dialogue:
-      "작물은 목마른 만큼만 물을 마셔야 해요, 흙을 살펴 필요한 만큼만 주고 싶어요.",
+      "작물은 목마른 만큼만 물을 마셔야 해요. 흙을 살펴 필요한 만큼만 주고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "foreign-theatergoer",
@@ -447,7 +447,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🎭",
     productId: "performance-interpreter",
     dialogue:
-      "배우의 표정은 알겠는데 대사는 모르겠어요, 제 나라 말로 바로 듣고 싶어요.",
+      "배우의 표정은 알겠는데 대사는 모르겠어요. 저희 나라 말로 바로 듣고 싶어요.",
   }),
 ];
 

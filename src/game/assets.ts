@@ -4,6 +4,9 @@ export const GAME_ASSETS = {
     statusPanel: "/assets/ui/game-status-panel-blank-v1.webp",
     gameStartPanel: "/assets/ui/game-start-panel-v1.webp",
     gameStartButton: "/assets/ui/game-start-button-v1.webp",
+    gameResultPanel: "/assets/ui/game-result-panel-v1.webp",
+    gameResultRetryButton: "/assets/ui/game-result-retry-button-v1.webp",
+    gameResultReturnButton: "/assets/ui/game-result-return-button-v1.webp",
     villageEntryButton: "/assets/ui/village-entry-button-v1.webp",
     villageActivityStarEmpty:
       "/assets/ui/village-activity-star-empty-v1.webp",
@@ -12,6 +15,8 @@ export const GAME_ASSETS = {
   },
   intro: {
     board: "/assets/intro/gem-board.webp",
+    backdrop: "/assets/intro/village-intro-background-v2.webp",
+    entryButton: "/assets/intro/village-intro-entry-button-v1.webp",
   },
   world: {
     ground: "/assets/world/village-ground.webp",
@@ -19,6 +24,10 @@ export const GAME_ASSETS = {
     airport: "/assets/world/village-airport.webp",
     ethicsOffice: "/assets/world/village-ethics-office.webp",
     aiWorldGate: "/assets/world/village-ai-world-gate.webp",
+    aiWorldPortalFrames:
+      "/assets/world/village-ai-world-portal-frames-v3.webp",
+    aiWorldPortalNight:
+      "/assets/world/village-ai-world-portal-night-v4.webp",
     fountain: "/assets/world/village-fountain.webp",
     fountainWaterOverlay:
       "/assets/world/village-fountain-water-overlay-v1.webp",
@@ -39,6 +48,16 @@ export const GAME_ASSETS = {
     workbench: "/assets/shop/ai-workbench-foreground-v2.webp",
     craftingMachine: "/assets/shop/workshop-crafting-machine-v1.webp",
     craftingPanel: "/assets/shop/workshop-crafting-panel-v2.webp",
+    actionButton: "/assets/shop/workshop-action-button-v4.webp",
+    craftingDustCenter: "/assets/shop/workshop-dust-center-v1.webp",
+    craftingDustDiagonal: "/assets/shop/workshop-dust-diagonal-v1.webp",
+    craftingDustSweep: "/assets/shop/workshop-dust-sweep-v1.webp",
+    craftingDustRise: "/assets/shop/workshop-dust-rise-v1.webp",
+    craftingDustLow: "/assets/shop/workshop-dust-low-v1.webp",
+    craftingToolHammer: "/assets/shop/workshop-tool-hammer-v1.webp",
+    craftingToolScrew: "/assets/shop/workshop-tool-screw-v1.webp",
+    craftingToolNut: "/assets/shop/workshop-tool-nut-v1.webp",
+    craftingToolGear: "/assets/shop/workshop-tool-gear-v1.webp",
     itemPanel4: "/assets/shop/workshop-item-panel-4.webp",
     itemPanel5: "/assets/shop/workshop-item-panel-5.webp",
     customerNameplate: "/assets/shop/workshop-customer-nameplate-v4.webp",
@@ -77,6 +96,7 @@ export const GAME_ASSETS = {
     sky: "/assets/airport/bg_sky.webp",
     city: "/assets/airport/bg_city.webp",
     ground: "/assets/airport/bg_ground.webp",
+    quizCard: "/assets/airport/data-flight-quiz-card-v1.webp",
     data: {
       doc: "/assets/airport/data_doc.webp",
       image: "/assets/airport/data_image.webp",

@@ -1,11 +1,22 @@
 import { GAME_ASSETS } from "../../../assets";
 import { defineMap } from "./mapDefinition";
 import { VILLAGE_COLLISION_MASK } from "./villageCollisionMask";
+import {
+  VILLAGE_MAP_LAYOUT_SIZE,
+  getVillageBuildingPosition,
+  getVillageBuildingSize,
+  getVillageStarPosition,
+  offsetVillageBounds,
+  offsetVillagePoint,
+  offsetVillagePoints,
+  offsetVillageRadius,
+  offsetVillageSize,
+} from "./villageLayoutGrid";
 
 export const VILLAGE_MAP = defineMap({
   schemaVersion: 1,
   id: "world",
-  size: { width: 1280, height: 720 },
+  size: VILLAGE_MAP_LAYOUT_SIZE,
   background: {
     assetKey: "village-ground",
     url: GAME_ASSETS.world.ground,
@@ -20,13 +31,15 @@ export const VILLAGE_MAP = defineMap({
       id: "ai-shop",
       assetKey: "village-ai-shop",
       url: GAME_ASSETS.world.shop,
-      position: { x: 270, y: 175 },
-      displaySize: { width: 266, height: 253 },
-      occlusionArea: { minX: 112, maxX: 448, minY: 42, maxY: 225 },
+      position: getVillageBuildingPosition("ai-shop"),
+      displaySize: getVillageBuildingSize("ai-shop"),
+      occlusionArea: offsetVillageBounds("ai-shop", {
+        minX: 112, maxX: 448, minY: 42, maxY: 225,
+      }),
       progressMarker: {
         kind: "activity-stars",
         featureId: "ai-workshop",
-        position: { x: 270, y: 56 },
+        position: getVillageStarPosition("ai-shop"),
         capacity: 3,
       },
     },
@@ -34,13 +47,15 @@ export const VILLAGE_MAP = defineMap({
       id: "airport",
       assetKey: "village-airport",
       url: GAME_ASSETS.world.airport,
-      position: { x: 989, y: 145 },
-      displaySize: { width: 269, height: 252 },
-      occlusionArea: { minX: 875, maxX: 1_115, minY: 5, maxY: 205 },
+      position: getVillageBuildingPosition("airport"),
+      displaySize: getVillageBuildingSize("airport"),
+      occlusionArea: offsetVillageBounds("airport", {
+        minX: 875, maxX: 1_115, minY: 5, maxY: 205,
+      }),
       progressMarker: {
         kind: "activity-stars",
         featureId: "data-flight",
-        position: { x: 989, y: 42 },
+        position: getVillageStarPosition("airport"),
         capacity: 3,
       },
     },
@@ -48,13 +63,15 @@ export const VILLAGE_MAP = defineMap({
       id: "ethics-office",
       assetKey: "village-ethics-office",
       url: GAME_ASSETS.world.ethicsOffice,
-      position: { x: 267, y: 482 },
-      displaySize: { width: 235, height: 254 },
-      occlusionArea: { minX: 105, maxX: 510, minY: 350, maxY: 500 },
+      position: getVillageBuildingPosition("ethics-office"),
+      displaySize: getVillageBuildingSize("ethics-office"),
+      occlusionArea: offsetVillageBounds("ethics-office", {
+        minX: 105, maxX: 510, minY: 350, maxY: 590,
+      }),
       progressMarker: {
         kind: "activity-stars",
         featureId: "ethics-review",
-        position: { x: 267, y: 372 },
+        position: getVillageStarPosition("ethics-office"),
         capacity: 3,
       },
     },
@@ -62,12 +79,14 @@ export const VILLAGE_MAP = defineMap({
       id: "ai-world-gate",
       assetKey: "village-ai-world-gate",
       url: GAME_ASSETS.world.aiWorldGate,
-      position: { x: 1_099, y: 514 },
-      displaySize: { width: 324, height: 308 },
-      occlusionArea: { minX: 850, maxX: 1_220, minY: 340, maxY: 600 },
+      position: getVillageBuildingPosition("ai-world-gate"),
+      displaySize: getVillageBuildingSize("ai-world-gate"),
+      occlusionArea: offsetVillageBounds("ai-world-gate", {
+        minX: 850, maxX: 1_220, minY: 340, maxY: 600,
+      }),
       progressMarker: {
         kind: "starlight-exit",
-        position: { x: 1_085, y: 347 },
+        position: offsetVillagePoint("ai-world-gate", { x: 1_085, y: 347 }),
         requiredStars: 9,
       },
     },
@@ -75,15 +94,17 @@ export const VILLAGE_MAP = defineMap({
       id: "fountain",
       assetKey: "village-fountain",
       url: GAME_ASSETS.world.fountain,
-      position: { x: 633, y: 310 },
-      displaySize: { width: 238, height: 251 },
-      occlusionArea: { minX: 500, maxX: 772, minY: 174, maxY: 426 },
+      position: getVillageBuildingPosition("fountain"),
+      displaySize: getVillageBuildingSize("fountain"),
+      occlusionArea: offsetVillageBounds("fountain", {
+        minX: 500, maxX: 772, minY: 174, maxY: 426,
+      }),
     },
   ],
   portals: [
     {
       id: "shop",
-      position: { x: 270, y: 175 },
+      position: offsetVillagePoint("ai-shop", { x: 318, y: 236 }),
       label: "생활 속 AI 제작소",
       availability: { kind: "always" },
       destination: {
@@ -91,15 +112,27 @@ export const VILLAGE_MAP = defineMap({
         featureId: "ai-workshop",
       },
       returnSpawn: {
-        position: { x: 360, y: 318 },
+        position: offsetVillagePoint("ai-shop", { x: 360, y: 318 }),
         facing: "front",
       },
-      interactionRadius: 210,
+      interactionRadius: offsetVillageRadius("ai-shop", 205),
+      interactionArea: {
+        kind: "ellipse",
+        radiusX: offsetVillageSize("ai-shop", {
+          width: 205, height: 115,
+        }).width,
+        radiusY: offsetVillageSize("ai-shop", {
+          width: 205, height: 115,
+        }).height,
+      },
       interactionComparison: "strictly-less-than",
     },
     {
       id: "workshop",
-      position: { x: 267, y: 482 },
+      // The entry prompt belongs to the paved approach in front of the door.
+      // Keeping this ellipse below the building prevents activation at its
+      // sides or behind its roof while retaining a broad front approach.
+      position: offsetVillagePoint("ethics-office", { x: 318, y: 665 }),
       label: "윤리 심사소",
       availability: { kind: "always" },
       destination: {
@@ -107,15 +140,24 @@ export const VILLAGE_MAP = defineMap({
         featureId: "ethics-review",
       },
       returnSpawn: {
-        position: { x: 310, y: 680 },
+        position: offsetVillagePoint("ethics-office", { x: 310, y: 680 }),
         facing: "front",
       },
-      interactionRadius: 205,
+      interactionRadius: offsetVillageRadius("ethics-office", 200),
+      interactionArea: {
+        kind: "ellipse",
+        radiusX: offsetVillageSize("ethics-office", {
+          width: 183, height: 130,
+        }).width,
+        radiusY: offsetVillageSize("ethics-office", {
+          width: 183, height: 130,
+        }).height,
+      },
       interactionComparison: "strictly-less-than",
     },
     {
       id: "library",
-      position: { x: 989, y: 145 },
+      position: offsetVillagePoint("airport", { x: 950, y: 227 }),
       label: "데이터 비행 공항",
       availability: { kind: "always" },
       destination: {
@@ -123,15 +165,24 @@ export const VILLAGE_MAP = defineMap({
         featureId: "data-flight",
       },
       returnSpawn: {
-        position: { x: 910, y: 318 },
+        position: offsetVillagePoint("airport", { x: 910, y: 318 }),
         facing: "front",
       },
-      interactionRadius: 205,
+      interactionRadius: offsetVillageRadius("airport", 208),
+      interactionArea: {
+        kind: "ellipse",
+        radiusX: offsetVillageSize("airport", {
+          width: 208, height: 110,
+        }).width,
+        radiusY: offsetVillageSize("airport", {
+          width: 208, height: 110,
+        }).height,
+      },
       interactionComparison: "strictly-less-than",
     },
     {
       id: "starlight-exit",
-      position: { x: 1_099, y: 514 },
+      position: getVillageBuildingPosition("ai-world-gate"),
       label: "별빛 졸업길",
       availability: {
         kind: "world-star-total",
@@ -141,7 +192,7 @@ export const VILLAGE_MAP = defineMap({
         kind: "world-completion-placeholder",
         completionEvent: "world:starlight-graduation-path-ready",
       },
-      interactionRadius: 220,
+      interactionRadius: offsetVillageRadius("ai-world-gate", 220),
       interactionComparison: "strictly-less-than",
     },
   ],
@@ -152,89 +203,58 @@ export const VILLAGE_MAP = defineMap({
     polygons: [
       {
         id: "ai-shop-building",
-        points: [
+        points: offsetVillagePoints("ai-shop", [
           { x: 137, y: 49 }, { x: 403, y: 49 }, { x: 403, y: 275 },
           { x: 385, y: 302 }, { x: 155, y: 302 }, { x: 137, y: 275 },
-        ],
+        ]),
       },
       {
         id: "airport-building",
-        points: [
+        points: offsetVillagePoints("airport", [
           { x: 854, y: 7 }, { x: 1_124, y: 7 }, { x: 1_124, y: 254 },
           { x: 1_100, y: 283 }, { x: 875, y: 283 }, { x: 854, y: 254 },
-        ],
+        ]),
       },
       {
         id: "ethics-office-building",
-        points: [
-          { x: 149, y: 500 }, { x: 355, y: 500 }, { x: 370, y: 567 },
-          { x: 351, y: 593 }, { x: 155, y: 593 }, { x: 134, y: 567 },
-          { x: 134, y: 526 },
-        ],
+        points: offsetVillagePoints("ethics-office", [
+          { x: 149, y: 455 }, { x: 400, y: 455 }, { x: 420, y: 567 },
+          { x: 405, y: 593 }, { x: 155, y: 593 }, { x: 134, y: 567 },
+          { x: 134, y: 480 },
+        ]),
+      },
+      {
+        id: "ai-world-gate-portal-barrier",
+        points: offsetVillagePoints("ai-world-gate", [
+          { x: 1_020, y: 600 }, { x: 1_185, y: 615 },
+          { x: 1_185, y: 645 }, { x: 1_020, y: 630 },
+        ]),
       },
     ],
     ellipses: [
       {
-        id: "northwest-flowerbed",
-        center: { x: 255, y: 180 },
-        radiusX: 210,
-        radiusY: 165,
-        boundary: "inclusive",
-        maskBypassPadding: { x: 6, y: 6 },
-      },
-      {
-        id: "northeast-flowerbed",
-        center: { x: 1_005, y: 180 },
-        radiusX: 265,
-        radiusY: 165,
-        boundary: "inclusive",
-        maskBypassPadding: { x: 6, y: 6 },
-      },
-      {
-        id: "southwest-flowerbed",
-        center: { x: 184, y: 600 },
-        radiusX: 265,
-        radiusY: 190,
-        boundary: "inclusive",
-        maskBypassPadding: { x: 6, y: 6 },
-      },
-      {
         id: "fountain",
-        center: { x: 636, y: 372 },
-        radiusX: 166,
-        radiusY: 122,
+        center: offsetVillagePoint("fountain", { x: 636, y: 372 }),
+        radiusX: offsetVillageSize("fountain", {
+          width: 166, height: 122,
+        }).width,
+        radiusY: offsetVillageSize("fountain", {
+          width: 166, height: 122,
+        }).height,
         boundary: "inclusive",
-        maskBypassPadding: { x: 18, y: 14 },
       },
     ],
     curvedMovementGuides: [
       {
-        id: "northwest-garden",
-        center: { x: 255, y: 180 },
-        radiusX: 210,
-        radiusY: 165,
-      },
-      {
-        id: "northeast-garden",
-        center: { x: 1_005, y: 180 },
-        radiusX: 265,
-        radiusY: 165,
-      },
-      {
-        id: "southwest-garden",
-        center: { x: 184, y: 600 },
-        radiusX: 265,
-        radiusY: 190,
-      },
-      {
         id: "ethics-office-footprint",
-        center: { x: 267, y: 557 },
-        radiusX: 124,
-        radiusY: 67,
+        center: offsetVillagePoint("ethics-office", { x: 267, y: 557 }),
+        radiusX: offsetVillageSize("ethics-office", {
+          width: 124, height: 67,
+        }).width,
+        radiusY: offsetVillageSize("ethics-office", {
+          width: 124, height: 67,
+        }).height,
       },
-    ],
-    maskWalkableOverrides: [
-      { minX: 700, maxX: 1_280, minY: 360, maxY: 720 },
     ],
     precomputedMask: {
       ...VILLAGE_COLLISION_MASK,

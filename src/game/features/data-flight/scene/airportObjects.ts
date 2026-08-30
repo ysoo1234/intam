@@ -166,21 +166,22 @@ export function createAirportMovingObstacle(
   );
   const container = scene.add.container(1360, y).setDepth(16);
   const dangerColor = 0xff0000;
+  const imageSize = 74;
   const warningAuraOuter = scene.add
     .image(0, -8, `airport-bad-data-${dataKind}`)
-    .setDisplaySize(116, 116)
+    .setDisplaySize(imageSize * 1.32, imageSize * 1.32)
     .setTint(dangerColor)
     .setTintMode(Phaser.TintModes.FILL)
     .setAlpha(0.22);
   const warningAuraInner = scene.add
     .image(0, -8, `airport-bad-data-${dataKind}`)
-    .setDisplaySize(101, 101)
+    .setDisplaySize(imageSize * 1.15, imageSize * 1.15)
     .setTint(dangerColor)
     .setTintMode(Phaser.TintModes.FILL)
     .setAlpha(0.45);
   const warningRim = scene.add
     .image(0, -8, `airport-bad-data-${dataKind}`)
-    .setDisplaySize(95, 95)
+    .setDisplaySize(imageSize + 7, imageSize + 7)
     .setTint(dangerColor)
     .setTintMode(Phaser.TintModes.FILL)
     .setAlpha(0.55);
@@ -190,7 +191,7 @@ export function createAirportMovingObstacle(
   const innerScaleY = warningAuraInner.scaleY;
   const image = scene.add
     .image(0, -8, `airport-bad-data-${dataKind}`)
-    .setDisplaySize(88, 88);
+    .setDisplaySize(imageSize, imageSize);
   const label = scene.add
     .text(0, 43, dataLabel, {
       color: "#fff9e8",
@@ -236,7 +237,7 @@ export function createAirportMovingObstacle(
   return {
     kind: "obstacle",
     container,
-    radius: 36,
+    radius: 34,
     spin: 0,
     baseY: y,
     bobAmplitude,
@@ -262,21 +263,21 @@ export function createAirportEdgeObstacles(
 
   return sides.map((side) => {
     const top = side === "top";
-    const y = top ? 112 : 608;
+    const y = top ? 142.5 : 577.5;
     const container = scene.add.container(1360, y).setDepth(16);
     const texture = top
       ? "airport-corrupted-data-cloud-top"
       : "airport-corrupted-data-vortex-bottom";
     const image = scene.add
       .image(0, 0, texture)
-      .setDisplaySize(top ? 164 : 154, 248);
+      .setDisplaySize(155, 285);
     container.add(image);
     return {
       kind: "obstacle",
       container,
-      radius: 48,
-      collisionRadiusX: 44,
-      collisionRadiusY: 112,
+      radius: 50,
+      collisionRadiusX: 54,
+      collisionRadiusY: 118,
       spin: 0,
     };
   });

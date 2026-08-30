@@ -7,6 +7,7 @@ import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import { generateCustomerTexture, generatePlayerTexture } from "../../../core/visual/fallbackTextures";
 import { preloadGameChromeAssets } from "../../../core/visual/gameChrome";
+import { preloadGameResultOverlayAssets } from "../../../core/visual/gameResultOverlay";
 import { createGameStartOverlay, isGameStartOverlayOpen, preloadGameStartOverlayAssets } from "../../../core/visual/gameStartOverlay";
 import { COLORS } from "../../../core/visual/theme";
 import { WORKSHOP_PRODUCT_BY_ID, WORKSHOP_REQUESTS, type WorkshopProduct, type WorkshopRequest } from "../../../content/aiWorkshop";
@@ -26,6 +27,10 @@ import { createWorkshopControls } from "./workshopControls";
 import { applyWorkshopCustomerRequestVisual } from "./workshopCustomerVisual";
 import { animateWorkshopCustomerArtworkJoy, createCustomerJoyEffect, createWorkshopCoinBurst, createWorkshopSparkBurst } from "./workshopEffects";
 import { createWorkshopCraftingAnimation } from "./workshopCraftingView";
+import {
+  preloadWorkshopSceneAssets,
+  unloadWorkshopSceneAssets,
+} from "./workshopAssets";
 import { createWorkshopItemPanel, createWorkshopProductChoices, hideWorkshopItemPanel, rebuildWorkshopCarriedVisuals, returnWorkshopProductToPanel, showWorkshopItemPanel, type WorkshopProductChoice, type WorkshopProductOrigin } from "./workshopProducts";
 import { updateWorkshopPlayer, updateWorkshopPlayerPerspective } from "./workshopPlayer";
 import { createWorkshopResultOverlay } from "./workshopResult";
@@ -37,7 +42,7 @@ import {
 } from "./workshopStarCatchView";
 import { findNearestWorkshopProduct, findNearestWorkshopProductOrigin, renderWorkshopHud, updateWorkshopInteractionPrompt, vibrateDevice } from "./workshopStatus";
 import { createWorkshopBackground, createWorkshopCustomer, createWorkshopHud, createWorkshopPlayer, setWorkshopCustomerRole, syncWorkshopDialoguePanel } from "./workshopView";
-const AI_WORKSHOP_START = { placeName: "생활 속 AI 제작소", playDescription: "손님의 이야기를 듣고 필요한 AI 상품을 골라 작업대에서 완성해 전달해요." } as const;
+const AI_WORKSHOP_START = { placeName: "생활 속 AI 제작소", playDescription: "손님의 이야기를 듣고 필요한 AI 상품을 골라요. \n 작업대로 가져가 상품을 제작하고 손님에게 전달해요." } as const;
 export class AiWorkshopScene extends Phaser.Scene {
   private keys?: ControlKeys;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -79,7 +84,7 @@ export class AiWorkshopScene extends Phaser.Scene {
   private updateTouchDirection?: () => void;
   private actionQueued = false;
   private starCatchContainer?: Phaser.GameObjects.Container;
-  private starMarker?: Phaser.GameObjects.Rectangle;
+  private starMarker?: Phaser.GameObjects.Graphics;
   private starStatusText?: Phaser.GameObjects.Text;
   private craftingAnimationContainer?: Phaser.GameObjects.Container;
   private craftingSparkTimer?: Phaser.Time.TimerEvent;
@@ -99,15 +104,9 @@ export class AiWorkshopScene extends Phaser.Scene {
 
   preload() {
     preloadGameChromeAssets(this);
+    preloadGameResultOverlayAssets(this);
     preloadGameStartOverlayAssets(this);
-    this.load.image("ai-workshop-interior", GAME_ASSETS.shop.workshop);
-    this.load.image("ai-workbench-foreground", GAME_ASSETS.shop.workbench);
-    this.load.image("workshop-item-panel-4", GAME_ASSETS.shop.itemPanel4);
-    this.load.image("workshop-item-panel-5", GAME_ASSETS.shop.itemPanel5);
-    this.load.image("workshop-customer-nameplate", GAME_ASSETS.shop.customerNameplate);
-    this.load.image("workshop-dialogue-bubble", GAME_ASSETS.shop.dialogueBubble);
-    this.load.image("workshop-crafting-machine", GAME_ASSETS.shop.craftingMachine);
-    this.load.image("workshop-crafting-panel", GAME_ASSETS.shop.craftingPanel);
+    preloadWorkshopSceneAssets(this);
     Object.entries(GAME_ASSETS.shop.products).forEach(([productId, asset]) => {
       this.load.image(`workshop-product-${productId}`, asset);
     });
@@ -135,15 +134,8 @@ export class AiWorkshopScene extends Phaser.Scene {
   create() {
     configureSceneCamera(this, this.renderScale);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      unloadWorkshopSceneAssets(this);
       [
-        "ai-workshop-interior",
-        "ai-workbench-foreground",
-        "workshop-item-panel-4",
-        "workshop-item-panel-5",
-        "workshop-customer-nameplate",
-        "workshop-dialogue-bubble",
-        "workshop-crafting-machine",
-        "workshop-crafting-panel",
         ...Object.keys(GAME_ASSETS.shop.products).map(
           (productId) => `workshop-product-${productId}`,
         ),

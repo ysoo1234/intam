@@ -19,6 +19,10 @@ const villageScenery = await readFile(
   "src/game/features/world/scene/villageScenery.ts",
   "utf8",
 );
+const villageProgressPresentation = await readFile(
+  "src/game/features/world/scene/villageProgressPresentation.ts",
+  "utf8",
+);
 const worldTouchDirection = await readFile(
   "src/game/features/world/scene/worldTouchDirection.ts",
   "utf8",
@@ -31,8 +35,16 @@ const pointerCoordinates = await readFile(
   "src/game/core/input/pointerCoordinates.ts",
   "utf8",
 );
+const gameResultOverlay = await readFile(
+  "src/game/core/visual/gameResultOverlay.ts",
+  "utf8",
+);
 const villageMap = await readFile(
   "src/game/features/world/model/villageMap.ts",
+  "utf8",
+);
+const villageLayoutGrid = await readFile(
+  "src/game/features/world/model/villageLayoutGrid.ts",
   "utf8",
 );
 const villageMovement = await readFile(
@@ -67,8 +79,16 @@ const ethicsEffects = await readFile(
   "src/game/features/ethics-review/scene/ethicsReviewEffects.ts",
   "utf8",
 );
+const ethicsOverlays = await readFile(
+  "src/game/features/ethics-review/scene/ethicsReviewOverlays.ts",
+  "utf8",
+);
 const airportScene = await readFile(
   "src/game/features/data-flight/scene/AirportScene.ts",
+  "utf8",
+);
+const airportResult = await readFile(
+  "src/game/features/data-flight/scene/airportResult.ts",
   "utf8",
 );
 const airportEffects = await readFile(
@@ -105,6 +125,10 @@ const airportFeverFormation = await readFile(
 );
 const workshopScene = await readFile(
   "src/game/features/ai-workshop/scene/AiWorkshopScene.ts",
+  "utf8",
+);
+const workshopResult = await readFile(
+  "src/game/features/ai-workshop/scene/workshopResult.ts",
   "utf8",
 );
 const workshopView = await readFile(
@@ -229,25 +253,42 @@ assert.match(
 );
 assert.match(
   villageMap,
-  /id: "fountain",[\s\S]*?center: \{ x: 636, y: 372 \},[\s\S]*?radiusX: 166,[\s\S]*?radiusY: 122,[\s\S]*?boundary: "inclusive",[\s\S]*?maskBypassPadding: \{ x: 18, y: 14 \}/,
-  "The fountain collision must cover its full visible base.",
+  /id: "fountain",[\s\S]*?center: offsetVillagePoint\("fountain", \{ x: 636, y: 372 \}\),[\s\S]*?offsetVillageSize\("fountain", \{[\s\S]*?width: 166, height: 122,[\s\S]*?boundary: "inclusive"/,
+  "The fountain collision must follow its editable grid placement.",
 );
-for (const guideId of [
-  "northwest-garden",
-  "northeast-garden",
-  "southwest-garden",
-  "ethics-office-footprint",
-]) {
-  assert.match(
-    villageMap,
-    new RegExp(`id: "${guideId}"`),
-    `The curved movement guide ${guideId} must remain registered.`,
-  );
-}
+assert.match(villageMap, /id: "ethics-office-footprint"/);
+assert.doesNotMatch(villageMap, /northwest-garden|northeast-garden|southwest-garden/);
+assert.doesNotMatch(villageMap, /maskWalkableOverrides/);
 assert.match(
   villageMap,
-  /id: "ethics-office-building",[\s\S]*?\{ x: 149, y: 500 \}/,
-  "The Ethics Review collision must begin at its physical base, not its roof.",
+  /id: "ethics-office-building",[\s\S]*?offsetVillagePoints\("ethics-office", \[[\s\S]*?\{ x: 149, y: 455 \}/,
+  "The Ethics Review collision must block the wall below its roof overlap.",
+);
+assert.match(villageLayoutGrid, /VILLAGE_LAYOUT_GRID_MAX = 1_000/);
+assert.match(villageLayoutGrid, /VILLAGE_STAR_GRID/);
+assert.match(villageMap, /position: getVillageStarPosition\("ai-shop"\)/);
+assert.match(villageMap, /position: getVillageStarPosition\("airport"\)/);
+assert.match(villageMap, /position: getVillageStarPosition\("ethics-office"\)/);
+for (const buildingId of [
+  "ai-shop",
+  "airport",
+  "ethics-office",
+  "ai-world-gate",
+  "fountain",
+]) {
+  assert.match(
+    villageLayoutGrid,
+    new RegExp(`${JSON.stringify(buildingId)}: \\{ x: -?\\d+, y: -?\\d+, width: \\d+, height: \\d+ \\}`),
+    `The ${buildingId} placement must stay editable as a 1000-grid rectangle.`,
+  );
+}
+assert.match(villageMap, /position: getVillageBuildingPosition\("ai-shop"\)/);
+assert.match(villageMap, /displaySize: getVillageBuildingSize\("airport"\)/);
+assert.match(villageMap, /occlusionArea: offsetVillageBounds\("ethics-office"/);
+assert.match(
+  villageMap,
+  /occlusionArea: offsetVillageBounds\("ethics-office", \{[\s\S]*?minX: 105, maxX: 510, minY: 350, maxY: 590/,
+  "The Ethics Review office must occlude the player through its visible base.",
 );
 for (const sceneryKey of [
   "village-ai-shop",
@@ -262,6 +303,25 @@ assert.match(worldScene, /createVillageScenery\(this, WORLD_MAP\)/);
 assert.match(worldScene, /getVillagePlayerDepth\(this\.player\.y\)/);
 assert.match(villageScenery, /isPointWithinSceneryOcclusionArea/);
 assert.match(villageScenery, /updateVillageSceneryDepths/);
+assert.match(villageScenery, /AI_WORLD_PORTAL_TEXTURE/);
+assert.match(villageScenery, /createAiWorldPortal/);
+assert.match(villageScenery, /depthBackdrops/);
+assert.match(villageScenery, /GAME_ASSETS\.world\.aiWorldPortalNight/);
+assert.doesNotMatch(villageScenery, /AI_WORLD_PORTAL_ANIMATION/);
+assert.doesNotMatch(villageScenery, /AI_WORLD_PORTAL_FRAME_COUNT/);
+assert.match(villageScenery, /point\(76, 192\)/);
+assert.match(villageScenery, /\[188, 207\]/);
+assert.match(villageScenery, /duration: 42_000/);
+assert.match(villageScenery, /stars\.fillStyle\(0xffffff/);
+assert.match(villageScenery, /renderer\.type === Phaser\.CANVAS/);
+assert.match(villageScenery, /openingMask\.createGeometryMask\(\)/);
+assert.match(villageScenery, /target\.setMask/);
+assert.match(villageScenery, /filters\?\.external\.addMask/);
+assert.match(
+  villageProgressPresentation,
+  /exitLayer\.image\.clearTint\(\)\.setAlpha\(1\)/,
+  "The locked world gate must remain opaque.",
+);
 assert.match(worldScene, /updateVillageSceneryDepths\(this\.sceneryLayers/);
 assert.match(worldScene, /clampVillageFrameDelta\(delta\)/);
 assert.match(worldScene, /resolveVillageMovement\(/);
@@ -314,14 +374,62 @@ assert.doesNotMatch(villageCollision, /Phaser|TextureManager|getPixel|getFrame/)
 assert.doesNotMatch(worldScene, /WORLD_COLLISION\.isBlocked\(this\.textures/);
 assert.match(
   villageMap,
-  /id: "workshop",[\s\S]*?featureId: "ethics-review",[\s\S]*?interactionRadius: 205/,
-  "The Ethics Review entrance must be reachable outside the building collision edge.",
+  /id: "shop",[\s\S]*?position: offsetVillagePoint\("ai-shop", \{ x: 318, y: 236 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 205, height: 115/,
+  "The AI shop must activate throughout its marked approach ellipse.",
+);
+assert.match(
+  villageMap,
+  /id: "workshop",[\s\S]*?position: offsetVillagePoint\("ethics-office", \{ x: 318, y: 665 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 183, height: 130/,
+  "The Ethics Review office must activate only on its front paved approach.",
+);
+assert.match(villageScenery, /const AI_WORLD_PORTAL_OFFSET_X_PX = -?\d+/);
+assert.match(villageScenery, /const AI_WORLD_PORTAL_OFFSET_Y_PX = -?\d+/);
+assert.match(
+  villageScenery,
+  /const portalCenterY = y \+ AI_WORLD_PORTAL_OFFSET_Y_PX/,
+  "The AI-world portal center must expose a direct game-pixel Y offset.",
+);
+assert.match(
+  villageMap,
+  /id: "library",[\s\S]*?position: offsetVillagePoint\("airport", \{ x: 950, y: 227 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 208, height: 110/,
+  "The data airport must activate throughout its marked approach ellipse.",
 );
 assert.doesNotMatch(
   ethicsScene,
   /setInterval|GAME_DURATION|WRONG_PENALTY/,
   "Ethics Review must not bring back the React timer loop or time penalty.",
 );
+for (const activeScene of [workshopScene, airportScene, ethicsScene]) {
+  assert.match(
+    activeScene,
+    /preloadGameResultOverlayAssets\(this\)/,
+    "Every active village activity must preload the shared result artwork.",
+  );
+}
+for (const resultView of [workshopResult, airportResult, ethicsOverlays]) {
+  assert.match(
+    resultView,
+    /createGameResultOverlay\(scene,/,
+    "Every active village activity must use the shared result layout.",
+  );
+}
+assert.match(gameResultOverlay, /GAME_ASSETS\.ui\.gameResultPanel/);
+assert.match(gameResultOverlay, /GAME_ASSETS\.ui\.gameResultRetryButton/);
+assert.match(gameResultOverlay, /GAME_ASSETS\.ui\.gameResultReturnButton/);
+assert.match(gameResultOverlay, /"마을로 돌아가기"/);
+assert.doesNotMatch(gameResultOverlay, /"🏆"/);
+assert.match(gameResultOverlay, /titleY: -169/);
+assert.match(gameResultOverlay, /starsY: -97/);
+assert.match(gameResultOverlay, /summaryY: -22/);
+assert.match(gameResultOverlay, /retryButtonY: 72/);
+assert.match(gameResultOverlay, /returnButtonY: 152/);
+assert.match(gameResultOverlay, /\.text\(0, 3, label,/);
+assert.match(gameResultOverlay, /summary: "#2a6570"/);
+assert.match(gameResultOverlay, /button: "#102d37"/);
+assert.match(gameResultOverlay, /RESULT_FONT_FAMILY =[\s\S]*?"Malgun Gothic"/);
+assert.match(gameResultOverlay, /\.setResolution\(4\)/);
+assert.match(gameResultOverlay, /fontSize: "23px"/);
+assert.match(workshopControls, /\.setDepth\(90\)/);
 assert.match(
   ethicsScene,
   /create\(\) \{\s*this\.resetSceneState\(\);/,
@@ -440,6 +548,9 @@ assert.match(airportFeverFormation, /createXFormation/);
 assert.match(airportFeverFormation, /createHeartFormation/);
 assert.match(airportFeverFormation, /createWaveFormation/);
 assert.match(airportFeverFormation, /createDiamondFormation/);
+assert.match(airportFeverFormation, /createStarFormation/);
+assert.match(airportFeverFormation, /createAiFormation/);
+assert.match(airportFeverFormation, /Phaser\.Math\.Between\(0, FORMATION_PATTERN_COUNT - 1\)/);
 assert.match(airportFeverFormation, /ITEMS_PER_GROUP = 5/);
 assert.match(airportFeverFormation, /slice\(0, 4\)/);
 assert.match(airportScene, /this\.score >= DATA_FLIGHT_CONFIG\.firstQuestionScore/);
@@ -454,7 +565,14 @@ assert.match(airportObjects, /과학기술 공공데이터/);
 assert.match(airportObjects, /환경 공공데이터/);
 assert.match(airportObjects, /airport-corrupted-data-cloud-top/);
 assert.match(airportObjects, /airport-corrupted-data-vortex-bottom/);
-assert.match(airportObjects, /collisionRadiusY: 112/);
+assert.match(airportObjects, /collisionRadiusY: 118/);
+assert.match(airportScene, /Phaser\.Math\.Between\(\s*DATA_FLIGHT_CONFIG\.dataSpawnInterval\.minMs/);
+assert.match(airportScene, /\.text\(0, -172, "데이터 퀴즈"/);
+assert.match(airportScene, /fontSize: "24px"/);
+assert.match(airportScene, /fillRoundedRect\(-236, 153, 472, 20, 10\)/);
+assert.doesNotMatch(airportScene, /DATA QUIZ/);
+assert.doesNotMatch(airportScene, /revealGlow|revealMotes/);
+assert.match(airportScene, /targets: readingFill/);
 assert.match(airportObjects, /horizontalBobSpeed: bobSpeed \* 0\.55/);
 assert.match(airportScene, /updateAirportObstacleMotion\(object, this\.elapsedMs\)/);
 assert.match(airportObjectMotion, /nextHorizontalOffset - \(object\.horizontalBobOffset \?\? 0\)/);
@@ -464,7 +582,7 @@ const count = (pattern) => randomSource.match(pattern)?.length ?? 0;
 assert.equal(count(/Phaser\.Utils\.Array\.Shuffle\(/g), 2);
 assert.equal(count(/Phaser\.Utils\.Array\.GetRandom\(/g), 6);
 assert.equal(count(/Phaser\.Math\.FloatBetween\(/g), 5);
-assert.equal(count(/Phaser\.Math\.Between\(/g), 18);
+assert.equal(count(/Phaser\.Math\.Between\(/g), 19);
 
 const orderedSceneMarkers = [
   "Phaser.Utils.Array.Shuffle([...FLIGHT_QUESTIONS])",
@@ -605,7 +723,9 @@ assert.match(workshopControls, /scene\.input\.on\("pointerdown"/);
 assert.match(workshopControls, /scene\.input\.on\("pointermove"/);
 assert.match(workshopControls, /scene\.input\.on\("pointerupoutside"/);
 assert.match(workshopControls, /Scenes\.Events\.SHUTDOWN/);
-assert.match(workshopControls, /stopPropagation: true/);
+assert.match(workshopControls, /image\(0, 0, "workshop-action-button"\)/);
+assert.match(workshopControls, /event\.stopPropagation\(\)/);
+assert.match(workshopControls, /UI_MOTION\.pressedScale/);
 assert.match(workshopControls, /getPointerWorldPoint\(scene, pointer/);
 assert.match(workshopControls, /updateTouchDirection/);
 assert.doesNotMatch(workshopControls, /pointer\.x > 1_090/);
@@ -645,7 +765,7 @@ const countWorkshop = (pattern) =>
 assert.equal(countWorkshop(/Phaser\.Utils\.Array\.Shuffle\(/g), 5);
 assert.equal(countWorkshop(/Phaser\.Utils\.Array\.GetRandom\(/g), 1);
 assert.equal(countWorkshop(/Phaser\.Math\.FloatBetween\(/g), 1);
-assert.equal(countWorkshop(/Phaser\.Math\.Between\(/g), 11);
+assert.equal(countWorkshop(/Phaser\.Math\.Between\(/g), 29);
 
 const orderedWorkshopSceneMarkers = [
   "Phaser.Utils.Array.Shuffle([\n      ...WORKSHOP_REQUESTS",

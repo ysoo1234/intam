@@ -56,6 +56,11 @@ type PortalBase = Readonly<{
   position: Point;
   label: string;
   interactionRadius: number;
+  interactionArea?: Readonly<{
+    kind: "ellipse";
+    radiusX: number;
+    radiusY: number;
+  }>;
   interactionComparison: "strictly-less-than";
 }>;
 
@@ -81,6 +86,24 @@ export type CompletionPortalDefinition = PortalBase &
 export type PortalDefinition =
   | FeaturePortalDefinition
   | CompletionPortalDefinition;
+
+export function isPointWithinPortalInteractionArea(
+  portal: PortalDefinition,
+  point: Point,
+) {
+  if (portal.interactionArea?.kind === "ellipse") {
+    const normalizedX = (point.x - portal.position.x) /
+      portal.interactionArea.radiusX;
+    const normalizedY = (point.y - portal.position.y) /
+      portal.interactionArea.radiusY;
+    return normalizedX * normalizedX + normalizedY * normalizedY < 1;
+  }
+
+  return Math.hypot(
+    point.x - portal.position.x,
+    point.y - portal.position.y,
+  ) < portal.interactionRadius;
+}
 
 export type PolygonCollisionDefinition = Readonly<{
   id: string;

@@ -1,14 +1,7 @@
 import Phaser from "phaser";
 import {
-  COLORS,
-  getTextStyle,
-  TEXT_COLORS,
-  UI_RADII,
-} from "../../../core/visual/theme";
-import {
-  addUiButton,
-  addUiSurface,
-} from "../../../core/visual/uiPrimitives";
+  createGameResultOverlay,
+} from "../../../core/visual/gameResultOverlay";
 
 export type AirportResult = {
   completed: boolean;
@@ -24,74 +17,12 @@ export function createAirportResultOverlay(
   scene: Phaser.Scene,
   result: AirportResult,
 ) {
-  const overlay = scene.add.container(640, 360).setDepth(110);
-  const shade = scene.add.rectangle(0, 0, 1280, 720, COLORS.ink, 0.82);
-  const panel = addUiSurface(
-    scene,
-    { x: -370, y: -250, width: 740, height: 500 },
-    "paper",
-    {
-      radius: UI_RADII.dialog,
-      borderWidth: 6,
-      shadow: "medium",
-    },
-  );
-  const icon = scene.add
-    .text(0, -190, result.completed ? "🏆" : "💛", { fontSize: "70px" })
-    .setOrigin(0.5);
-  const title = scene.add
-    .text(
-      0,
-      -118,
-      result.completed ? "데이터 비행 완료!" : "비행을 마쳤어요",
-      getTextStyle("display", { fontSize: "39px" }),
-    )
-    .setOrigin(0.5);
-  const stars = scene.add
-    .text(0, -63, `${"★".repeat(result.stars)}${"☆".repeat(3 - result.stars)}`, getTextStyle("title", {
-      color: "#E9A735",
-      fontSize: "34px",
-    }))
-    .setOrigin(0.5);
-  const stats = scene.add
-    .text(
-      0,
-      24,
-      `최종 점수  ${result.score.toLocaleString()}점\n수집한 데이터  ${result.collected}개   ·   맞힌 문제  ${result.correctAnswers}개`,
-      getTextStyle("heading", {
-        color: TEXT_COLORS.accent,
-        fontSize: "25px",
-        align: "center",
-        lineSpacing: 13,
-      }),
-    )
-    .setOrigin(0.5);
-  const retry = addUiButton(scene, {
-    x: 0,
-    y: 122,
-    width: 300,
-    height: 58,
-    label: "다시 비행",
-    variant: "caution",
-    onPress: result.onRetry,
-  }).container;
-  const world = addUiButton(scene, {
-    x: 0,
-    y: 198,
-    width: 300,
-    height: 58,
-    label: "마을로 돌아가기",
-    variant: "positive",
-    onPress: result.onWorld,
-  }).container;
-  overlay.add([shade, panel, icon, title, stars, stats, retry, world]);
-  overlay.setScale(0.9).setAlpha(0);
-  scene.tweens.add({
-    targets: overlay,
-    scale: 1,
-    alpha: 1,
-    duration: 420,
-    ease: "Back.easeOut",
+  return createGameResultOverlay(scene, {
+    title: "비행을 마쳤어요.",
+    stars: result.stars,
+    summary: `데이터 ${result.collected}개를 모으고 ${result.score.toLocaleString()}점을 얻었어요!\n문제 ${result.correctAnswers}개를 맞혔어요.`,
+    retryLabel: "다시 비행하기",
+    onRetry: result.onRetry,
+    onWorld: result.onWorld,
   });
-  return overlay;
 }

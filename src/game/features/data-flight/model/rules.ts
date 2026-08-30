@@ -49,7 +49,7 @@ export function shouldSpawnDoubleEdgeObstacle(score: number, roll: number) {
   return roll < getDifficultyProfile(score).doubleEdgeChance;
 }
 
-export function getCollectedDataScore(feverActive: boolean): 10 | 20 {
+export function getCollectedDataScore(feverActive: boolean): 10 | 30 {
   return feverActive
     ? DATA_FLIGHT_CONFIG.feverDataScore
     : DATA_FLIGHT_CONFIG.dataScore;

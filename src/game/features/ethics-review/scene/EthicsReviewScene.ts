@@ -4,6 +4,7 @@ import { createWorldReturnSceneData } from "../../../core/navigation";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import { generatePlayerTexture } from "../../../core/visual/fallbackTextures";
 import { createGameStartOverlay, preloadGameStartOverlayAssets } from "../../../core/visual/gameStartOverlay";
+import { preloadGameResultOverlayAssets } from "../../../core/visual/gameResultOverlay";
 import {
   createGameStatusHud,
   createVillageReturnButton,
@@ -83,6 +84,7 @@ export class EthicsReviewScene extends Phaser.Scene {
 
   preload() {
     preloadGameChromeAssets(this);
+    preloadGameResultOverlayAssets(this);
     preloadGameStartOverlayAssets(this);
     preloadEthicsReviewAssets(this);
   }

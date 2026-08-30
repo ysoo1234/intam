@@ -94,7 +94,7 @@ export function createVillageProgressPresentation(
   );
   if (exitLayer) {
     if (exitState.kind === "locked") {
-      exitLayer.image.setAlpha(0.76).setTint(0xb7c7c5);
+      exitLayer.image.clearTint().setAlpha(1);
     } else {
       exitLayer.image.clearTint().setAlpha(1);
       scene.tweens.add({

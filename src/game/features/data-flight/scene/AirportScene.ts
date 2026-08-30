@@ -3,6 +3,7 @@ import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera
 import { createWorldReturnSceneData } from "../../../core/navigation";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import { preloadGameChromeAssets } from "../../../core/visual/gameChrome";
+import { preloadGameResultOverlayAssets } from "../../../core/visual/gameResultOverlay";
 import { createGameStartOverlay, isGameStartOverlayOpen, preloadGameStartOverlayAssets } from "../../../core/visual/gameStartOverlay";
 import { COLORS, FONT_FAMILY } from "../../../core/visual/theme";
 import {
@@ -47,7 +48,7 @@ import { preloadAirportAssets, releaseAirportTextures } from "./airportTextures"
 import { createAirportDataObject, createAirportEdgeObstacles, createAirportMovingObstacle } from "./airportObjects";
 import { advanceAirportBackgroundTile, createAirportBackground, createAirportPlayer } from "./airportView";
 import type { FlightObject } from "./flightObject";
-const DATA_FLIGHT_START = { placeName: "데이터 비행 공항", playDescription: "좋은 데이터를 모으며 장애물을 피하고, 질문에 맞는 공공데이터를 골라요." } as const;
+const DATA_FLIGHT_START = { placeName: "데이터 비행 공항", playDescription: "다양한 데이터를 모으며 장애물을 피해요. \n 질문이 나오면 목적에 맞는 데이터를 골라요." } as const;
 export class AirportScene extends Phaser.Scene {
   private sky?: Phaser.GameObjects.TileSprite;
   private city?: Phaser.GameObjects.TileSprite;
@@ -78,7 +79,6 @@ export class AirportScene extends Phaser.Scene {
   private missionText?: Phaser.GameObjects.Text;
   private hud?: AirportHud;
   private nextFeverSparkAtMs = 0;
-  private feverFormationIndex = 0;
   private controls?: AirportControls;
   private failurePending = false;
   private finished = false;
@@ -90,6 +90,7 @@ export class AirportScene extends Phaser.Scene {
   preload() {
     preloadAirportAssets(this);
     preloadGameChromeAssets(this);
+    preloadGameResultOverlayAssets(this);
     preloadGameStartOverlayAssets(this);
   }
   create() {
@@ -137,7 +138,6 @@ export class AirportScene extends Phaser.Scene {
     this.missionText = undefined;
     this.controls = undefined;
     this.nextFeverSparkAtMs = 0;
-    this.feverFormationIndex = 0;
     this.failurePending = false;
     this.finished = false;
   }
@@ -165,8 +165,7 @@ export class AirportScene extends Phaser.Scene {
   }
 
   private spawnFeverFormation() {
-    const formation = createAirportFeverFormation(this.feverFormationIndex);
-    this.feverFormationIndex += 1;
+    const formation = createAirportFeverFormation();
     formation.forEach(({ publicDataKind, x, y, showLabel }) => {
       this.spawnData(
         undefined,
@@ -216,51 +215,50 @@ export class AirportScene extends Phaser.Scene {
 
     const overlay = this.add.container(640, 360).setDepth(90);
     const shade = this.add.rectangle(0, 0, 1280, 720, 0x112f43, 0.82);
-    const rays = this.add.graphics();
-    rays.lineStyle(5, 0x71e8ff, 0.28);
-    for (let index = 0; index < 18; index += 1) {
-      const angle = (Math.PI * 2 * index) / 18;
-      rays.lineBetween(
-        Math.cos(angle) * 175,
-        Math.sin(angle) * 175,
-        Math.cos(angle) * 620,
-        Math.sin(angle) * 620,
-      );
-    }
-    const panel = this.add.graphics();
-    panel.fillStyle(0xfff8e5, 1);
-    panel.lineStyle(9, COLORS.ink, 1);
-    panel.fillRoundedRect(-455, -185, 910, 370, 62);
-    panel.strokeRoundedRect(-455, -185, 910, 370, 62);
+    const panel = this.add
+      .image(0, 0, "airport-quiz-card")
+      .setDisplaySize(1_040, 425);
     const badge = this.add
-      .text(0, -122, `DATA QUIZ · ${question.category}`, {
-        color: "#ffffff",
-        backgroundColor: "#ef7663",
+      .text(0, -172, "데이터 퀴즈", {
+        color: "#fffaf1",
         fontFamily: FONT_FAMILY,
-        fontSize: "22px",
+        fontSize: "24px",
         fontStyle: "bold",
-        padding: { x: 20, y: 10 },
+        shadow: {
+          offsetY: 2,
+          color: "#9f352f",
+          blur: 1,
+          fill: true,
+        },
       })
       .setOrigin(0.5);
     const prompt = this.add
-      .text(0, -22, question.prompt, {
+      .text(0, -12, question.prompt, {
         color: "#173f43",
         fontFamily: FONT_FAMILY,
-        fontSize: "38px",
+        fontSize: "39px",
         fontStyle: "bold",
         align: "center",
-        wordWrap: { width: 780 },
+        lineSpacing: 8,
+        wordWrap: { width: 760 },
       })
       .setOrigin(0.5);
     const instruction = this.add
-      .text(0, 105, "곧 데이터 4개가 날아옵니다. 정답을 향해 비행하세요!", {
-        color: "#287b85",
+      .text(0, 132, "곧 데이터 4개가 날아옵니다  ·  정답을 향해 비행하세요!", {
+        color: "#145c77",
         fontFamily: FONT_FAMILY,
-        fontSize: "23px",
+        fontSize: "20px",
         fontStyle: "bold",
       })
       .setOrigin(0.5);
-    overlay.add([shade, rays, panel, badge, prompt, instruction]);
+    const readingTrack = this.add.graphics();
+    readingTrack.fillStyle(0x145c77, 0.78);
+    readingTrack.fillRoundedRect(-236, 153, 472, 20, 10);
+    readingTrack.lineStyle(2, 0x73d9e4, 0.95);
+    readingTrack.strokeRoundedRect(-236, 153, 472, 20, 10);
+    const readingFill = this.add.graphics().fillStyle(0xf3b94d, 1);
+    readingFill.fillRoundedRect(0, -6, 460, 12, 6).setPosition(-230, 163);
+    overlay.add([shade, panel, badge, prompt, instruction, readingTrack, readingFill]);
     overlay.setScale(0.82).setAlpha(0);
     this.tweens.add({
       targets: overlay,
@@ -270,9 +268,9 @@ export class AirportScene extends Phaser.Scene {
       ease: "Back.easeOut",
     });
     this.tweens.add({
-      targets: rays,
-      angle: 18,
-      duration: 2_800,
+      targets: readingFill,
+      scaleX: 0,
+      duration: DATA_FLIGHT_CONFIG.questionReadingMs,
       ease: "Linear",
     });
     this.questionOverlay = overlay;
@@ -672,7 +670,11 @@ export class AirportScene extends Phaser.Scene {
         } else {
           this.spawnData();
           this.nextDataAtMs =
-            this.elapsedMs + DATA_FLIGHT_CONFIG.dataSpawnIntervalMs;
+            this.elapsedMs +
+            Phaser.Math.Between(
+              DATA_FLIGHT_CONFIG.dataSpawnInterval.minMs,
+              DATA_FLIGHT_CONFIG.dataSpawnInterval.maxMs,
+            );
         }
       }
       if (!fever && this.elapsedMs >= this.nextObstacleAtMs) {

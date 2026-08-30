@@ -4,7 +4,11 @@ import {
   type ControlKeys,
 } from "../../../core/input/controlKeys";
 import { getPointerWorldPoint } from "../../../core/input/pointerCoordinates";
-import { addUiButton } from "../../../core/visual/uiPrimitives";
+import {
+  getTextStyle,
+  TEXT_COLORS,
+  UI_MOTION,
+} from "../../../core/visual/theme";
 import { projectWorkshopPointToWalkableArea } from "./workshopPlayer";
 
 export type WorkshopControls = {
@@ -120,20 +124,61 @@ export function createWorkshopControls(
   scene.input.on("pointerupoutside", releaseTouch);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, destroyTouchControls);
 
-  const { container: action, label: actionText } = addUiButton(scene, {
-    x: 1190,
-    y: 630,
-    width: 80,
-    height: 80,
-    radius: 40,
-    label: "집기",
-    onPress: onAction,
-    variant: "caution",
-    fontSize: "18px",
-    depth: 57,
-    stopPropagation: true,
+  const actionSurface = scene.add
+    .image(0, 0, "workshop-action-button")
+    .setDisplaySize(90, 90);
+  const actionText = scene.add
+    .text(
+      0,
+      -1,
+      "집기",
+      getTextStyle("heading", {
+        color: TEXT_COLORS.primary,
+        fontSize: "18px",
+      }),
+    )
+    .setOrigin(0.5)
+    .setResolution(3);
+  const action = scene.add
+    .container(1188, 628, [actionSurface, actionText])
+    .setDepth(90)
+    .setSize(94, 94)
+    .setInteractive({ useHandCursor: true })
+    .setVisible(false);
+  let actionHovering = false;
+  action.on(
+    "pointerdown",
+    (
+      _pointer: Phaser.Input.Pointer,
+      _localX: number,
+      _localY: number,
+      event: Phaser.Types.Input.EventData,
+    ) => {
+      event.stopPropagation();
+      scene.tweens.killTweensOf(action);
+      scene.tweens.add({
+        targets: action,
+        scale: UI_MOTION.pressedScale,
+        duration: UI_MOTION.pressDurationMs,
+        yoyo: true,
+        ease: "Sine.easeOut",
+        onComplete: () => {
+          action.setScale(actionHovering ? UI_MOTION.hoverScale : 1);
+        },
+      });
+      onAction();
+    },
+  );
+  action.on("pointerover", () => {
+    actionHovering = true;
+    if (!scene.tweens.isTweening(action)) {
+      action.setScale(UI_MOTION.hoverScale);
+    }
   });
-  action.setSize(90, 90).setVisible(false);
+  action.on("pointerout", () => {
+    actionHovering = false;
+    if (!scene.tweens.isTweening(action)) action.setScale(1);
+  });
   return {
     keys,
     cursors,

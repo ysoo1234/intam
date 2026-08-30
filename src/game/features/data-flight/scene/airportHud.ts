@@ -57,7 +57,7 @@ export class AirportHud {
       .setVisible(false);
     this.feverFrame = scene.add.graphics().setDepth(59).setVisible(false);
     this.feverText = scene.add
-      .text(480, 102, "⚡ 공공데이터 피버!", {
+      .text(640, 102, "⚡ 공공데이터 피버!", {
         color: "#fff6ad",
         fontFamily: FONT_FAMILY,
         fontSize: "28px",

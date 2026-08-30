@@ -28,6 +28,7 @@ import {
 } from "../../../core/visual/theme";
 import { addUiSurface } from "../../../core/visual/uiPrimitives";
 import { mapRegistry } from "../model/mapRegistry";
+import { isPointWithinPortalInteractionArea } from "../model/mapDefinition";
 import {
   clampVillageFrameDelta,
   createVillageMovementMemory,
@@ -520,15 +521,12 @@ export class WorldScene extends Phaser.Scene {
     });
 
     this.nearestBuilding = WORLD_MAP.portals.find((portal) => {
-      const distance = Phaser.Math.Distance.Between(
-        this.player!.x,
-        this.player!.y,
-        portal.position.x,
-        portal.position.y,
-      );
       switch (portal.interactionComparison) {
         case "strictly-less-than":
-          return distance < portal.interactionRadius;
+          return isPointWithinPortalInteractionArea(portal, {
+            x: this.player!.x,
+            y: this.player!.y,
+          });
       }
     });
 

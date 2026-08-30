@@ -1,25 +1,34 @@
 import { createHash } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 
 const SOURCE_PATH = path.resolve(
-  "assets-source/world/ai-village-main-background-v3.png",
+  "assets-source/world/ai-village-main-background-v4.png",
 );
 const OUTPUT_PATH = path.resolve(
   "src/game/features/world/model/villageCollisionMask.ts",
 );
+const PREVIEW_PATH = path.resolve("tmp/village-collision-preview.png");
 const CELL_SIZE = 4;
+const MAP_WIDTH = 1_280;
+const MAP_HEIGHT = 720;
 
-function isLegacyPixelBlocked(red, green, blue) {
-  // The current village art uses a deliberately soft, yellow-green lawn. It
-  // is less saturated than the old background, so hue alone no longer finds
-  // the visible flowerbed edge. The red ceiling separates it from the warm
-  // cream paving while retaining the muted grass and surrounding foliage.
-  const vegetation = red < 235 && green > blue + 20 && green >= red - 35;
-  const blueSurface = blue > red + 8 && green > red - 20;
-  const redRoof = red > green + 72 && green < 185 && blue < 155;
-  return vegetation || blueSurface || redRoof;
+function isPathPixel(red, green, blue) {
+  // The approved village path is a warm sand color. Requiring each channel
+  // relationship keeps the green lawn, cyan trim, trees, walls, and sky out
+  // of the walkable mask even where their brightness is similar.
+  return (
+    red >= 220 &&
+    green >= 165 &&
+    green <= 232 &&
+    blue >= 100 &&
+    blue <= 190 &&
+    red - green >= 20 &&
+    red - green <= 72 &&
+    green - blue >= 24 &&
+    green - blue <= 90
+  );
 }
 
 function removeIsolatedCells(source, columns, rows) {
@@ -64,6 +73,10 @@ function wrapString(value, width = 96) {
 const sourceBytes = await readFile(SOURCE_PATH);
 const sourceSha256 = createHash("sha256").update(sourceBytes).digest("hex");
 const { data, info } = await sharp(sourceBytes)
+  .resize(MAP_WIDTH, MAP_HEIGHT, {
+    fit: "fill",
+    kernel: sharp.kernel.lanczos3,
+  })
   .ensureAlpha()
   .raw()
   .toBuffer({ resolveWithObject: true });
@@ -73,16 +86,33 @@ const sampledCells = new Uint8Array(columns * rows);
 
 for (let row = 0; row < rows; row += 1) {
   for (let column = 0; column < columns; column += 1) {
-    const x = Math.min(info.width - 1, column * CELL_SIZE);
-    const y = Math.min(info.height - 1, row * CELL_SIZE);
-    const pixelIndex = (y * info.width + x) * info.channels;
-    sampledCells[row * columns + column] = isLegacyPixelBlocked(
-      data[pixelIndex],
-      data[pixelIndex + 1],
-      data[pixelIndex + 2],
-    )
-      ? 1
-      : 0;
+    let pathPixels = 0;
+    let sampledPixels = 0;
+    for (let offsetY = 0; offsetY < CELL_SIZE; offsetY += 1) {
+      for (let offsetX = 0; offsetX < CELL_SIZE; offsetX += 1) {
+        const x = Math.min(
+          info.width - 1,
+          column * CELL_SIZE + offsetX,
+        );
+        const y = Math.min(
+          info.height - 1,
+          row * CELL_SIZE + offsetY,
+        );
+        const pixelIndex = (y * info.width + x) * info.channels;
+        if (
+          isPathPixel(
+            data[pixelIndex],
+            data[pixelIndex + 1],
+            data[pixelIndex + 2],
+          )
+        ) {
+          pathPixels += 1;
+        }
+        sampledPixels += 1;
+      }
+    }
+    sampledCells[row * columns + column] =
+      pathPixels / sampledPixels >= 0.55 ? 0 : 1;
   }
 }
 
@@ -110,3 +140,31 @@ await writeFile(OUTPUT_PATH, output, "utf8");
 console.log(
   `Wrote ${path.relative(process.cwd(), OUTPUT_PATH)} (${columns}x${rows} cells).`,
 );
+
+if (process.argv.includes("--preview")) {
+  const overlay = Buffer.alloc(MAP_WIDTH * MAP_HEIGHT * 4);
+  for (let y = 0; y < MAP_HEIGHT; y += 1) {
+    for (let x = 0; x < MAP_WIDTH; x += 1) {
+      const cell =
+        Math.floor(y / CELL_SIZE) * columns + Math.floor(x / CELL_SIZE);
+      if (collisionCells[cell] !== 1) continue;
+      const index = (y * MAP_WIDTH + x) * 4;
+      overlay[index] = 218;
+      overlay[index + 1] = 58;
+      overlay[index + 2] = 74;
+      overlay[index + 3] = 118;
+    }
+  }
+  await mkdir(path.dirname(PREVIEW_PATH), { recursive: true });
+  await sharp(sourceBytes)
+    .resize(MAP_WIDTH, MAP_HEIGHT, { fit: "fill" })
+    .composite([
+      {
+        input: overlay,
+        raw: { width: MAP_WIDTH, height: MAP_HEIGHT, channels: 4 },
+      },
+    ])
+    .png()
+    .toFile(PREVIEW_PATH);
+  console.log(`Wrote ${path.relative(process.cwd(), PREVIEW_PATH)}`);
+}

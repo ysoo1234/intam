@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { COLORS, FONT_FAMILY } from "../../../core/visual/theme";
+import { FONT_FAMILY } from "../../../core/visual/theme";
 import type { WorkshopOrder } from "../model";
 import { createWorkshopProductArt } from "./workshopProducts";
 
@@ -23,10 +23,10 @@ export const WORKSHOP_STAR_CATCH_TUNING = {
   trackX: 0,
   trackY: 75,
   trackHalfWidth: 275,
-  targetHeight: 40,
-  targetRadius: 14,
-  markerWidth: 14,
-  markerHeight: 58,
+  targetHeight: 34,
+  targetRadius: 12,
+  markerWidth: 10,
+  markerHeight: 52,
   statusX: 0,
   statusY: 171,
   statusFontSize: 22,
@@ -38,7 +38,7 @@ export const WORKSHOP_STAR_CATCH_HALF_WIDTH =
 
 export type WorkshopStarCatchView = {
   container: Phaser.GameObjects.Container;
-  marker: Phaser.GameObjects.Rectangle;
+  marker: Phaser.GameObjects.Graphics;
   statusText: Phaser.GameObjects.Text;
 };
 
@@ -56,23 +56,245 @@ export function drawWorkshopStarZone(
 ) {
   const tuning = WORKSHOP_STAR_CATCH_TUNING;
   const top = tuning.trackY - tuning.targetHeight / 2;
+  const visualTop = top - 1;
+  const visualHeight = tuning.targetHeight + 1;
   zone.clear();
-  zone.fillStyle(COLORS.yellow, 0.96);
+  zone.fillStyle(0xe4f6f1, 0.82);
   zone.fillRoundedRect(
     tuning.trackX + center - width / 2,
-    top,
+    visualTop,
     width,
-    tuning.targetHeight,
+    visualHeight,
     tuning.targetRadius,
   );
-  zone.lineStyle(3, 0xfff1a6, 1);
+  zone.lineStyle(2, 0x79cfd2, 0.92);
   zone.strokeRoundedRect(
     tuning.trackX + center - width / 2,
-    top,
+    visualTop,
     width,
-    tuning.targetHeight,
+    visualHeight,
     tuning.targetRadius,
   );
+}
+
+function createCraftingPuffVisuals(scene: Phaser.Scene) {
+  const tuning = WORKSHOP_STAR_CATCH_TUNING;
+  const createPuff = (
+    texture: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ) =>
+    scene.add
+      .image(x, y, texture)
+      .setDisplaySize(width, height)
+      .setAlpha(0);
+  const backPuffs = [
+    createPuff(
+      "workshop-dust-rise",
+      tuning.productX - 24,
+      tuning.productY - 10,
+      96,
+      108,
+    ),
+  ];
+  const coverPuffSpecs = [
+    ["workshop-dust-center", tuning.productY + 4, 142, 122],
+    ["workshop-dust-diagonal", tuning.productY + 5, 126, 118],
+    ["workshop-dust-sweep", tuning.productY + 8, 136, 112],
+  ] as const;
+  const coverPuffs = [...coverPuffSpecs, ...coverPuffSpecs].map(
+    ([texture, y, width, height]) =>
+      createPuff(texture, tuning.productX, y, width, height),
+  );
+  const frontPuffs = [
+    ...coverPuffs,
+    createPuff(
+      "workshop-dust-low",
+      tuning.productX + 3,
+      tuning.productY + 22,
+      106,
+      64,
+    ),
+  ];
+  const tools = [
+    scene.add
+      .image(tuning.productX, tuning.productY + 18, "workshop-tool-hammer")
+      .setDisplaySize(48, 50)
+      .setAlpha(0),
+    scene.add
+      .image(tuning.productX, tuning.productY + 18, "workshop-tool-screw")
+      .setDisplaySize(34, 32)
+      .setAlpha(0),
+    scene.add
+      .image(tuning.productX, tuning.productY + 18, "workshop-tool-nut")
+      .setDisplaySize(34, 31)
+      .setAlpha(0),
+    scene.add
+      .image(tuning.productX, tuning.productY + 18, "workshop-tool-gear")
+      .setDisplaySize(36, 33)
+      .setAlpha(0),
+  ];
+
+  return { backPuffs, coverPuffs, frontPuffs, tools };
+}
+
+function animateCraftingPuffVisuals(
+  scene: Phaser.Scene,
+  visuals: ReturnType<typeof createCraftingPuffVisuals>,
+) {
+  const tuning = WORKSHOP_STAR_CATCH_TUNING;
+  const ambientPuffs = [visuals.backPuffs[0], visuals.frontPuffs.at(-1)!];
+  ambientPuffs.forEach((puff, index) => {
+    const baseScaleX = puff.scaleX;
+    const baseScaleY = puff.scaleY;
+    const startX = puff.x;
+    const startY = puff.y;
+    const launchAmbientPuff = () => {
+      const direction = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
+      const offsetX = Phaser.Math.Between(2, 9) * direction;
+      puff
+        .setPosition(startX + Phaser.Math.Between(-5, 5), startY + 6)
+        .setAngle(Phaser.Math.Between(-5, 5))
+        .setFlipX(direction < 0)
+        .setScale(baseScaleX * 0.74, baseScaleY * 0.74)
+        .setAlpha(0);
+      scene.tweens.add({
+        targets: puff,
+        alpha: index === 0 ? 0.58 : 0.5,
+        scaleX: baseScaleX * 0.9,
+        scaleY: baseScaleY * 0.9,
+        duration: 190,
+        ease: "Quad.easeOut",
+        onComplete: () => {
+          scene.tweens.add({
+            targets: puff,
+            alpha: 0,
+            x: puff.x + offsetX,
+            y: startY - Phaser.Math.Between(7, 14),
+            scaleX: baseScaleX * 1.04,
+            scaleY: baseScaleY * 1.04,
+            duration: 560,
+            ease: "Cubic.easeOut",
+            onComplete: () =>
+              scene.time.delayedCall(
+                Phaser.Math.Between(220, 420),
+                launchAmbientPuff,
+              ),
+          });
+        },
+      });
+    };
+    scene.time.delayedCall(index * 260, launchAmbientPuff);
+  });
+
+  const coverFlights = visuals.coverPuffs.map((image) => ({
+    image,
+    baseScaleX: image.scaleX,
+    baseScaleY: image.scaleY,
+  }));
+  const activeCoverPuffs = new Set<Phaser.GameObjects.Image>();
+  const launchCoverPuff = () => {
+    const availableFlights = coverFlights.filter(
+      ({ image }) => !activeCoverPuffs.has(image),
+    );
+    if (availableFlights.length === 0) return;
+    const { image, baseScaleX, baseScaleY } =
+      availableFlights[Phaser.Math.Between(0, availableFlights.length - 1)];
+    activeCoverPuffs.add(image);
+    const direction = Phaser.Math.Between(0, 1) === 0 ? -1 : 1;
+    const startX = tuning.productX + Phaser.Math.Between(-18, 18);
+    const startY = tuning.productY + Phaser.Math.Between(5, 17);
+    const driftX = Phaser.Math.Between(6, 16) * direction;
+    image
+      .setPosition(startX, startY)
+      .setAngle(Phaser.Math.Between(-9, 9))
+      .setFlipX(direction < 0)
+      .setScale(baseScaleX * 0.54, baseScaleY * 0.54)
+      .setAlpha(0);
+    scene.tweens.add({
+      targets: image,
+      alpha: 1,
+      x: startX + driftX * 0.3,
+      y: startY - 4,
+      scaleX: baseScaleX * 0.92,
+      scaleY: baseScaleY * 0.92,
+      duration: 220,
+      ease: "Quad.easeOut",
+      onComplete: () => {
+        scene.time.delayedCall(90, () => {
+          scene.tweens.add({
+            targets: image,
+            alpha: 0,
+            x: startX + driftX,
+            y: startY - Phaser.Math.Between(12, 22),
+            scaleX: baseScaleX * 1.04,
+            scaleY: baseScaleY * 1.04,
+            duration: 500,
+            ease: "Cubic.easeOut",
+            onComplete: () => {
+              image.setAlpha(0);
+              activeCoverPuffs.delete(image);
+            },
+          });
+        });
+      },
+    });
+  };
+  const scheduleNextCoverBurst = () => {
+    launchCoverPuff();
+    if (Phaser.Math.Between(0, 99) < 28) {
+      scene.time.delayedCall(Phaser.Math.Between(110, 190), launchCoverPuff);
+    }
+    scene.time.delayedCall(
+      Phaser.Math.Between(320, 520),
+      scheduleNextCoverBurst,
+    );
+  };
+  scene.time.delayedCall(90, scheduleNextCoverBurst);
+
+  const toolFlights = [
+    { image: visuals.tools[0], x: -72, y: -66, angle: -42 },
+    { image: visuals.tools[1], x: 70, y: -60, angle: 68 },
+    { image: visuals.tools[2], x: -60, y: -52, angle: -72 },
+    { image: visuals.tools[3], x: 64, y: -60, angle: 96 },
+  ].map((flight) => ({
+    ...flight,
+    baseScaleX: flight.image.scaleX,
+    baseScaleY: flight.image.scaleY,
+  }));
+  let lastToolIndex = 0;
+  const launchNextTool = () => {
+    const nextToolIndex =
+      (lastToolIndex + Phaser.Math.Between(1, toolFlights.length - 1)) %
+      toolFlights.length;
+    const { image, x, y, angle, baseScaleX, baseScaleY } =
+      toolFlights[nextToolIndex];
+    lastToolIndex = nextToolIndex;
+    image
+      .setPosition(tuning.productX, tuning.productY + 26)
+      .setAngle(-angle * 0.18)
+      .setScale(baseScaleX * 0.46, baseScaleY * 0.46)
+      .setAlpha(1);
+    scene.tweens.add({
+      targets: image,
+      alpha: { from: 1, to: 0, ease: "Expo.easeIn" },
+      x: tuning.productX + x,
+      y: tuning.productY + y,
+      angle,
+      scaleX: baseScaleX,
+      scaleY: baseScaleY,
+      duration: 650,
+      ease: "Cubic.easeOut",
+      onComplete: () => image.setAlpha(0),
+    });
+    scene.time.delayedCall(
+      Phaser.Math.Between(420, 720),
+      launchNextTool,
+    );
+  };
+  scene.time.delayedCall(130, launchNextTool);
 }
 
 export function createWorkshopStarCatchView(
@@ -108,28 +330,28 @@ export function createWorkshopStarCatchView(
     : scene.add
         .image(tuning.productX, tuning.productY, "workshop-crafting-panel")
         .setVisible(false);
-  const productGlow = scene.add
-    .ellipse(
-      tuning.productX,
-      tuning.productY + 6,
-      158,
-      104,
-      0x8cf6ff,
-      0.12,
-    )
-    .setBlendMode(Phaser.BlendModes.ADD);
+  const craftingPuff = createCraftingPuffVisuals(scene);
+  const { backPuffs, frontPuffs, tools } = craftingPuff;
   const zone = scene.add.graphics().setName("star-zone");
   drawWorkshopStarZone(zone, starZoneCenter, starZoneWidth);
-  const marker = scene.add
-    .rectangle(
-      tuning.trackX + starX,
-      tuning.trackY,
-      tuning.markerWidth,
-      tuning.markerHeight,
-      0xfff6d2,
-      1,
-    )
-    .setStrokeStyle(3, 0xd79032, 1);
+  const marker = scene.add.graphics().setName("star-marker");
+  marker.fillStyle(0xf8f1d8, 0.96);
+  marker.fillRoundedRect(
+    -tuning.markerWidth / 2,
+    -tuning.markerHeight / 2,
+    tuning.markerWidth,
+    tuning.markerHeight,
+    tuning.markerWidth / 2,
+  );
+  marker.lineStyle(2, 0x58bdc7, 0.95);
+  marker.strokeRoundedRect(
+    -tuning.markerWidth / 2,
+    -tuning.markerHeight / 2,
+    tuning.markerWidth,
+    tuning.markerHeight,
+    tuning.markerWidth / 2,
+  );
+  marker.setPosition(tuning.trackX + starX, tuning.trackY);
   const statusText = scene.add
     .text(
       tuning.statusX,
@@ -147,13 +369,16 @@ export function createWorkshopStarCatchView(
   container.add([
     shade,
     panel,
-    productGlow,
+    ...backPuffs,
     productArt,
+    ...tools,
+    ...frontPuffs,
     title,
     zone,
     marker,
     statusText,
   ]);
+  animateCraftingPuffVisuals(scene, craftingPuff);
   scene.tweens.add({
     targets: productArt,
     y: { from: tuning.productY - 3, to: tuning.productY + 3 },
@@ -162,15 +387,6 @@ export function createWorkshopStarCatchView(
     yoyo: true,
     repeat: -1,
     ease: "Sine.easeInOut",
-  });
-  scene.tweens.add({
-    targets: productGlow,
-    alpha: { from: 0.08, to: 0.32 },
-    scale: { from: 0.88, to: 1.08 },
-    duration: 520,
-    yoyo: true,
-    repeat: -1,
-    ease: "Quad.easeInOut",
   });
   container.setScale(0.9).setAlpha(0);
   scene.tweens.add({

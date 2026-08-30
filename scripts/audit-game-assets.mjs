@@ -72,12 +72,60 @@ const RUNTIME_SPECS = new Map([
     "ui/village-activity-star-filled-v1.webp",
     { format: "webp", width: 88, height: 85 },
   ],
-  ["intro/gem-board.webp", { format: "webp", width: 1920, height: 1080 }],
-  ["world/village-ground.webp", { format: "webp", width: 1280, height: 720 }],
+  [
+    "ui/game-result-panel-v1.webp",
+    { format: "webp", width: 1560, height: 1000 },
+  ],
+  [
+    "ui/game-result-retry-button-v1.webp",
+    { format: "webp", width: 664, height: 144 },
+  ],
+  [
+    "ui/game-result-return-button-v1.webp",
+    { format: "webp", width: 674, height: 144 },
+  ],
+  ["intro/gem-board.webp", { format: "webp", width: 1448, height: 1086 }],
+  [
+    "intro/village-intro-background-v2.webp",
+    { format: "webp", width: 1522, height: 855 },
+  ],
+  [
+    "intro/village-intro-entry-button-v1.webp",
+    { format: "webp", width: 800, height: 224 },
+  ],
+  ["world/village-ground.webp", { format: "webp", width: 1671, height: 941 }],
   ["world/village-ai-shop.webp", { format: "webp", width: 584, height: 555 }],
   ["world/village-airport.webp", { format: "webp", width: 538, height: 504 }],
   ["world/village-ethics-office.webp", { format: "webp", width: 502, height: 542 }],
   ["world/village-ai-world-gate.webp", { format: "webp", width: 648, height: 616 }],
+  [
+    "world/village-ai-world-portal-v1.webp",
+    { format: "webp", width: 512, height: 512 },
+  ],
+  [
+    "world/village-ai-world-portal-frames-v1.webp",
+    { format: "webp", width: 2048, height: 1536 },
+  ],
+  [
+    "world/village-ai-world-portal-frames-v2.webp",
+    { format: "webp", width: 2048, height: 976 },
+  ],
+  [
+    "world/village-ai-world-portal-frames-v3.webp",
+    { format: "webp", width: 2048, height: 1952 },
+  ],
+  [
+    "world/village-ai-world-portal-night-v2.webp",
+    { format: "webp", width: 840, height: 840 },
+  ],
+  [
+    "world/village-ai-world-portal-night-v3.webp",
+    { format: "webp", width: 840, height: 840 },
+  ],
+  [
+    "world/village-ai-world-portal-night-v4.webp",
+    { format: "webp", width: 840, height: 840 },
+  ],
   ["world/village-fountain.webp", { format: "webp", width: 422, height: 445 }],
   [
     "world/village-fountain-water-overlay-v1.webp",
@@ -109,6 +157,58 @@ const RUNTIME_SPECS = new Map([
     { format: "webp", width: 1624, height: 818 },
   ],
   [
+    "shop/workshop-action-button-v1.webp",
+    { format: "webp", width: 384, height: 376 },
+  ],
+  [
+    "shop/workshop-action-button-v2.webp",
+    { format: "webp", width: 256, height: 254 },
+  ],
+  [
+    "shop/workshop-action-button-v3.webp",
+    { format: "webp", width: 256, height: 255 },
+  ],
+  [
+    "shop/workshop-action-button-v4.webp",
+    { format: "webp", width: 256, height: 264 },
+  ],
+  [
+    "shop/workshop-dust-center-v1.webp",
+    { format: "webp", width: 300, height: 264 },
+  ],
+  [
+    "shop/workshop-dust-diagonal-v1.webp",
+    { format: "webp", width: 220, height: 204 },
+  ],
+  [
+    "shop/workshop-dust-sweep-v1.webp",
+    { format: "webp", width: 248, height: 206 },
+  ],
+  [
+    "shop/workshop-dust-rise-v1.webp",
+    { format: "webp", width: 200, height: 217 },
+  ],
+  [
+    "shop/workshop-dust-low-v1.webp",
+    { format: "webp", width: 240, height: 87 },
+  ],
+  [
+    "shop/workshop-tool-hammer-v1.webp",
+    { format: "webp", width: 96, height: 107 },
+  ],
+  [
+    "shop/workshop-tool-screw-v1.webp",
+    { format: "webp", width: 96, height: 118 },
+  ],
+  [
+    "shop/workshop-tool-nut-v1.webp",
+    { format: "webp", width: 96, height: 93 },
+  ],
+  [
+    "shop/workshop-tool-gear-v1.webp",
+    { format: "webp", width: 96, height: 92 },
+  ],
+  [
     "shop/workshop-item-panel-4.webp",
     { format: "webp", width: 1429, height: 448 },
   ],
@@ -131,6 +231,10 @@ const RUNTIME_SPECS = new Map([
   ["airport/bg_sky.webp", { format: "webp", width: 3200, height: 1440 }],
   ["airport/bg_city.webp", { format: "webp", width: 3200, height: 1440 }],
   ["airport/bg_ground.webp", { format: "webp", width: 3200, height: 1440 }],
+  [
+    "airport/data-flight-quiz-card-v1.webp",
+    { format: "webp", width: 1967, height: 800 },
+  ],
   ["airport/data_doc.webp", { format: "webp", width: 256, height: 256 }],
   ["airport/data_image.webp", { format: "webp", width: 256, height: 256 }],
   ["airport/data_sound.webp", { format: "webp", width: 256, height: 256 }],
@@ -149,11 +253,11 @@ const RUNTIME_SPECS = new Map([
   ["airport/public_data_environment.webp", { format: "webp", width: 256, height: 256 }],
   [
     "airport/corrupted-data-cloud-top-v1.webp",
-    { format: "webp", width: 512, height: 768 },
+    { format: "webp", width: 380, height: 871 },
   ],
   [
     "airport/corrupted-data-vortex-bottom-v1.webp",
-    { format: "webp", width: 512, height: 768 },
+    { format: "webp", width: 380, height: 718 },
   ],
   [
     "ethics-review/office-v2.webp",

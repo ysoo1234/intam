@@ -15,7 +15,7 @@ type FormationPoint = Readonly<{ x: number; y: number }>;
 
 const START_X = 1_350;
 const ITEMS_PER_GROUP = 5;
-const FORMATION_PATTERN_COUNT = 5;
+const FORMATION_PATTERN_COUNT = 7;
 
 function selectFormationKinds() {
   return Phaser.Utils.Array.Shuffle([...PUBLIC_DATA_KINDS]).slice(0, 4);
@@ -82,10 +82,60 @@ function createHeartFormation(
       2 * Math.cos(angle * 3) -
       Math.cos(angle * 4);
     return {
-      x: 1_820 + heartX * 28,
-      y: 350 - heartY * 11,
+      x: 1_820 + heartX * 20,
+      y: 360 - heartY * 16.5,
     };
   });
+  return labelFormationPath(points, kinds);
+}
+
+function createStarFormation(
+  kinds: readonly PublicDataKind[],
+): AirportFeverFormationItem[] {
+  const vertices = Array.from({ length: 11 }, (_, index) => {
+    const angle = -Math.PI / 2 + (Math.PI * 2 * index) / 10;
+    const radius = index % 2 === 0 ? 305 : 132;
+    return {
+      x: 1_820 + Math.cos(angle) * radius,
+      y: 360 + Math.sin(angle) * radius,
+    };
+  });
+  const points = Array.from({ length: 20 }, (_, index) => {
+    const edge = Math.floor(index / 2);
+    const progress = (index % 2) / 2;
+    return {
+      x: Phaser.Math.Linear(vertices[edge].x, vertices[edge + 1].x, progress),
+      y: Phaser.Math.Linear(vertices[edge].y, vertices[edge + 1].y, progress),
+    };
+  });
+  return labelFormationPath(points, kinds);
+}
+
+function createAiFormation(
+  kinds: readonly PublicDataKind[],
+): AirportFeverFormationItem[] {
+  const points = [
+    { x: 1_430, y: 550 },
+    { x: 1_480, y: 420 },
+    { x: 1_530, y: 290 },
+    { x: 1_580, y: 160 },
+    { x: 1_630, y: 290 },
+    { x: 1_680, y: 420 },
+    { x: 1_730, y: 550 },
+    { x: 1_505, y: 395 },
+    { x: 1_580, y: 395 },
+    { x: 1_655, y: 395 },
+    { x: 1_860, y: 180 },
+    { x: 1_940, y: 180 },
+    { x: 2_020, y: 180 },
+    { x: 2_100, y: 180 },
+    { x: 1_980, y: 300 },
+    { x: 1_980, y: 420 },
+    { x: 1_860, y: 540 },
+    { x: 1_940, y: 540 },
+    { x: 2_020, y: 540 },
+    { x: 2_100, y: 540 },
+  ] as const;
   return labelFormationPath(points, kinds);
 }
 
@@ -124,7 +174,7 @@ function createDiamondFormation(
 }
 
 export function createAirportFeverFormation(
-  formationIndex: number,
+  formationIndex = Phaser.Math.Between(0, FORMATION_PATTERN_COUNT - 1),
 ): AirportFeverFormationItem[] {
   const kinds = selectFormationKinds();
   switch (formationIndex % FORMATION_PATTERN_COUNT) {
@@ -136,7 +186,11 @@ export function createAirportFeverFormation(
       return createHeartFormation(kinds);
     case 3:
       return createWaveFormation(kinds);
-    default:
+    case 4:
       return createDiamondFormation(kinds);
+    case 5:
+      return createStarFormation(kinds);
+    default:
+      return createAiFormation(kinds);
   }
 }
