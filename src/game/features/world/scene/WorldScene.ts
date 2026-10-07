@@ -15,6 +15,11 @@ import {
   WORLD_PROGRESS_REGISTRY_KEY,
   type WorldProgressSnapshot,
 } from "../../../core/navigation";
+import {
+  loadStoredWorldProgress,
+  mergeWorldProgressSnapshots,
+  saveStoredWorldProgress,
+} from "../../../core/navigation/worldProgressStorage";
 import type { PlayerFacing } from "../../../core/player/playerFacing";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
@@ -24,9 +29,7 @@ import {
   COLORS,
   getTextStyle,
   TEXT_COLORS,
-  UI_RADII,
 } from "../../../core/visual/theme";
-import { addUiSurface } from "../../../core/visual/uiPrimitives";
 import { mapRegistry } from "../model/mapRegistry";
 import { isPointWithinPortalInteractionArea } from "../model/mapDefinition";
 import {
@@ -51,6 +54,7 @@ import {
   preloadVillageProgressPresentationAssets,
 } from "./villageProgressPresentation";
 import { createVillageEndingOverlay } from "./villageEndingOverlay";
+import { createVillageTutorial, type VillageTutorial } from "./villageTutorial";
 import {
   createWorldTouchDirection,
   type WorldTouchDirection,
@@ -109,7 +113,8 @@ export class WorldScene extends Phaser.Scene {
   private nearestBuilding?: WorldPortal;
   private prompt?: Phaser.GameObjects.Container;
   private promptText?: Phaser.GameObjects.Text;
-  private onboarding?: Phaser.GameObjects.Container;
+  private tutorial?: VillageTutorial;
+  private promptShown = false;
   private touchDirection = new Phaser.Math.Vector2();
   private touchMovement?: WorldTouchDirection;
   private interactionFeedbackText?: string;
@@ -146,16 +151,19 @@ export class WorldScene extends Phaser.Scene {
     configureSceneCamera(this, this.renderScale);
     generatePlayerTexture(this);
     const returnRequest = readWorldReturnRequest(data);
-    this.progress = readWorldProgressSnapshot(
-      this.registry.get(WORLD_PROGRESS_REGISTRY_KEY),
+    // Live registry and the saved browser copy both count; the best stars win.
+    this.progress = mergeWorldProgressSnapshots(
+      readWorldProgressSnapshot(this.registry.get(WORLD_PROGRESS_REGISTRY_KEY)),
+      loadStoredWorldProgress(),
     );
     if (returnRequest?.result) {
       this.progress = mergeWorldActivityResult(
         this.progress,
         returnRequest.result,
       );
-      this.registry.set(WORLD_PROGRESS_REGISTRY_KEY, this.progress);
     }
+    this.registry.set(WORLD_PROGRESS_REGISTRY_KEY, this.progress);
+    saveStoredWorldProgress(this.progress);
     const returnPortal = returnRequest
       ? WORLD_MAP.portals.find(
           (portal) =>
@@ -218,7 +226,14 @@ export class WorldScene extends Phaser.Scene {
     this.cursors = this.input.keyboard?.createCursorKeys();
     this.keys = makeControlKeys(this);
     this.createInteractionPrompt();
-    if (!returnRequest) this.createOnboarding();
+    this.hasMoved = false;
+    this.promptShown = false;
+    this.tutorial = createVillageTutorial(this, {
+      mapDefinition: WORLD_MAP,
+      progress: this.progress,
+      firstVisit: !returnRequest && getWorldTotalStars(this.progress) === 0,
+      returnedResult: returnRequest?.result,
+    });
     this.createTouchControls();
 
     this.cameras.main.fadeIn(350, 255, 245, 220);
@@ -286,61 +301,11 @@ export class WorldScene extends Phaser.Scene {
     button.on("pointerout", () => this.prompt?.setScale(1));
   }
 
-  private createOnboarding() {
-    const g = addUiSurface(
-      this,
-      { x: -305, y: -35, width: 610, height: 70 },
-      "cream",
-      { radius: UI_RADII.panel, shadow: "medium" },
-    );
-    g.fillStyle(COLORS.mint, 1);
-    g.fillRoundedRect(-279, -23, 72, 46, 18);
-
-    const tip = this.add
-      .text(-243, -1, "TIP", getTextStyle("support", { fontSize: "17px" }))
-      .setOrigin(0.5);
-    const text = this.add
-      .text(
-        45,
-        0,
-        "방향키 또는 화면을 터치하여 움직여 보세요!",
-        getTextStyle("heading", { fontSize: "21px" }),
-      )
-      .setOrigin(0.5);
-
-    this.onboarding = this.add
-      .container(640, 650, [g, tip, text])
-      .setDepth(VILLAGE_UI_DEPTH + 20)
-      .setAlpha(0)
-      .setScale(0.94);
-    this.tweens.add({
-      targets: this.onboarding,
-      alpha: 1,
-      scale: 1,
-      duration: 260,
-      ease: "Back.easeOut",
-    });
-    this.time.delayedCall(5_200, () => this.hideOnboarding());
-  }
-
   private createTouchControls() {
     this.touchMovement = createWorldTouchDirection(this, {
       direction: this.touchDirection,
       getOrigin: () =>
         this.player ? { x: this.player.x, y: this.player.y } : undefined,
-    });
-  }
-
-  private hideOnboarding() {
-    if (!this.onboarding?.visible || this.onboarding.alpha === 0) return;
-    this.tweens.killTweensOf(this.onboarding);
-    this.tweens.add({
-      targets: this.onboarding,
-      alpha: 0,
-      y: 674,
-      duration: 300,
-      ease: "Sine.easeIn",
-      onComplete: () => this.onboarding?.setVisible(false),
     });
   }
 
@@ -506,7 +471,7 @@ export class WorldScene extends Phaser.Scene {
 
       if (!this.hasMoved) {
         this.hasMoved = true;
-        this.time.delayedCall(900, () => this.hideOnboarding());
+        this.tutorial?.notifyMoved();
       }
     } else {
       resetVillageMovementMemory(this.movementMemory);
@@ -539,6 +504,10 @@ export class WorldScene extends Phaser.Scene {
         this.nearestBuilding.destination.kind ===
           "world-completion-placeholder" &&
         !this.isPortalAvailable(this.nearestBuilding);
+      if (!isLockedExit && !this.promptShown) {
+        this.promptShown = true;
+        this.tutorial?.notifyPromptShown();
+      }
       this.prompt
         .setVisible(!isLockedExit || hasInteractionFeedback)
         .setPosition(

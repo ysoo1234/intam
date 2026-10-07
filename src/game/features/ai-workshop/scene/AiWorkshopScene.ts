@@ -9,6 +9,7 @@ import { generateCustomerTexture, generatePlayerTexture } from "../../../core/vi
 import { preloadGameChromeAssets } from "../../../core/visual/gameChrome";
 import { preloadGameResultOverlayAssets } from "../../../core/visual/gameResultOverlay";
 import { createGameStartOverlay, isGameStartOverlayOpen, preloadGameStartOverlayAssets } from "../../../core/visual/gameStartOverlay";
+import { AI_WORKSHOP_START } from "./workshopStart";
 import { COLORS } from "../../../core/visual/theme";
 import { WORKSHOP_PRODUCT_BY_ID, WORKSHOP_REQUESTS, type WorkshopProduct, type WorkshopRequest } from "../../../content/aiWorkshop";
 import {
@@ -42,7 +43,6 @@ import {
 } from "./workshopStarCatchView";
 import { findNearestWorkshopProduct, findNearestWorkshopProductOrigin, renderWorkshopHud, updateWorkshopInteractionPrompt, vibrateDevice } from "./workshopStatus";
 import { createWorkshopBackground, createWorkshopCustomer, createWorkshopHud, createWorkshopPlayer, setWorkshopCustomerRole, syncWorkshopDialoguePanel } from "./workshopView";
-const AI_WORKSHOP_START = { placeName: "생활 속 AI 제작소", playDescription: "손님의 이야기를 듣고 필요한 AI 상품을 골라요. \n 작업대로 가져가 상품을 제작하고 손님에게 전달해요." } as const;
 export class AiWorkshopScene extends Phaser.Scene {
   private keys?: ControlKeys;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;

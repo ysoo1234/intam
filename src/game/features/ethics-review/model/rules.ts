@@ -1,9 +1,8 @@
+import { ETHICS_REVIEW_CONFIG as CONFIG } from "./config";
 import type {
-  EthicsReviewCase,
-  EthicsReviewDecision,
-  EthicsVerdict,
+  EthicsDeliveryAction, EthicsReviewCase, EthicsReviewDecision,
+  EthicsReviewPhase, EthicsVerdict, EthicsVisitor,
 } from "./types";
-import { ETHICS_REVIEW_CONFIG } from "./config";
 
 function shuffled<T>(items: readonly T[], random: () => number): T[] {
   const next = [...items];
@@ -14,82 +13,61 @@ function shuffled<T>(items: readonly T[], random: () => number): T[] {
   return next;
 }
 
+/** Builds a balanced, shuffled shift: half approve cases, half reject cases. */
 export function createReviewShift(
-  cases: readonly EthicsReviewCase[],
-  count: number,
-  random: () => number = Math.random,
+  cases: readonly EthicsReviewCase[], count: number, random: () => number = Math.random,
 ): EthicsReviewCase[] {
   const targetCount = Math.max(0, Math.min(Math.floor(count), cases.length));
-  const approve = shuffled(
-    cases.filter((reviewCase) => reviewCase.verdict === "approve"),
-    random,
-  );
-  const reject = shuffled(
-    cases.filter((reviewCase) => reviewCase.verdict === "reject"),
-    random,
-  );
-  const approveTarget = Math.ceil(targetCount / 2);
-  const rejectTarget = Math.floor(targetCount / 2);
+  const approve = shuffled(cases.filter(item => item.verdict === "approve"), random);
+  const reject = shuffled(cases.filter(item => item.verdict === "reject"), random);
   const selected = [
-    ...approve.slice(0, approveTarget),
-    ...reject.slice(0, rejectTarget),
+    ...approve.slice(0, Math.ceil(targetCount / 2)),
+    ...reject.slice(0, Math.floor(targetCount / 2)),
   ];
-  const selectedIds = new Set(selected.map((reviewCase) => reviewCase.id));
-  const remainder = shuffled(
-    cases.filter((reviewCase) => !selectedIds.has(reviewCase.id)),
-    random,
-  );
+  const ids = new Set(selected.map(item => item.id));
+  const remainder = shuffled(cases.filter(item => !ids.has(item.id)), random);
   selected.push(...remainder.slice(0, targetCount - selected.length));
   return shuffled(selected, random);
 }
 
+export function getEthicsReviewPoints(correct: boolean, combo: number): number {
+  if (!correct) return 0;
+  return CONFIG.scoring.correctDecision +
+    Math.min(Math.max(0, Math.floor(combo)), CONFIG.scoring.maxComboBonusSteps) * CONFIG.scoring.comboBonus;
+}
+
 export function evaluateReviewDecision(
-  reviewCase: EthicsReviewCase,
-  selected: EthicsVerdict,
+  item: EthicsReviewCase, selected: EthicsVerdict, combo = 0,
 ): EthicsReviewDecision {
+  const correct = item.verdict === selected;
   return {
-    correct: reviewCase.verdict === selected,
-    selected,
-    expected: reviewCase.verdict,
-    principle: reviewCase.principle,
-    evidenceFact: reviewCase.facts[reviewCase.evidenceFactIndex] ?? "",
-    explanation: reviewCase.explanation,
-    betterAction: reviewCase.betterAction,
+    correct, selected, expected: item.verdict, explanation: item.explanation,
+    points: getEthicsReviewPoints(correct, combo),
   };
 }
-
-export function getEthicsReviewPoints(
-  decision: EthicsReviewDecision,
-  comboBeforeDecision: number,
-): number {
-  if (!decision.correct) return 0;
-  const comboSteps = Math.min(
-    Math.max(0, Math.floor(comboBeforeDecision)),
-    ETHICS_REVIEW_CONFIG.scoring.maxComboBonusSteps,
-  );
-  return (
-    ETHICS_REVIEW_CONFIG.scoring.correctDecision +
-    comboSteps * ETHICS_REVIEW_CONFIG.scoring.comboBonus
-  );
+export function getNextEthicsReviewCombo(combo: number, correct: boolean): number {
+  return correct ? Math.max(0, Math.floor(combo)) + 1 : 0;
 }
-
-export function getNextEthicsReviewCombo(
-  comboBeforeDecision: number,
-  correct: boolean,
-): number {
-  return correct ? Math.max(0, Math.floor(comboBeforeDecision)) + 1 : 0;
+export function isEthicsComboCelebration(combo: number): boolean {
+  return CONFIG.comboCelebrations.includes(combo);
 }
-
-export function getEthicsReviewStars(correctCount: number): 1 | 2 | 3 {
-  if (correctCount >= ETHICS_REVIEW_CONFIG.starThresholds.threeStars) return 3;
-  if (correctCount >= ETHICS_REVIEW_CONFIG.starThresholds.twoStars) return 2;
-  return 1;
+export function getEthicsAccuracy(correct: number, processed: number): number {
+  return processed <= 0 ? 0 : Math.min(1, Math.max(0, correct / processed));
 }
-
-export function getEthicsReviewProgress(
-  completedCount: number,
-  totalCount: number,
-): number {
-  if (totalCount <= 0) return 0;
-  return Math.min(1, Math.max(0, completedCount / totalCount));
+export function getEthicsReviewStars(correct: number, processed: number): 1 | 2 | 3 {
+  const accuracy = getEthicsAccuracy(correct, processed);
+  const thresholds = CONFIG.starThresholds;
+  if (correct >= thresholds.threeStars && accuracy >= thresholds.threeStarAccuracy) return 3;
+  return correct >= thresholds.twoStars && accuracy >= thresholds.twoStarAccuracy ? 2 : 1;
+}
+export function canRequestEthicsAction(phase: EthicsReviewPhase, action: EthicsDeliveryAction) {
+  return phase === "choosing" && (action === "approve" || action === "reject");
+}
+/** Visitors alternate deterministically so a seeded deck replays identically. */
+export function getEthicsVisitorForCase(
+  visitors: readonly EthicsVisitor[], caseIndex: number, practice: boolean,
+): EthicsVisitor {
+  if (visitors.length === 0) throw new Error("Ethics Review needs at least one visitor.");
+  const index = practice ? 0 : (caseIndex + 1) % visitors.length;
+  return visitors[index];
 }

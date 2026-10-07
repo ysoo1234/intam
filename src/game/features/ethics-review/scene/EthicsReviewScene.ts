@@ -2,85 +2,70 @@ import Phaser from "phaser";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { createWorldReturnSceneData } from "../../../core/navigation";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
-import { generatePlayerTexture } from "../../../core/visual/fallbackTextures";
+import {
+  createGameStatusHud, createVillageReturnButton, preloadGameChromeAssets, type GameStatusHud,
+} from "../../../core/visual/gameChrome";
 import { createGameStartOverlay, preloadGameStartOverlayAssets } from "../../../core/visual/gameStartOverlay";
 import { preloadGameResultOverlayAssets } from "../../../core/visual/gameResultOverlay";
+import { ETHICS_REVIEW_CASES, ETHICS_VISITOR_LINES } from "../content";
 import {
-  createGameStatusHud,
-  createVillageReturnButton,
-  preloadGameChromeAssets,
-  type GameStatusHud,
-} from "../../../core/visual/gameChrome";
-import { ETHICS_REVIEW_CASES } from "../content";
-import {
-  ETHICS_REVIEW_CONFIG,
-  createReviewShift,
-  evaluateReviewDecision,
-  getEthicsReviewPoints,
-  getNextEthicsReviewCombo,
-  getEthicsReviewStars,
-  type EthicsReviewCase,
-  type EthicsReviewEndReason,
-  type EthicsReviewPhase,
-  type EthicsVerdict,
+  createReviewShift, createEthicsDeliveryState, getEthicsDeliveryCase, getEthicsDeliveryVisitor,
+  actEthicsDelivery, continueEthicsDelivery, tickEthicsDelivery, canRequestEthicsAction,
+  getEthicsReviewStars, isEthicsComboCelebration,
+  type EthicsDeliveryAction, type EthicsDeliveryState,
 } from "../model";
-import { createEthicsReviewControls } from "./ethicsReviewControls";
+import { createEthicsReviewControls, type EthicsReviewControls } from "./ethicsReviewControls";
+import { createEthicsReviewPlayer, type EthicsReviewPlayer } from "./ethicsReviewPlayer";
 import {
-  celebrateEthicsResult,
-  playEthicsCaseScan,
-  playEthicsCountdown,
-  playEthicsStationEffect,
-  playEthicsVerdictStamp,
-  setEthicsStationsReady,
-} from "./ethicsReviewEffects";
+  createEthicsOffice, createEthicsRulebook, preloadEthicsReviewAssets, type EthicsRulebook,
+} from "./ethicsReviewOffice";
+import { createEthicsReviewVisitor, ETHICS_VISITOR_MOTION, type EthicsReviewVisitorView } from "./ethicsReviewVisitor";
 import {
-  createEthicsReviewPlayer,
-  type EthicsReviewPlayer,
-} from "./ethicsReviewPlayer";
-import {
-  createEthicsOffice,
-  createEthicsReviewDocument,
-  createEthicsReviewFeedback,
-  createEthicsReviewPrompt,
-  createEthicsReviewStations,
-  preloadEthicsReviewAssets,
-  setEthicsReviewDocumentCase,
-  showDocumentEvidence,
-  showEthicsReviewFeedback,
-  type EthicsReviewDocumentView,
-  type EthicsReviewFeedbackView,
-  type EthicsReviewStationView,
+  createEthicsReviewForm, createEthicsReviewStations, ETHICS_FORM_MOTION, playEthicsFormArrival,
+  playEthicsFormDeparture, setEthicsReviewFormCase, setEthicsStationState, showEthicsFormState, type EthicsReviewFormView, type EthicsReviewStations,
 } from "./ethicsReviewView";
+import { ETHICS_STAMP_IMPACT_MS, playEthicsVerdictStamp } from "./ethicsReviewEffects";
 import { createEthicsResultOverlay } from "./ethicsReviewOverlays";
+import { createEthicsStampAudio } from "./ethicsReviewAudio";
 
-const ETHICS_REVIEW_START = { placeName: "윤리 심사소", playDescription: "사건 내용을 읽고 AI가 책임 있게 쓰였는지 승인 또는 보완 요청을 골라요." } as const;
+const ETHICS_START = {
+  placeName: "미디의 윤리 심사소",
+  playDescription: "친구들이 가져온 AI 사용 확인서를 미디가 심사해요.",
+  steps: [
+    { icon: "ethics-form", iconSize: 96, title: "확인서를 읽어요", text: "창구로 온 친구의\nAI 사용 이야기를 살펴봐요." },
+    { icon: "ethics-stamp-approve", title: "도장을 골라요", text: "좋은 사용은 승인,\n위험한 사용은 거절!" },
+    { icon: "ethics-midi-front", title: "2분 동안 심사", text: "연속으로 맞히면 점수가\n더 올라가요. 틀려도 괜찮아요!" },
+  ],
+  controlsHint: "도장 터치  ·  ← A 승인  ·  → D 거절",
+} as const;
+// The next form becomes stampable once it has landed on the desk.
+const ARRIVAL_INPUT_DELAY_MS = ETHICS_FORM_MOTION.arriveMs + 60;
+const DEPARTURE_GAP_MS = Math.max(ETHICS_FORM_MOTION.leaveMs, ETHICS_VISITOR_MOTION.leaveMs);
 
 export class EthicsReviewScene extends Phaser.Scene {
-  private phase: EthicsReviewPhase = "briefing";
-  private deck: EthicsReviewCase[] = [];
-  private caseIndex = 0;
-  private completedCount = 0;
-  private mistakeCount = 0;
-  private score = 0;
-  private combo = 0;
-  private bestCombo = 0;
-  private lives: number = ETHICS_REVIEW_CONFIG.startingLives;
-  private remainingMs: number = ETHICS_REVIEW_CONFIG.durationMs;
-  private runId = 0;
+  private state?: EthicsDeliveryState;
+  private started = false;
   private leaving = false;
-  private advanceTimer?: Phaser.Time.TimerEvent;
   private player?: EthicsReviewPlayer;
-  private document?: EthicsReviewDocumentView;
-  private feedback?: EthicsReviewFeedbackView;
+  private controls?: EthicsReviewControls;
+  private form?: EthicsReviewFormView;
+  private visitor?: EthicsReviewVisitorView;
+  private rulebook?: EthicsRulebook;
+  private stations: EthicsReviewStations = [];
   private hud?: GameStatusHud;
-  private promptText?: Phaser.GameObjects.Text;
-  private stations: readonly EthicsReviewStationView[] = [];
+  private audio?: ReturnType<typeof createEthicsStampAudio>;
+  private hudKey = "";
+  private uiKey = "";
+  private stamp?: Phaser.GameObjects.Container;
   private result?: Phaser.GameObjects.Container;
+  private arrivalTimer?: Phaser.Time.TimerEvent;
+  private presentGeneration = 0;
+  private arrived = true;
+  private inputReadyAt = 0;
+  private lastTickAt = 0;
   private earnedStars?: 1 | 2 | 3;
 
-  constructor(private readonly renderScale: number) {
-    super(SCENE_KEYS.ethicsReview);
-  }
+  constructor(private readonly renderScale: number) { super(SCENE_KEYS.ethicsReview); }
 
   preload() {
     preloadGameChromeAssets(this);
@@ -92,359 +77,254 @@ export class EthicsReviewScene extends Phaser.Scene {
   create() {
     this.resetSceneState();
     configureSceneCamera(this, this.renderScale);
-    generatePlayerTexture(this);
     createEthicsOffice(this);
-    createVillageReturnButton(this, () => this.returnToWorld(), { depth: 110 });
-    this.hud = createGameStatusHud(this, this.getHudValues(), { depth: 110 });
-    this.promptText = createEthicsReviewPrompt(this);
-    this.document = createEthicsReviewDocument(this);
-    this.feedback = createEthicsReviewFeedback(this, this.document.container);
-    this.stations = createEthicsReviewStations(this, (verdict) =>
-      this.chooseVerdict(verdict),
-    );
+    this.rulebook = createEthicsRulebook(this);
+    this.visitor = createEthicsReviewVisitor(this);
     this.player = createEthicsReviewPlayer(this);
-    createEthicsReviewControls(
-      this,
-      () => this.returnToWorld(),
-      (verdict) => this.chooseVerdict(verdict),
-      () => {},
+    this.form = createEthicsReviewForm(this, () => this.handleContinue());
+    this.stations = createEthicsReviewStations(this, action => this.requestStamp(action));
+    createVillageReturnButton(this, () => this.returnToWorld());
+    this.hud = createGameStatusHud(this, ["손님 0명", "0점", "콤보 0", "02:00"]);
+    this.audio = createEthicsStampAudio(this);
+    this.controls = createEthicsReviewControls(
+      this, () => this.canStamp(),
+      action => Boolean(this.state && canRequestEthicsAction(this.state.phase, action)),
+      () => this.returnToWorld(), action => this.handleAction(action), () => this.handleContinue(),
     );
-    createGameStartOverlay(this, ETHICS_REVIEW_START, () => this.startShift());
-    this.setStationActivity(false);
-    this.updateHud();
+    this.input.keyboard?.on("keydown", this.warmAudio, this);
+    this.input.on("pointerdown", this.warmAudio, this);
+    createGameStartOverlay(this, ETHICS_START, () => this.startShift());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.runId += 1;
-      this.cancelAdvanceTimer();
+      this.started = false;
+      this.leaving = true;
+      this.arrivalTimer?.remove(false);
+      this.controls?.cancelMovement();
+      this.input.keyboard?.off("keydown", this.warmAudio, this);
+      this.input.off("pointerdown", this.warmAudio, this);
     });
   }
 
-  update(_time: number, delta: number) {
-    if (
-      !this.isTimedGameplayPhase() ||
-      this.lives <= 0 ||
-      (this.deck.length > 0 && this.completedCount >= this.deck.length) ||
-      this.remainingMs <= 0
-    ) {
-      return;
-    }
-    const secondsBefore = Math.ceil(this.remainingMs / 1000);
-    this.remainingMs = Math.max(0, this.remainingMs - Math.max(0, delta));
-    const secondsAfter = Math.ceil(this.remainingMs / 1000);
-    if (secondsAfter !== secondsBefore) {
-      this.hud?.setValue(3, this.formatRemainingTime());
-    }
-    if (this.remainingMs <= 0 && this.phase !== "feedback") {
-      this.finishShift("time");
-    }
+  update() {
+    if (!this.started || this.leaving || !this.state || !this.player) return;
+    this.advanceClock();
+    if (this.state.phase === "result") return;
+    this.player.update();
+    this.updateView();
   }
+
+  private warmAudio() { this.audio?.unlock(); }
 
   private resetSceneState() {
-    this.earnedStars = undefined;
-    this.runId += 1;
-    this.cancelAdvanceTimer();
-    this.phase = "briefing";
-    this.deck = [];
-    this.caseIndex = 0;
-    this.completedCount = 0;
-    this.mistakeCount = 0;
-    this.score = 0;
-    this.combo = 0;
-    this.bestCombo = 0;
-    this.lives = ETHICS_REVIEW_CONFIG.startingLives;
-    this.remainingMs = ETHICS_REVIEW_CONFIG.durationMs;
+    this.state = undefined;
+    this.started = false;
     this.leaving = false;
     this.player = undefined;
-    this.document = undefined;
-    this.feedback = undefined;
-    this.hud = undefined;
-    this.promptText = undefined;
+    this.controls = undefined;
+    this.form = undefined;
+    this.visitor = undefined;
+    this.rulebook = undefined;
     this.stations = [];
+    this.hud = undefined;
+    this.audio = undefined;
+    this.hudKey = "";
+    this.uiKey = "";
+    this.stamp = undefined;
     this.result = undefined;
+    this.arrivalTimer = undefined;
+    this.presentGeneration = 0;
+    this.arrived = true;
+    this.inputReadyAt = 0;
+    this.lastTickAt = 0;
+    this.earnedStars = undefined;
   }
 
-  private get currentCase() {
-    return this.deck[this.caseIndex];
+  private canStamp() {
+    return this.started && !this.leaving && this.state?.phase === "choosing" && performance.now() >= this.inputReadyAt;
+  }
+
+  private requestStamp(action: EthicsDeliveryAction) {
+    this.warmAudio();
+    this.controls?.requestAction(action);
   }
 
   private startShift() {
-    this.earnedStars = undefined;
-    if (this.leaving) return;
-    this.cancelAdvanceTimer();
-    const runId = ++this.runId;
-    this.phase = "countdown";
+    if (this.leaving || !this.player) return;
+    this.warmAudio();
     this.result?.destroy(true);
     this.result = undefined;
-    this.deck = createReviewShift(
-      ETHICS_REVIEW_CASES,
-      ETHICS_REVIEW_CONFIG.roundCount,
-    );
-    this.caseIndex = 0;
-    this.completedCount = 0;
-    this.mistakeCount = 0;
-    this.score = 0;
-    this.combo = 0;
-    this.bestCombo = 0;
-    this.lives = ETHICS_REVIEW_CONFIG.startingLives;
-    this.remainingMs = ETHICS_REVIEW_CONFIG.durationMs;
-    this.document?.container.setVisible(false);
-    this.feedback?.container.setVisible(false);
-    this.player?.container
-      .setPosition(640, 584)
-      .setScale(1)
-      .setAlpha(1)
-      .setVisible(true);
-    this.setStationActivity(false);
-    this.promptText?.setVisible(true).setText("곧 심사가 시작돼요");
-    this.updateHud();
-    playEthicsCountdown(this, () => {
-      if (!this.isCurrentRun(runId, "countdown")) return;
-      this.introduceCurrentCase(runId);
-    });
+    this.stamp?.destroy(true);
+    this.stamp = undefined;
+    this.arrivalTimer?.remove(false);
+    this.presentGeneration += 1;
+    this.arrived = true;
+    this.state = createEthicsDeliveryState(createReviewShift(ETHICS_REVIEW_CASES, ETHICS_REVIEW_CASES.length));
+    this.started = true;
+    this.lastTickAt = performance.now();
+    this.hudKey = "";
+    this.uiKey = "";
+    this.player.reset();
+    this.visitor?.reset();
+    this.form?.hint.setVisible(true);
+    this.controls?.cancelMovement();
+    this.presentCase(true);
+    this.updateView();
   }
 
-  private introduceCurrentCase(runId: number) {
-    const reviewCase = this.currentCase;
-    if (!reviewCase || !this.document || !this.feedback) {
-      this.finishShift("cases");
-      return;
+  private advanceClock() {
+    if (!this.state || this.state.phase === "result") return;
+    const now = performance.now();
+    const previous = this.state;
+    this.state = tickEthicsDelivery(previous, now - this.lastTickAt);
+    this.lastTickAt = now;
+    if (this.state.phase === "result") { this.finishShift(); return; }
+    if (previous.phase === "feedback" && this.state.phase === "choosing") this.sendOffAndPresentNext();
+  }
+
+  /** The stamped form goes back to the visitor, then the next student steps up. */
+  private sendOffAndPresentNext() {
+    if (!this.form || !this.visitor) return;
+    this.controls?.cancelMovement();
+    this.stamp?.destroy(true);
+    this.stamp = undefined;
+    this.visitor.leave();
+    this.inputReadyAt = performance.now() + DEPARTURE_GAP_MS + ARRIVAL_INPUT_DELAY_MS;
+    // The next student steps up once the stamped form has left the desk. A
+    // generation counter makes a stale completion (after restart) harmless.
+    const generation = ++this.presentGeneration;
+    const presentNext = () => {
+      if (generation !== this.presentGeneration || this.arrived) return;
+      this.arrived = true;
+      this.presentCase(true);
+    };
+    this.arrived = false;
+    playEthicsFormDeparture(this, this.form, presentNext);
+    this.arrivalTimer?.remove(false);
+    this.arrivalTimer = this.time.delayedCall(DEPARTURE_GAP_MS + 120, presentNext);
+    this.uiKey = "";
+  }
+
+  private presentCase(animate: boolean) {
+    if (!this.state || !this.form || !this.visitor || this.leaving) return;
+    const item = getEthicsDeliveryCase(this.state);
+    if (!item) return;
+    const visitor = getEthicsDeliveryVisitor(this.state);
+    this.stamp?.destroy(true);
+    this.stamp = undefined;
+    this.controls?.cancelMovement();
+    this.player?.hideBubble();
+    setEthicsReviewFormCase(this.form, item, visitor);
+    this.rulebook?.setActive(item.category);
+    this.visitor.enter(visitor);
+    this.audio?.bell();
+    this.player?.greet();
+    playEthicsFormArrival(this, this.form, animate);
+    this.inputReadyAt = performance.now() + (animate ? ARRIVAL_INPUT_DELAY_MS : 0);
+    this.uiKey = "";
+  }
+
+  private handleContinue() {
+    if (!this.started || this.leaving || !this.state) return;
+    if (!this.state.practice || this.state.phase !== "feedback") return;
+    if (performance.now() < this.inputReadyAt) return;
+    const wasCorrect = this.state.decision?.correct;
+    this.state = continueEthicsDelivery(this.state);
+    this.lastTickAt = performance.now();
+    this.visitor?.hideBubble();
+    if (wasCorrect) this.sendOffAndPresentNext();
+    else this.presentCase(true);
+    this.updateView();
+  }
+
+  private handleAction(action: EthicsDeliveryAction) {
+    if (!this.started || this.leaving || !this.state || !this.player || !this.form || !this.visitor) return;
+    this.advanceClock();
+    if (this.state.phase !== "choosing") { this.controls?.cancelMovement(); return; }
+    const previous = this.state;
+    this.state = actEthicsDelivery(previous, action);
+    if (this.state === previous || !this.state.decision) { this.controls?.cancelMovement(); return; }
+    const state = this.state;
+    const decision = state.decision!;
+    const celebrate = !state.practice && decision.correct && isEthicsComboCelebration(state.combo);
+    // Practice waits for the reader; the timed shift advances on its own clock.
+    this.inputReadyAt = performance.now() + ETHICS_STAMP_IMPACT_MS + 500;
+    this.player.react(decision.correct);
+    this.stamp = playEthicsVerdictStamp(this, decision, this.stations, this.form, () => {
+      this.audio?.play(decision.correct);
+      if (celebrate) this.audio?.cheer();
+      this.visitor?.react(decision.correct);
+      this.visitor?.say(pickVisitorLine(decision.correct, decision.selected, state.caseIndex), decision.correct ? 1_000 : 1_800);
+      if (!decision.correct) this.player?.say(decision.explanation);
+    }, { combo: state.combo, celebrate });
+    this.uiKey = "";
+    this.updateView();
+  }
+
+  private updateView() {
+    if (!this.state || !this.form) return;
+    const state = this.state;
+    const pending = this.controls?.pendingAction;
+    const ready = performance.now() >= this.inputReadyAt;
+    const key = [state.phase, state.practice, state.caseIndex, pending, state.processedCount, ready].join("|");
+    if (key !== this.uiKey) {
+      showEthicsFormState(this.form, state, ready);
+      setEthicsStationState(this.stations, state.phase === "choosing" && ready, pending);
+      this.uiKey = key;
     }
-    if (runId !== this.runId || this.phase === "result") return;
-    this.phase = "entering";
-    this.setStationActivity(false);
-    this.feedback.container.setVisible(false);
-    this.player?.container.setPosition(640, 584).setScale(1).setAlpha(1);
-    setEthicsReviewDocumentCase(this.document, reviewCase, this.caseIndex + 1);
-    this.document.container
-      .setPosition(640, -210)
-      .setScale(0.92)
-      .setRotation(0.025)
-      .setAlpha(0)
-      .setDepth(45)
-      .setVisible(true);
-    this.tweens.add({
-      targets: this.document.container,
-      y: 272,
-      scale: 1,
-      alpha: 1,
-      rotation: -0.008,
-      duration: 480,
-      ease: "Back.easeOut",
-      onComplete: () => {
-        if (!this.isCurrentRun(runId, "entering") || !this.document) return;
-        playEthicsCaseScan(this, this.document.container);
-        this.phase = "reviewing";
-        this.setStationActivity(true);
-        this.updatePrompt();
-      },
-    });
-  }
-
-  private chooseVerdict(verdict: EthicsVerdict) {
-    if (
-      this.phase !== "reviewing" ||
-      !this.currentCase ||
-      !this.player ||
-      !this.document ||
-      !this.feedback
-    ) {
-      return;
-    }
-    const reviewCase = this.currentCase;
-    const runId = this.runId;
-    this.phase = "feedback";
-    this.setStationActivity(false);
-    const decision = evaluateReviewDecision(this.currentCase, verdict);
-    const points = getEthicsReviewPoints(decision, this.combo);
-    this.combo = getNextEthicsReviewCombo(this.combo, decision.correct);
-    if (decision.correct) {
-      this.score += points;
-      this.bestCombo = Math.max(this.bestCombo, this.combo);
-    } else {
-      this.mistakeCount += 1;
-      this.lives = Math.max(0, this.lives - 1);
-    }
-    this.completedCount += 1;
-    this.caseIndex += 1;
     this.updateHud();
-    this.promptText?.setVisible(false);
-
-    const station = this.stations.find((candidate) => candidate.verdict === verdict);
-    const targetX = ETHICS_REVIEW_CONFIG.stations[verdict].x;
-    this.tweens.add({
-      targets: this.player.container,
-      x: targetX,
-      y: 594,
-      scale: 1.12,
-      duration: 280,
-      ease: "Cubic.easeIn",
-      onComplete: () => {
-        if (
-          !this.isCurrentRun(runId, "feedback") ||
-          !this.document ||
-          !this.feedback
-        ) {
-          return;
-        }
-        if (station) {
-          playEthicsStationEffect(this, station, decision.correct, points);
-        }
-        playEthicsVerdictStamp(
-          this,
-          this.document.container,
-          verdict,
-          decision.correct,
-        );
-        showDocumentEvidence(this.document, reviewCase);
-        this.document.questionText.setVisible(false);
-        showEthicsReviewFeedback(this.feedback, decision, points, this.combo);
-      },
-    });
-    this.tweens.add({
-      targets: this.document.container,
-      x: 640 + (verdict === "approve" ? -34 : 34),
-      rotation: verdict === "approve" ? -0.025 : 0.025,
-      duration: 280,
-      ease: "Cubic.easeInOut",
-    });
-
-    const holdMs = decision.correct
-      ? ETHICS_REVIEW_CONFIG.feedbackHoldMs.correct
-      : ETHICS_REVIEW_CONFIG.feedbackHoldMs.retry;
-    this.advanceTimer = this.time.delayedCall(holdMs, () => {
-      this.advanceTimer = undefined;
-      if (!this.isCurrentRun(runId, "feedback")) return;
-      if (this.remainingMs <= 0) {
-        this.finishShift("time");
-      } else if (this.lives <= 0) {
-        this.finishShift("lives");
-      } else {
-        this.exitCurrentCase(verdict, runId);
-      }
-    });
-  }
-
-  private exitCurrentCase(verdict: EthicsVerdict, runId: number) {
-    if (!this.document || !this.isCurrentRun(runId, "feedback")) return;
-    this.phase = "exiting";
-    this.feedback?.container.setVisible(false);
-    this.tweens.add({
-      targets: this.document.container,
-      x: verdict === "approve" ? -260 : 1540,
-      y: 236,
-      scale: 0.72,
-      alpha: 0,
-      rotation: verdict === "approve" ? -0.16 : 0.16,
-      duration: 420,
-      ease: "Cubic.easeIn",
-      onComplete: () => {
-        if (!this.isCurrentRun(runId, "exiting")) return;
-        this.player?.container.setPosition(640, 584).setScale(1);
-        if (this.caseIndex >= this.deck.length) {
-          this.finishShift("cases");
-        } else {
-          this.promptText?.setVisible(true);
-          this.introduceCurrentCase(runId);
-        }
-      },
-    });
-  }
-
-  private finishShift(endReason: EthicsReviewEndReason) {
-    if (this.phase === "result" || this.leaving) return;
-    this.cancelAdvanceTimer();
-    this.phase = "result";
-    if (this.document) this.tweens.killTweensOf(this.document.container);
-    if (this.player) this.tweens.killTweensOf(this.player.container);
-    this.setStationActivity(false);
-    this.document?.container.setVisible(false);
-    this.feedback?.container.setVisible(false);
-    this.promptText?.setVisible(false);
-    this.player?.container.setVisible(false);
-    this.stations.forEach((station) => station.container.setAlpha(0.35));
-    this.updateHud();
-    const correctCount = this.completedCount - this.mistakeCount;
-    const stars = endReason === "lives" ? 1 : getEthicsReviewStars(correctCount);
-    this.earnedStars = stars;
-    celebrateEthicsResult(this, stars);
-    this.result?.destroy(true);
-    this.result = createEthicsResultOverlay(this, {
-      stars,
-      score: this.score,
-      bestCombo: this.bestCombo,
-      correctCount,
-      reviewedCount: this.completedCount,
-      lives: this.lives,
-      endReason,
-      onBack: () => this.returnToWorld(),
-      onReplay: () => this.startShift(),
-    });
   }
 
   private updateHud() {
-    this.hud?.setValues(this.getHudValues());
+    if (!this.state || !this.hud) return;
+    const state = this.state;
+    const seconds = Math.ceil(state.remainingMs / 1000);
+    const clock = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+    const values = [
+      `손님 ${state.processedCount}명`, `${state.score.toLocaleString()}점`,
+      `콤보 ${state.combo}`, state.practice ? "연습" : clock,
+    ] as const;
+    const key = values.join("|");
+    if (key === this.hudKey) return;
+    this.hud.setValues(values);
+    this.hud.setValue(3, values[3], seconds <= 10 && !state.practice ? "#c8574a" : "#315567");
+    this.hud.setValue(2, values[2], state.combo >= 3 ? "#d4792e" : "#315567");
+    this.hudKey = key;
   }
 
-  private getHudValues(): [string, string, string, string] {
-    const hearts = Array.from(
-      { length: ETHICS_REVIEW_CONFIG.startingLives },
-      (_, index) => (index < this.lives ? "♥" : "♡"),
-    ).join(" ");
-    return [
-      `심사 ${this.completedCount}개`,
-      `${this.score}점`,
-      hearts,
-      this.formatRemainingTime(),
-    ];
-  }
-
-  private formatRemainingTime() {
-    const seconds = Math.max(0, Math.ceil(this.remainingMs / 1000));
-    const minutes = Math.floor(seconds / 60);
-    return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
-  }
-
-  private updatePrompt() {
-    this.promptText
-      ?.setVisible(true)
-      .setText("← 승인          → 보완 요청          화면의 판정 장치를 눌러도 돼요");
-  }
-
-  private isTimedGameplayPhase() {
-    return (
-      this.phase === "entering" ||
-      this.phase === "reviewing" ||
-      this.phase === "feedback" ||
-      this.phase === "exiting"
-    );
-  }
-
-  private isCurrentRun(runId: number, phase: EthicsReviewPhase) {
-    return runId === this.runId && this.phase === phase && !this.leaving;
-  }
-
-  private cancelAdvanceTimer() {
-    this.advanceTimer?.remove(false);
-    this.advanceTimer = undefined;
-  }
-
-  private setStationActivity(active: boolean) {
-    setEthicsStationsReady(this, this.stations, active);
+  private finishShift() {
+    if (!this.state || this.result || this.leaving) return;
+    this.controls?.cancelMovement();
+    this.arrivalTimer?.remove(false);
+    this.stamp?.destroy(true);
+    this.stamp = undefined;
+    this.form?.hint.setVisible(false);
+    this.form?.continueButton.setVisible(false);
+    this.visitor?.hideBubble();
+    this.player?.hideBubble();
+    setEthicsStationState(this.stations, false);
+    const stars = getEthicsReviewStars(this.state.completedCount, this.state.processedCount);
+    if (!this.earnedStars || stars > this.earnedStars) this.earnedStars = stars;
+    this.result = createEthicsResultOverlay(this, {
+      stars, score: this.state.score, completedCount: this.state.completedCount,
+      processedCount: this.state.processedCount, bestCombo: this.state.bestCombo,
+      onBack: () => this.returnToWorld(), onReplay: () => this.startShift(),
+    });
+    this.updateHud();
   }
 
   private returnToWorld() {
     if (this.leaving) return;
     this.leaving = true;
-    this.phase = "result";
-    this.cancelAdvanceTimer();
-    this.setStationActivity(false);
-    const navigationId = ++this.runId;
+    this.controls?.cancelMovement();
     this.cameras.main.fadeOut(220, 255, 245, 220);
     this.time.delayedCall(220, () => {
-      if (navigationId !== this.runId) return;
-      this.scene.start(
-        SCENE_KEYS.world,
-        createWorldReturnSceneData("ethics-review", this.earnedStars),
-      );
+      this.scene.start(SCENE_KEYS.world, createWorldReturnSceneData("ethics-review", this.earnedStars));
     });
   }
+}
+
+function pickVisitorLine(correct: boolean, selected: EthicsDeliveryAction, index: number) {
+  const lines = correct
+    ? (index % 2 === 0 ? ETHICS_VISITOR_LINES.correct : ETHICS_VISITOR_LINES[selected])
+    : ETHICS_VISITOR_LINES.wrong;
+  return lines[index % lines.length];
 }

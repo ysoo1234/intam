@@ -1,3 +1,4 @@
+import { runEthicsDeliveryTests } from "./test-ethics-delivery.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
@@ -428,105 +429,7 @@ for (const question of AI_SERVICE_QUESTIONS) {
 
 console.log("AI Service Shop model rules passed.");
 
-const ethicsModelRoot = path.resolve(
-  "src/game/features/ethics-review/model",
-);
-const { ETHICS_REVIEW_CONFIG } = loadTypeScriptModule(
-  path.join(ethicsModelRoot, "config.ts"),
-);
-const ethicsRules = loadTypeScriptModule(
-  path.join(ethicsModelRoot, "rules.ts"),
-);
-const { ETHICS_REVIEW_CASES } = loadTypeScriptModule(
-  "src/game/features/ethics-review/content/cases.ts",
-);
-
-assert.equal(ETHICS_REVIEW_CONFIG.roundCount, 30);
-assert.equal(ETHICS_REVIEW_CONFIG.durationMs, 150_000);
-assert.equal(ETHICS_REVIEW_CONFIG.startingLives, 3);
-assert.equal(ETHICS_REVIEW_CASES.length, 30);
-assert.equal(
-  new Set(ETHICS_REVIEW_CASES.map((reviewCase) => reviewCase.id)).size,
-  ETHICS_REVIEW_CASES.length,
-  "Ethics review case IDs must be unique.",
-);
-for (const reviewCase of ETHICS_REVIEW_CASES) {
-  assert.ok(
-    reviewCase.facts.length >= 2 && reviewCase.facts.length <= 3,
-    `${reviewCase.id} must provide two or three readable facts.`,
-  );
-  assert.ok(
-    reviewCase.evidenceFactIndex >= 0 &&
-      reviewCase.evidenceFactIndex < reviewCase.facts.length,
-    `${reviewCase.id} has an invalid evidence fact index.`,
-  );
-}
-
-function seededRandom(seed) {
-  let state = seed >>> 0;
-  return () => {
-    state = (state * 1_664_525 + 1_013_904_223) >>> 0;
-    return state / 4_294_967_296;
-  };
-}
-
-const firstShift = ethicsRules.createReviewShift(
-  ETHICS_REVIEW_CASES,
-  ETHICS_REVIEW_CONFIG.roundCount,
-  seededRandom(42),
-);
-const repeatedShift = ethicsRules.createReviewShift(
-  ETHICS_REVIEW_CASES,
-  ETHICS_REVIEW_CONFIG.roundCount,
-  seededRandom(42),
-);
-assert.deepEqual(
-  firstShift.map((reviewCase) => reviewCase.id),
-  repeatedShift.map((reviewCase) => reviewCase.id),
-  "Ethics review shifts must be reproducible with the same random source.",
-);
-assert.equal(firstShift.length, ETHICS_REVIEW_CONFIG.roundCount);
-assert.equal(
-  firstShift.filter((reviewCase) => reviewCase.verdict === "approve").length,
-  15,
-);
-assert.equal(
-  firstShift.filter((reviewCase) => reviewCase.verdict === "reject").length,
-  15,
-);
-assert.equal(
-  new Set(firstShift.map((reviewCase) => reviewCase.id)).size,
-  ETHICS_REVIEW_CONFIG.roundCount,
-);
-
-const sampleCase = ETHICS_REVIEW_CASES[0];
-const correctDecision = ethicsRules.evaluateReviewDecision(
-  sampleCase,
-  sampleCase.verdict,
-);
-assert.equal(
-  correctDecision.correct,
-  true,
-);
-assert.equal(
-  ethicsRules.evaluateReviewDecision(
-    sampleCase,
-    sampleCase.verdict === "approve" ? "reject" : "approve",
-  ).correct,
-  false,
-);
-assert.equal(ethicsRules.getEthicsReviewPoints(correctDecision, 0), 100);
-assert.equal(ethicsRules.getEthicsReviewPoints(correctDecision, 3), 175);
-assert.equal(ethicsRules.getNextEthicsReviewCombo(2, true), 3);
-assert.equal(ethicsRules.getNextEthicsReviewCombo(4, false), 0);
-assert.equal(ethicsRules.getEthicsReviewStars(0), 1);
-assert.equal(ethicsRules.getEthicsReviewStars(8), 2);
-assert.equal(ethicsRules.getEthicsReviewStars(15), 3);
-assert.equal(ethicsRules.getEthicsReviewProgress(-1, 6), 0);
-assert.equal(ethicsRules.getEthicsReviewProgress(3, 6), 0.5);
-assert.equal(ethicsRules.getEthicsReviewProgress(9, 6), 1);
-
-console.log("Ethics Review model rules passed.");
+runEthicsDeliveryTests(loadTypeScriptModule);
 
 const villageMovement = loadTypeScriptModule(
   "src/game/features/world/model/villageMovement.ts",

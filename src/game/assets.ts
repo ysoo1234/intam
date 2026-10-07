@@ -126,6 +126,45 @@ export const GAME_ASSETS = {
     },
   },
   ethicsReview: {
+    // Office scene: the inspection booth with its service window and desk.
+    booth: "/assets/ethics-review/inspection-booth-v2.webp",
+    form: "/assets/ethics-review/inspection-form-v2.webp",
+    // Students at the window reuse the workshop's storybook customer art so
+    // both village activities share one cast and one drawing style.
+    visitors: Object.fromEntries(
+      [
+        "school-prep-student", "diary-student", "science-homework-student",
+        "cafeteria-student", "wrong-answer-student", "foreign-call-student",
+      ].map((id) => [id, {
+        waiting: `/assets/customers/v3-game/${id}-worried.webp`,
+        happy: `/assets/customers/v3-game/${id}-happy.webp`,
+      }]),
+    ) as Readonly<Record<string, Readonly<{ waiting: string; happy: string }>>>,
+    legacyWindowQueue: {
+      girl: "/assets/ethics-review/inspection-window-girl-v1.webp",
+      boy: "/assets/ethics-review/inspection-window-boy-v1.webp",
+    },
+    stampApprove: "/assets/ethics-review/stamp-tool-approve-v1.webp",
+    stampReject: "/assets/ethics-review/stamp-tool-reject-v1.webp",
+    midiFront: "/assets/ethics-review/stamp-midi-front-v1.webp",
+    midiLeft: "/assets/ethics-review/stamp-midi-left-v1.webp",
+    midiRight: "/assets/ethics-review/stamp-midi-right-v1.webp",
+    topics: {
+      permission: "/assets/ethics-review/stamp-topic-permission-v2.webp",
+      privacy: "/assets/ethics-review/stamp-topic-privacy-v1.webp",
+      checking: "/assets/ethics-review/stamp-topic-checking-v1.webp",
+      honesty: "/assets/ethics-review/stamp-topic-honesty-v1.webp",
+      respect: "/assets/ethics-review/stamp-topic-respect-v1.webp",
+    },
+    // Earlier iterations, kept for comparison and recovery.
+    stampStage: "/assets/ethics-review/stamp-stage-v2.webp",
+    inspectionBooth: "/assets/ethics-review/inspection-booth-simple-v1.webp",
+    inspectionApproveStamp: "/assets/ethics-review/inspection-approve-stamp-v2.webp",
+    inspectionReturnStamp: "/assets/ethics-review/inspection-return-stamp-v2.webp",
+    inspectionVisitorGirl: "/assets/ethics-review/inspection-window-girl-simple-v1.webp",
+    inspectionVisitorBoy: "/assets/ethics-review/inspection-window-boy-simple-v1.webp",
+    deliveryRoom: "/assets/ethics-review/delivery-room-final-v1.webp",
+    deliveryCardPanel: "/assets/ethics-review/delivery-card-panel-v1.webp",
     office: "/assets/ethics-review/office-v2.webp",
     briefingDossier: "/assets/ethics-review/briefing-sheet-v2.webp",
     caseDossier: "/assets/ethics-review/case-file-v2.webp",

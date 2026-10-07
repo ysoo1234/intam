@@ -71,8 +71,17 @@ const ethicsPlayer = await readFile(
   "src/game/features/ethics-review/scene/ethicsReviewPlayer.ts",
   "utf8",
 );
+const gameAssets = await readFile("src/game/assets.ts", "utf8");
+const ethicsVisitor = await readFile(
+  "src/game/features/ethics-review/scene/ethicsReviewVisitor.ts",
+  "utf8",
+);
 const ethicsView = await readFile(
   "src/game/features/ethics-review/scene/ethicsReviewView.ts",
+  "utf8",
+);
+const ethicsOffice = await readFile(
+  "src/game/features/ethics-review/scene/ethicsReviewOffice.ts",
   "utf8",
 );
 const ethicsEffects = await readFile(
@@ -329,11 +338,20 @@ assert.match(worldScene, /WORLD_CURVED_MOVEMENT_GUIDES/);
 assert.match(worldScene, /projectToBoundary: false/);
 assert.match(worldScene, /lastSafePosition/);
 assert.match(worldScene, /createWorldTouchDirection\(this/);
+const villageTutorial = await readFile(
+  "src/game/features/world/scene/villageTutorial.ts",
+  "utf8",
+);
 assert.match(
-  worldScene,
-  /방향키 또는 화면을 터치하여 움직여 보세요!/,
+  villageTutorial,
+  /방향키 또는 화면을 터치해서 미디를 움직여 보세요!/,
   "World onboarding must explain keyboard and touch movement without arrow clutter.",
 );
+assert.match(villageTutorial, /건물 앞으로 가면 입장 버튼이 나와요/, "The second tip must point to the buildings.");
+assert.match(worldScene, /createVillageTutorial\(this,/, "World must mount the village tutorial.");
+assert.match(worldScene, /loadStoredWorldProgress\(\)/, "Stars must be restored from browser storage.");
+assert.match(worldScene, /saveStoredWorldProgress\(this\.progress\)/, "Stars must be saved to browser storage.");
+assert.match(introScene, /loadStoredWorldProgress\(\)/, "The intro shows saved stars for a returning player.");
 assert.match(floatingJoystick, /pointerdown/);
 assert.match(floatingJoystick, /pointermove/);
 assert.match(floatingJoystick, /pointerupoutside/);
@@ -435,31 +453,26 @@ assert.match(
   /create\(\) \{\s*this\.resetSceneState\(\);/,
   "Ethics Review must reset all state whenever its scene is re-entered.",
 );
-assert.match(ethicsScene, /private chooseVerdict\(verdict: EthicsVerdict\)/);
-assert.match(
-  ethicsScene,
-  /evaluateReviewDecision\(this\.currentCase, verdict\)/,
-  "Ethics Review must resolve each case with one verdict choice.",
-);
-assert.doesNotMatch(ethicsScene, /selectEvidence|pickUpDocument|handleAction/);
-assert.doesNotMatch(ethicsScene, /"carrying"/);
 assert.match(ethicsControls, /keydown-LEFT/);
 assert.match(ethicsControls, /keydown-RIGHT/);
-assert.match(ethicsControls, /keydown-SPACE/);
-assert.match(ethicsControls, /keydown-ENTER/);
+assert.match(ethicsControls, /if \(pending \|\| !canMove\(\)/);
 assert.match(ethicsControls, /Scenes\.Events\.SHUTDOWN/);
-assert.match(ethicsView, /← 방향키/);
-assert.match(ethicsView, /→ 방향키/);
-assert.doesNotMatch(ethicsControls, /keydown-A/);
-assert.doesNotMatch(ethicsControls, /keydown-D/);
-assert.match(ethicsView, /사건 파일/);
-assert.match(ethicsEffects, /playEthicsStationEffect/);
-assert.match(ethicsEffects, /playEthicsCaseScan/);
+assert.match(ethicsOverlays, /createGameResultOverlay/);
+assert.match(ethicsOffice, /GAME_ASSETS\.ethicsReview/);
+assert.match(ethicsOffice, /source\.booth/, "The office must load the inspection booth artwork.");
+assert.match(ethicsOffice, /source\.visitors/, "Visitors come from the shared assets manifest.");
+assert.match(gameAssets, /customers\/v3-game\/\$\{id\}-worried\.webp/, "Ethics visitors reuse the workshop customer cast.");
+assert.match(ethicsOffice, /createEthicsRulebook/);
+assert.match(ethicsVisitor, /external\.addMask\(/, "Visitors must be clipped to the window opening (WebGL mask filter).");
+assert.match(ethicsVisitor, /createGeometryMask/, "Canvas fallback keeps the geometry mask.");
+assert.match(ethicsVisitor, /Scenes\.Events\.SHUTDOWN/);
+assert.match(ethicsView, /playEthicsFormArrival/);
+assert.match(ethicsView, /playEthicsFormDeparture/);
+assert.match(ethicsPlayer, /greet:/, "Midi must glance toward each arriving visitor.");
 assert.match(ethicsEffects, /playEthicsVerdictStamp/);
-assert.match(
-  ethicsPlayer,
-  /scene\.add\s*\.container\(640, 584/,
-);
+assert.match(ethicsScene, /createGameStatusHud\(/, "Ethics Review must use the shared status chrome.");
+assert.match(ethicsScene, /createVillageReturnButton\(/);
+assert.doesNotMatch(ethicsScene, /console\.log/);
 const ethicsSceneLineCount = ethicsScene.split(/\r?\n/).length;
 assert.ok(
   ethicsSceneLineCount <= 500,

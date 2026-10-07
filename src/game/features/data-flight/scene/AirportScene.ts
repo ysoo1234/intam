@@ -42,13 +42,12 @@ import { createAirportFeverFormation } from "./airportFeverFormation";
 import { AIRPORT_FEVER_COLORS, AirportHud } from "./airportHud";
 import { updateAirportPlayer } from "./airportPlayer";
 import { createAirportResultOverlay } from "./airportResult";
-import { showAirportLevelUp, showAirportNotice } from "./airportOverlays";
+import { DATA_FLIGHT_START, showAirportLevelUp, showAirportNotice } from "./airportOverlays";
 import { updateAirportObstacleMotion } from "./airportObjectMotion";
 import { preloadAirportAssets, releaseAirportTextures } from "./airportTextures";
 import { createAirportDataObject, createAirportEdgeObstacles, createAirportMovingObstacle } from "./airportObjects";
 import { advanceAirportBackgroundTile, createAirportBackground, createAirportPlayer } from "./airportView";
 import type { FlightObject } from "./flightObject";
-const DATA_FLIGHT_START = { placeName: "데이터 비행 공항", playDescription: "다양한 데이터를 모으며 장애물을 피해요. \n 질문이 나오면 목적에 맞는 데이터를 골라요." } as const;
 export class AirportScene extends Phaser.Scene {
   private sky?: Phaser.GameObjects.TileSprite;
   private city?: Phaser.GameObjects.TileSprite;

@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import type { GameStartOverlayConfig } from "../../../core/visual/gameStartOverlay";
 import { COLORS, FONT_FAMILY } from "../../../core/visual/theme";
 
 export function showAirportNotice(
@@ -84,3 +85,15 @@ export function showAirportLevelUp(scene: Phaser.Scene, level: number) {
     });
   });
 }
+
+/** Start-overlay copy and tutorial cards for the airport. */
+export const DATA_FLIGHT_START = {
+  placeName: "데이터 비행 공항",
+  playDescription: "미디와 함께 하늘을 날며 좋은 데이터를 모아요.",
+  steps: [
+    { icon: "airport-midi", iconSize: 90, title: "위아래로 날아요", text: "미디를 움직여\n하늘을 날아요." },
+    { icon: "airport-data-doc", title: "데이터를 모아요", text: "깨끗한 데이터는 모으고\n망가진 데이터는 피해요." },
+    { icon: "airport-public-data-science-technology", title: "질문에 답해요", text: "질문이 나오면 목적에\n맞는 데이터를 골라요." },
+  ],
+  controlsHint: "↑ ↓ 키  ·  W S  ·  화면 터치",
+} as const satisfies GameStartOverlayConfig;

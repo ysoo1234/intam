@@ -128,6 +128,31 @@ const WORKSHOP_PRODUCT_IDS = [
 ];
 
 const ASSETS = [
+  ...["approve", "reject"].map(verdict => highDpiPanelAsset({
+    source: `ethics-review/stamp-tool-${verdict}-v1.png`,
+    trim: true, quality: 96, alphaQuality: 100,
+  }, { width: 160, height: 150 })),
+  fullScreenAsset({ source: "ethics-review/stamp-stage-v1.png", quality: 96 }),
+  fullScreenAsset({ source: "ethics-review/stamp-stage-v2.png", quality: 96 }),
+  ...["permission", "privacy", "checking", "honesty", "respect"].map(topic => highDpiPanelAsset({
+    source: `ethics-review/stamp-topic-${topic}-${topic === "permission" ? "v2" : "v1"}.png`,
+    trim: true, quality: 96, alphaQuality: 100,
+  }, { width: 160, height: 140 })),
+  highDpiPanelAsset({
+    source: "ethics-review/inspection-approve-stamp-v2.png",
+    output: "ethics-review/stamp-approve-v1.webp",
+    trim: true, quality: 96, alphaQuality: 100,
+  }, { width: 220, height: 275 }),
+  highDpiPanelAsset({
+    source: "ethics-review/inspection-return-stamp-v2.png",
+    output: "ethics-review/stamp-reject-v1.webp",
+    trim: true, quality: 96, alphaQuality: 100,
+  }, { width: 220, height: 275 }),
+  ...["front", "left", "right"].map(facing => highDpiPanelAsset({
+    source: `characters/midi_${facing}.png`,
+    output: `ethics-review/stamp-midi-${facing}-v1.webp`,
+    quality: 96, alphaQuality: 100,
+  }, { width: 230, height: 295 })),
   fullScreenAsset({
     source: "intro/gem-board-blue-cutout-v1.png",
     output: "intro/gem-board.webp",
@@ -588,9 +613,62 @@ const ASSETS = [
     alphaQuality: 100,
   },
   fullScreenAsset({
+    source: "ethics-review/inspection-booth-simple-v1.png",
+    quality: 96,
+  }),
+  highDpiPanelAsset({
+    source: "ethics-review/inspection-window-girl-simple-v1.png",
+    quality: 96,
+  }, { width: 304, height: 240 }),
+  highDpiPanelAsset({
+    source: "ethics-review/inspection-window-boy-simple-v1.png",
+    quality: 96,
+  }, { width: 304, height: 240 }),
+  fullScreenAsset({
+    source: "ethics-review/inspection-booth-v2.png",
+    quality: 96,
+  }),
+  highDpiPanelAsset({
+    source: "ethics-review/inspection-form-v2.png",
+    trim: true, quality: 96, alphaQuality: 100,
+  }, { width: 510, height: 266 }),
+  highDpiPanelAsset({
+    source: "ethics-review/inspection-approve-stamp-v2.png",
+    trim: true, quality: 96, alphaQuality: 100,
+  }, { width: 154, height: 192 }),
+  highDpiPanelAsset({
+    source: "ethics-review/inspection-return-stamp-v2.png",
+    trim: true, quality: 96, alphaQuality: 100,
+  }, { width: 154, height: 192 }),
+  highDpiPanelAsset({
+    source: "ethics-review/inspection-window-girl-v1.png",
+    quality: 96,
+  }, { width: 327, height: 229 }),
+  highDpiPanelAsset({
+    source: "ethics-review/inspection-window-boy-v1.png",
+    quality: 96,
+  }, { width: 327, height: 229 }),
+  highDpiPanelAsset({
+    source: "ethics-review/inspection-visitor-girl-v3.png",
+    trim: true, quality: 96, alphaQuality: 100,
+  }, { width: 180, height: 288 }),
+  highDpiPanelAsset({
+    source: "ethics-review/inspection-visitor-boy-v3.png",
+    trim: true, quality: 96, alphaQuality: 100,
+  }, { width: 180, height: 288 }),
+  fullScreenAsset({
     source: "ethics-review/office-v2.png",
     lossless: true,
   }),
+  fullScreenAsset({
+    source: "ethics-review/delivery-room-final-v1.png",
+    quality: 94,
+  }),
+  highDpiPanelAsset({
+    source: "ethics-review/delivery-card-panel-v1.png",
+    trim: true,
+    alphaQuality: 100,
+  }, { width: 840, height: 280 }),
   highDpiPanelAsset({
     source: "ethics-review/briefing-sheet-v2.png",
     alphaQuality: 100,
