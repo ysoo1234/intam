@@ -14,7 +14,8 @@ import { FONT_FAMILY, UI_MOTION } from "../../../core/visual/theme";
  * (after textbook p.101, before the epilogue), so the board is shown complete.
  */
 // Title artwork: AI 월드 마법판 (public/assets/intro/intro-title-ai-world-v1.webp).
-const INTRO_TITLE = { x: 640, y: 70, width: 560 } as const;
+// Sized like textbook page 1: title about four-fifths the width of the board frame.
+const INTRO_TITLE = { x: 640, y: 82, width: 450 } as const;
 const INTRO_BOARD = { x: 640, y: 362, width: 600, height: 450 } as const;
 const INTRO_BUTTON = { x: 640, y: 654, width: 280, height: 58 } as const;
 const INTRO_MASCOT = { x: 124, y: 640, width: 118, height: 152 } as const;
