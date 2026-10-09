@@ -265,7 +265,7 @@ export class IntroScene extends Phaser.Scene {
     if (!this.prefersReducedMotion) {
       this.tweens.add({
         targets: pulse, scale: { from: 1, to: 1.02 },
-        duration: 1_400, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+        duration: 800, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
       });
       this.tweens.add({
         targets: ripple, scaleX: { from: 1, to: 1.04 }, scaleY: { from: 1, to: 1.14 }, alpha: { from: 0.6, to: 0 },
