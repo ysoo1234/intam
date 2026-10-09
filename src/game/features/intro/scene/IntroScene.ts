@@ -7,19 +7,41 @@ import { FONT_FAMILY, UI_MOTION } from "../../../core/visual/theme";
 import { getWorldTotalStars, WORLD_EXIT_REQUIRED_STARS } from "../../../core/navigation";
 import { loadStoredWorldProgress } from "../../../core/navigation/worldProgressStorage";
 
-// The gem board is textbook artwork and stays untouched; the frame around it
-// (title, ambience, mascot, button) is what the intro redesign dresses up.
-const INTRO_BOARD = { x: 640, y: 352, width: 660, height: 495 } as const;
-const INTRO_BUTTON = { x: 640, y: 656, width: 400, height: 112 } as const;
-const INTRO_TITLE = { x: 640, y: 46 } as const;
-const INTRO_MASCOT = { x: 262, y: 598, width: 118, height: 152 } as const;
-const INTRO_DEPTH = { backdrop: 0, vignette: 1, orbs: 2, board: 4, mascot: 6, title: 8, button: 15 } as const;
+/**
+ * The intro mirrors page 1 of the textbook ("AI 월드 마법판"): a sky-blue to
+ * lavender sky with light rays and sparkles, the chunky outlined title, the
+ * gem board in the centre and a frosted note card underneath. Students arrive
+ * here by scanning the QR code that appears once all nine gems are attached,
+ * so the board is shown complete. The village stays visible behind the wash.
+ */
+const INTRO_TITLE = { x: 640, y: 66, text: "AI 월드 마법판" } as const;
+const INTRO_BOARD = { x: 640, y: 338, width: 560, height: 420 } as const;
+const INTRO_NOTE = { x: 640, y: 598, width: 640, height: 64 } as const;
+const INTRO_BUTTON = { x: 640, y: 672, width: 252, height: 52 } as const;
+const INTRO_MASCOT = { x: 214, y: 636, width: 112, height: 144 } as const;
+const INTRO_DEPTH = {
+  backdrop: 0, wash: 1, rays: 2, sparkles: 3, boardShadow: 4, board: 5,
+  note: 6, mascot: 7, title: 8, button: 15,
+} as const;
+// Textbook palette: sky #8fd8f5 → lavender #a99ad8, title blue #2f8fd8 → purple #a347b8.
+const INTRO_COLORS = {
+  skyTop: 0x7fd0f2,
+  skyBottom: 0xa99ad8,
+  titleOuter: 0x2b3f86,
+  titleBlue: "#2f8fd8",
+  titlePurple: "#a347b8",
+  noteText: "#2f3d68",
+  buttonText: "#4b3b8f",
+  buttonEdge: 0x8f7fd0,
+} as const;
 
 export class IntroScene extends Phaser.Scene {
   private backdrop?: Phaser.GameObjects.Image;
   private board?: Phaser.GameObjects.Image;
   private mascot?: Phaser.GameObjects.Container;
   private titleGroup?: Phaser.GameObjects.Container;
+  private note?: Phaser.GameObjects.Container;
+  private rays?: Phaser.GameObjects.Container;
   private enterButton?: Phaser.GameObjects.Container;
   private pressedPointerId: number | null = null;
   private prefersReducedMotion = false;
@@ -35,7 +57,6 @@ export class IntroScene extends Phaser.Scene {
   preload() {
     this.load.image("intro-village-backdrop", GAME_ASSETS.intro.backdrop);
     this.load.image("gem-board", GAME_ASSETS.intro.board);
-    this.load.image("intro-entry-button", GAME_ASSETS.intro.entryButton);
     this.load.image("player-front", GAME_ASSETS.characters.player.front);
     this.load.image("player-back", GAME_ASSETS.characters.player.back);
     this.load.image("player-left", GAME_ASSETS.characters.player.left);
@@ -44,32 +65,16 @@ export class IntroScene extends Phaser.Scene {
 
   create() {
     configureSceneCamera(this, this.renderScale);
+    this.entering = false;
+    this.pressedPointerId = null;
     this.prefersReducedMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
     this.createBackdrop();
-    this.createAmbience();
+    this.createSky();
     this.createTitle();
-
-    this.board = this.add
-      .image(INTRO_BOARD.x, INTRO_BOARD.y, "gem-board")
-      .setDepth(INTRO_DEPTH.board);
-    const boardScale = Math.min(
-      INTRO_BOARD.width / this.board.width,
-      INTRO_BOARD.height / this.board.height,
-    );
-    this.board.setScale(boardScale);
-    if (!this.prefersReducedMotion) {
-      // The board settles onto the screen; a soft shadow below reads as depth.
-      this.board.setY(INTRO_BOARD.y - 34).setAlpha(0).setScale(boardScale * 0.97);
-      this.tweens.add({
-        targets: this.board, y: INTRO_BOARD.y, alpha: 1, scale: boardScale,
-        duration: 620, delay: 120, ease: "Back.easeOut",
-      });
-    }
-    this.add.ellipse(INTRO_BOARD.x + 4, INTRO_BOARD.y + INTRO_BOARD.height / 2 + 6, INTRO_BOARD.width * 0.9, 34, 0x10263a, 0.22)
-      .setDepth(INTRO_DEPTH.board - 1);
-
+    this.createBoard();
+    this.createNote();
     this.createMascot();
     this.createEnterButton();
     this.input.keyboard?.on("keydown-SPACE", this.startFromKeyboard);
@@ -78,103 +83,188 @@ export class IntroScene extends Phaser.Scene {
       this.input.keyboard?.off("keydown-SPACE", this.startFromKeyboard);
       this.input.keyboard?.off("keydown-ENTER", this.startFromKeyboard);
     });
-    this.cameras.main.fadeIn(520, 255, 245, 220);
+    this.cameras.main.fadeIn(520, 236, 240, 255);
     this.onReady();
   }
 
+  /** The village stays in place behind the textbook sky. */
   private createBackdrop() {
-    // Zoomed past the artwork's own corner caption so the new title stands alone.
     this.backdrop = this.add
       .image(640, 372, "intro-village-backdrop")
       .setDepth(INTRO_DEPTH.backdrop);
-    this.fitToScreen(this.backdrop);
-    this.backdrop.setScale(this.backdrop.scale * 1.3);
+    this.backdrop.setScale(
+      Math.max(1280 / this.backdrop.width, 720 / this.backdrop.height) * 1.3,
+    );
+  }
+
+  /** Sky-blue to lavender wash, radiating light behind the board, sparkles. */
+  private createSky() {
+    const wash = this.add.graphics().setDepth(INTRO_DEPTH.wash);
+    wash.fillGradientStyle(
+      INTRO_COLORS.skyTop, INTRO_COLORS.skyTop,
+      INTRO_COLORS.skyBottom, INTRO_COLORS.skyBottom,
+      0.86, 0.86, 0.8, 0.8,
+    );
+    wash.fillRect(0, 0, 1280, 720);
+    // A soft bright core behind the board, like the page's glow.
+    for (let ring = 0; ring < 6; ring += 1) {
+      wash.fillStyle(0xffffff, 0.045);
+      wash.fillEllipse(INTRO_BOARD.x, INTRO_BOARD.y + 40, 980 - ring * 120, 620 - ring * 80);
+    }
+
+    const rayCount = 18;
+    const rays = this.add.graphics();
+    for (let index = 0; index < rayCount; index += 1) {
+      const angle = (Math.PI * 2 * index) / rayCount;
+      const spread = index % 2 === 0 ? 0.07 : 0.04;
+      const length = 900;
+      rays.fillStyle(0xffffff, index % 2 === 0 ? 0.11 : 0.06);
+      rays.fillTriangle(
+        0, 0,
+        Math.cos(angle - spread) * length, Math.sin(angle - spread) * length,
+        Math.cos(angle + spread) * length, Math.sin(angle + spread) * length,
+      );
+    }
+    this.rays = this.add
+      .container(INTRO_BOARD.x, INTRO_BOARD.y + 60, [rays])
+      .setDepth(INTRO_DEPTH.rays)
+      .setBlendMode(Phaser.BlendModes.ADD);
     if (!this.prefersReducedMotion) {
-      // A slow breathing zoom keeps the village alive behind the board.
-      const scale = this.backdrop.scale;
-      this.tweens.add({
-        targets: this.backdrop, scale: scale * 1.045, duration: 9_000,
-        yoyo: true, repeat: -1, ease: "Sine.easeInOut",
-      });
+      this.tweens.add({ targets: this.rays, angle: 360, duration: 120_000, repeat: -1 });
     }
+
+    // Four-point sparkles scattered around the board, like the printed page.
+    const sparkleSpots = [
+      [168, 210, 1], [116, 360, 0.7], [250, 470, 0.55], [1080, 196, 0.9], [1170, 330, 0.65],
+      [1040, 470, 1], [1188, 520, 0.6], [330, 150, 0.6], [960, 120, 0.55], [92, 540, 0.8],
+    ] as const;
+    sparkleSpots.forEach(([x, y, size], index) => {
+      const sparkle = this.add
+        .star(x, y, 4, 3 * size, 22 * size, 0xffffff, 0.95)
+        .setDepth(INTRO_DEPTH.sparkles)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      if (this.prefersReducedMotion) return;
+      this.tweens.add({
+        targets: sparkle, scale: { from: 0.55, to: 1.1 }, alpha: { from: 0.35, to: 1 },
+        duration: 1_100 + (index % 4) * 260, delay: index * 170, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+      });
+    });
   }
 
-  /** Vignette for legibility plus drifting light motes over the village. */
-  private createAmbience() {
-    const vignette = this.add.graphics().setDepth(INTRO_DEPTH.vignette);
-    for (let band = 0; band < 10; band += 1) {
-      const alpha = 0.03 * (10 - band);
-      vignette.fillStyle(0x12304a, alpha);
-      vignette.fillRect(0, band * 9, 1280, 9);
-      vignette.fillRect(0, 720 - (band + 1) * 14, 1280, 14);
-    }
-    vignette.fillStyle(0x12304a, 0.12).fillRect(0, 0, 1280, 720);
-    if (this.prefersReducedMotion) return;
-    for (let index = 0; index < 14; index += 1) {
-      const x = 60 + Math.random() * 1_160;
-      const startY = 160 + Math.random() * 560;
-      const radius = 3 + Math.random() * 5;
-      const mote = this.add
-        .circle(x, startY, radius, 0xfff4c2, 0.7)
-        .setDepth(INTRO_DEPTH.orbs)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setAlpha(0);
-      this.tweens.add({
-        targets: mote, y: startY - 160 - Math.random() * 120, x: x + (Math.random() - 0.5) * 60,
-        alpha: { from: 0, to: 0.55 }, duration: 5_200 + Math.random() * 3_000,
-        delay: Math.random() * 4_000, repeat: -1, yoyo: true, ease: "Sine.easeInOut",
-      });
-    }
-  }
-
+  /**
+   * "AI 월드 마법판" in the textbook's chunky style: white letters, a blue to
+   * purple outline, and a deep navy outer edge with a drop shadow.
+   */
   private createTitle() {
-    const title = this.add
-      .text(0, 0, "배움마을", {
-        fontFamily: FONT_FAMILY, fontSize: "54px", fontStyle: "bold", color: "#fffaf0",
-        stroke: "#2b4f66", strokeThickness: 9, shadow: { offsetX: 0, offsetY: 5, color: "#10263a", blur: 0, fill: true },
-      })
-      .setOrigin(0.5)
-      .setResolution(3);
-    const chipLabel = this.add
-      .text(0, 50, "생활 속 AI 제작소  ·  데이터 비행 공항  ·  윤리 심사소", {
-        fontFamily: FONT_FAMILY, fontSize: "17px", fontStyle: "bold", color: "#fffaf0",
-      })
-      .setOrigin(0.5)
-      .setResolution(3);
-    const chip = this.add.graphics();
-    const chipWidth = chipLabel.width + 40;
-    chip.fillStyle(0x10263a, 0.5).fillRoundedRect(-chipWidth / 2, 50 - 17, chipWidth, 34, 17);
+    const style: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontFamily: FONT_FAMILY, fontSize: "66px", fontStyle: "bold", color: "#ffffff",
+    };
+    const shadow = this.add
+      .text(0, 7, INTRO_TITLE.text, { ...style, stroke: "#1d2a5e", strokeThickness: 22 })
+      .setOrigin(0.5).setResolution(3).setAlpha(0.35);
+    const outer = this.add
+      .text(0, 0, INTRO_TITLE.text, { ...style, stroke: "#ffffff", strokeThickness: 22 })
+      .setOrigin(0.5).setResolution(3);
+    const outline = this.add
+      .text(0, 0, INTRO_TITLE.text, { ...style, strokeThickness: 13 })
+      .setOrigin(0.5).setResolution(3);
+    const gradient = outline.context.createLinearGradient(0, 0, outline.width, 0);
+    gradient.addColorStop(0, INTRO_COLORS.titleBlue);
+    gradient.addColorStop(0.5, "#5b7fd6");
+    gradient.addColorStop(1, INTRO_COLORS.titlePurple);
+    outline.setStroke(gradient as unknown as string, 13);
+    const face = this.add
+      .text(0, 0, INTRO_TITLE.text, style)
+      .setOrigin(0.5).setResolution(3);
+    // A thin glossy band on the upper half of the letters.
+    const gloss = this.add
+      .text(0, 0, INTRO_TITLE.text, { ...style, color: "#e6f6ff" })
+      .setOrigin(0.5).setResolution(3).setAlpha(0.55)
+      .setCrop(0, outline.height * 0.55, outline.width, outline.height);
     this.titleGroup = this.add
-      .container(INTRO_TITLE.x, INTRO_TITLE.y, [chip, chipLabel, title])
+      .container(INTRO_TITLE.x, INTRO_TITLE.y, [shadow, outer, outline, face, gloss])
       .setDepth(INTRO_DEPTH.title);
     if (!this.prefersReducedMotion) {
-      this.titleGroup.setAlpha(0).setY(INTRO_TITLE.y - 16);
-      this.tweens.add({ targets: this.titleGroup, alpha: 1, y: INTRO_TITLE.y, duration: 520, ease: "Cubic.easeOut" });
+      this.titleGroup.setAlpha(0).setY(INTRO_TITLE.y - 18).setScale(0.96);
+      this.tweens.add({
+        targets: this.titleGroup, alpha: 1, y: INTRO_TITLE.y, scale: 1,
+        duration: 560, ease: "Back.easeOut",
+      });
     }
+  }
+
+  /** The textbook gem board, unchanged, completed with all nine gems. */
+  private createBoard() {
+    this.add
+      .ellipse(INTRO_BOARD.x + 4, INTRO_BOARD.y + INTRO_BOARD.height / 2 + 4, INTRO_BOARD.width * 0.86, 30, 0x2b3f86, 0.22)
+      .setDepth(INTRO_DEPTH.boardShadow);
+    this.board = this.add
+      .image(INTRO_BOARD.x, INTRO_BOARD.y, "gem-board")
+      .setDepth(INTRO_DEPTH.board);
+    const boardScale = Math.min(
+      INTRO_BOARD.width / this.board.width,
+      INTRO_BOARD.height / this.board.height,
+    );
+    this.board.setScale(boardScale);
+    if (this.prefersReducedMotion) return;
+    this.board.setY(INTRO_BOARD.y - 30).setAlpha(0).setScale(boardScale * 0.97);
+    this.tweens.add({
+      targets: this.board, y: INTRO_BOARD.y, alpha: 1, scale: boardScale,
+      duration: 620, delay: 140, ease: "Back.easeOut",
+    });
+  }
+
+  /** Frosted note card, styled like the two-line notice on the printed page. */
+  private createNote() {
+    const { width, height } = INTRO_NOTE;
+    const card = this.add.graphics();
+    card.fillStyle(0x3b3f86, 0.14).fillRoundedRect(-width / 2 + 3, -height / 2 + 5, width, height, 14);
+    card.fillStyle(0xffffff, 0.9).fillRoundedRect(-width / 2, -height / 2, width, height, 14);
+    card.lineStyle(2, 0xc9c2ec, 1).strokeRoundedRect(-width / 2, -height / 2, width, height, 14);
+    card.lineStyle(1.5, 0xe2def5, 1).strokeRoundedRect(-width / 2 + 6, -height / 2 + 6, width - 12, height - 12, 10);
+    const savedStars = getWorldTotalStars(loadStoredWorldProgress());
+    const lines = [
+      "✦ 9개의 보석을 모두 모아 AI 월드에 빛을 되찾았어요.",
+      savedStars > 0
+        ? `✦ 배움마을의 별을 이어서 모아 보세요.  ★ ${savedStars} / ${WORLD_EXIT_REQUIRED_STARS}`
+        : "✦ 배움마을의 세 곳을 탐험하고 별을 모아 졸업길을 열어 보세요.",
+    ];
+    const text = this.add
+      .text(-width / 2 + 34, 0, lines.join("\n"), {
+        fontFamily: FONT_FAMILY, fontSize: "17px", fontStyle: "bold",
+        color: INTRO_COLORS.noteText, lineSpacing: 6,
+      })
+      .setOrigin(0, 0.5).setResolution(3);
+    this.note = this.add
+      .container(INTRO_NOTE.x, INTRO_NOTE.y, [card, text])
+      .setDepth(INTRO_DEPTH.note);
+    if (this.prefersReducedMotion) return;
+    this.note.setAlpha(0).setY(INTRO_NOTE.y + 12);
+    this.tweens.add({ targets: this.note, alpha: 1, y: INTRO_NOTE.y, duration: 420, delay: 380, ease: "Cubic.easeOut" });
   }
 
   /** Midi waits beside the board with a short invitation. */
   private createMascot() {
-    const shadow = this.add.ellipse(0, 4, 92, 18, 0x10263a, 0.24);
+    const shadow = this.add.ellipse(0, 4, 88, 16, 0x2b3f86, 0.22);
     const sprite = this.add
       .image(0, 0, "player-front")
       .setDisplaySize(INTRO_MASCOT.width, INTRO_MASCOT.height)
       .setOrigin(0.5, 0.97);
     const bubbleText = this.add
-      .text(0, 0, "별을 모아 졸업길을 열어 보자!", {
-        fontFamily: FONT_FAMILY, fontSize: "18px", fontStyle: "bold", color: "#315567",
+      .text(0, 0, "배움마을로 가 보자!", {
+        fontFamily: FONT_FAMILY, fontSize: "17px", fontStyle: "bold", color: "#315567",
       })
       .setOrigin(0.5)
       .setResolution(3);
-    const bubbleWidth = bubbleText.width + 34;
+    const bubbleWidth = bubbleText.width + 32;
     const bubble = this.add.graphics();
-    bubble.fillStyle(0x10263a, 0.16).fillRoundedRect(-bubbleWidth / 2 + 3, -22 + 4, bubbleWidth, 44, 16);
-    bubble.fillStyle(0xfffaf0, 1).fillRoundedRect(-bubbleWidth / 2, -22, bubbleWidth, 44, 16);
-    bubble.lineStyle(2.5, 0x6fb0b2, 1).strokeRoundedRect(-bubbleWidth / 2, -22, bubbleWidth, 44, 16);
-    bubble.fillStyle(0xfffaf0, 1).fillTriangle(-30, 20, -10, 20, -24, 34);
-    bubble.lineStyle(2.5, 0x6fb0b2, 1).lineBetween(-30, 20, -24, 34);
-    bubble.lineBetween(-24, 34, -10, 20);
-    const bubbleGroup = this.add.container(96, -INTRO_MASCOT.height - 2, [bubble, bubbleText]);
+    bubble.fillStyle(0x2b3f86, 0.14).fillRoundedRect(-bubbleWidth / 2 + 3, -20 + 4, bubbleWidth, 40, 16);
+    bubble.fillStyle(0xffffff, 1).fillRoundedRect(-bubbleWidth / 2, -20, bubbleWidth, 40, 16);
+    bubble.lineStyle(2, 0xc9c2ec, 1).strokeRoundedRect(-bubbleWidth / 2, -20, bubbleWidth, 40, 16);
+    bubble.fillStyle(0xffffff, 1).fillTriangle(-26, 18, -8, 18, -22, 32);
+    bubble.lineStyle(2, 0xc9c2ec, 1).lineBetween(-26, 18, -22, 32);
+    bubble.lineBetween(-22, 32, -8, 18);
+    const bubbleGroup = this.add.container(70, -INTRO_MASCOT.height - 4, [bubble, bubbleText]);
     this.mascot = this.add
       .container(INTRO_MASCOT.x, INTRO_MASCOT.y, [shadow, sprite, bubbleGroup])
       .setDepth(INTRO_DEPTH.mascot);
@@ -185,50 +275,27 @@ export class IntroScene extends Phaser.Scene {
     this.tweens.add({ targets: bubbleGroup, alpha: 1, scale: 1, delay: 900, duration: 260, ease: "Back.easeOut" });
   }
 
-  private fitToScreen(image: Phaser.GameObjects.Image) {
-    image.setScale(Math.max(1280 / image.width, 720 / image.height));
-  }
-
+  /** A small, quiet pill button instead of the ornate sci-fi plate. */
   private createEnterButton() {
-    const plate = this.add
-      .image(0, 0, "intro-entry-button")
-      .setDisplaySize(INTRO_BUTTON.width, INTRO_BUTTON.height);
+    const { width, height } = INTRO_BUTTON;
+    const plate = this.add.graphics();
+    plate.fillStyle(0x3b3f86, 0.2).fillRoundedRect(-width / 2 + 2, -height / 2 + 5, width, height, height / 2);
+    plate.fillStyle(0xffffff, 1).fillRoundedRect(-width / 2, -height / 2, width, height, height / 2);
+    plate.lineStyle(2.5, INTRO_COLORS.buttonEdge, 1).strokeRoundedRect(-width / 2, -height / 2, width, height, height / 2);
     const label = this.add
-      .text(0, -8, "배움마을 입장하기", {
-        color: "#17386f",
+      .text(0, -1, "배움마을 입장하기  →", {
+        color: INTRO_COLORS.buttonText,
         fontFamily: FONT_FAMILY,
-        fontSize: "28px",
-        fontStyle: "bold",
-        stroke: "#ffffff",
-        strokeThickness: 2,
-      })
-      .setOrigin(0.5);
-    const keyHint = this.add
-      .text(0, 23, "ENTER  ·  SPACE", {
-        color: "#48667f",
-        fontFamily: FONT_FAMILY,
-        fontSize: "12px",
+        fontSize: "21px",
         fontStyle: "bold",
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setResolution(3);
 
-    const glow = this.add
-      .ellipse(0, 6, INTRO_BUTTON.width + 60, INTRO_BUTTON.height + 10, 0xfff1b8, 0.35)
-      .setBlendMode(Phaser.BlendModes.ADD);
-    const savedStars = getWorldTotalStars(loadStoredWorldProgress());
-    const progressChip = savedStars > 0
-      ? this.add
-          .text(0, -INTRO_BUTTON.height / 2 - 18, `이어서 모으기  ★ ${savedStars} / ${WORLD_EXIT_REQUIRED_STARS}`, {
-            fontFamily: FONT_FAMILY, fontSize: "16px", fontStyle: "bold", color: "#fffaf0",
-            stroke: "#2b4f66", strokeThickness: 5,
-          })
-          .setOrigin(0.5)
-          .setResolution(3)
-      : undefined;
     this.enterButton = this.add
-      .container(INTRO_BUTTON.x, INTRO_BUTTON.y, [glow, plate, label, keyHint, ...(progressChip ? [progressChip] : [])])
+      .container(INTRO_BUTTON.x, INTRO_BUTTON.y, [plate, label])
       .setDepth(INTRO_DEPTH.button)
-      .setSize(INTRO_BUTTON.width, INTRO_BUTTON.height)
+      .setSize(width, height)
       .setInteractive({ useHandCursor: true });
     this.enterButton.on(
       "pointerdown",
@@ -246,7 +313,7 @@ export class IntroScene extends Phaser.Scene {
           targets: this.enterButton,
           scaleX: 0.97,
           scaleY: 0.94,
-          y: INTRO_BUTTON.y + 3,
+          y: INTRO_BUTTON.y + 2,
           duration: UI_MOTION.pressDurationMs,
           ease: "Sine.easeOut",
         });
@@ -257,7 +324,7 @@ export class IntroScene extends Phaser.Scene {
       this.tweens.killTweensOf(this.enterButton);
       this.tweens.add({
         targets: this.enterButton,
-        scale: 1.035,
+        scale: 1.04,
         y: INTRO_BUTTON.y - 2,
         duration: 120,
         ease: "Sine.easeOut",
@@ -298,22 +365,6 @@ export class IntroScene extends Phaser.Scene {
       this.input.off("pointerup", releasePointer);
       this.input.off("pointerupoutside", releasePointerOutside);
     });
-    if (!this.prefersReducedMotion) {
-      this.tweens.add({ targets: glow, alpha: { from: 0.18, to: 0.42 }, scaleX: { from: 0.96, to: 1.04 },
-        duration: 1_500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-      const plateScaleX = plate.scaleX;
-      const plateScaleY = plate.scaleY;
-      this.tweens.add({
-        targets: plate,
-        alpha: { from: 0.96, to: 1 },
-        scaleX: { from: plateScaleX * 0.99, to: plateScaleX * 1.01 },
-        scaleY: { from: plateScaleY * 0.99, to: plateScaleY * 1.01 },
-        duration: 1800,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-    }
   }
 
   private isInsideButton(x: number, y: number) {
@@ -331,7 +382,7 @@ export class IntroScene extends Phaser.Scene {
       targets: this.enterButton,
       scaleX: 0.97,
       scaleY: 0.94,
-      y: INTRO_BUTTON.y + 3,
+      y: INTRO_BUTTON.y + 2,
       duration: UI_MOTION.pressDurationMs,
       yoyo: true,
       ease: "Sine.easeOut",
@@ -354,7 +405,7 @@ export class IntroScene extends Phaser.Scene {
     const backdrop = this.backdrop;
     enterButton.disableInteractive();
     this.tweens.killTweensOf([enterButton, board, backdrop]);
-    for (const extra of [this.mascot, this.titleGroup]) {
+    for (const extra of [this.mascot, this.titleGroup, this.note]) {
       if (!extra) continue;
       this.tweens.add({ targets: extra, alpha: 0, duration: 220, ease: "Sine.easeIn" });
     }
@@ -363,7 +414,7 @@ export class IntroScene extends Phaser.Scene {
       scaleX: 0.94,
       scaleY: 0.88,
       alpha: 0,
-      y: INTRO_BUTTON.y + 18,
+      y: INTRO_BUTTON.y + 14,
       duration: 180,
       ease: "Sine.easeIn",
     });
@@ -382,10 +433,14 @@ export class IntroScene extends Phaser.Scene {
       return;
     }
 
+    // The board flares and opens like a portal into the village.
     const boardScaleX = board.scaleX;
     const boardScaleY = board.scaleY;
     const backdropScaleX = backdrop.scaleX;
     const backdropScaleY = backdrop.scaleY;
+    if (this.rays) {
+      this.tweens.add({ targets: this.rays, scale: 1.6, alpha: 0, duration: 820, ease: "Cubic.easeIn" });
+    }
     this.tweens.add({
       targets: backdrop,
       x: 640,
@@ -397,7 +452,6 @@ export class IntroScene extends Phaser.Scene {
     });
     this.tweens.add({
       targets: board,
-      y: 310,
       scaleX: boardScaleX * 1.4,
       scaleY: boardScaleY * 1.4,
       alpha: 0,
