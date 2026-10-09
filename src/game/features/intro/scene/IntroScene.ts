@@ -32,9 +32,9 @@ const MIDI_FRAMES = {
 // Speech pacing: one letter at a time, like Midi is actually saying it.
 const MIDI_SPEECH = {
   startDelayMs: 1_000,
-  letterMs: 110,
-  spaceMs: 90,
-  lineBreakMs: 420,
+  letterMs: 70,
+  spaceMs: 60,
+  lineBreakMs: 320,
 } as const;
 const INTRO_DEPTH = {
   wash: 1, rays: 2, sparkles: 3, boardShadow: 4, board: 5,
