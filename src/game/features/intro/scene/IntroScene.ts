@@ -32,10 +32,9 @@ const MIDI_FRAMES = {
 // Speech pacing: one letter at a time, like Midi is actually saying it.
 const MIDI_SPEECH = {
   startDelayMs: 1_000,
-  letterMs: 55,
-  spaceMs: 30,
-  lineBreakMs: 260,
-  mouthMs: 85,
+  letterMs: 110,
+  spaceMs: 90,
+  lineBreakMs: 420,
 } as const;
 const INTRO_DEPTH = {
   wash: 1, rays: 2, sparkles: 3, boardShadow: 4, board: 5,
@@ -61,7 +60,6 @@ export class IntroScene extends Phaser.Scene {
   private midiSprite?: Phaser.GameObjects.Image;
   private midiTalking = false;
   private speechTimer?: Phaser.Time.TimerEvent;
-  private mouthTimer?: Phaser.Time.TimerEvent;
 
   constructor(
     private readonly onReady: () => void,
@@ -277,7 +275,10 @@ export class IntroScene extends Phaser.Scene {
     });
   }
 
-  /** Types the line out letter by letter while Midi's mouth moves. */
+  /**
+   * Types the line out letter by letter. The mouth is driven by the same
+   * ticks, so it can only move while letters are still appearing.
+   */
   private speak(lines: Phaser.GameObjects.Text[]) {
     this.stopTalking();
     if (this.prefersReducedMotion) {
@@ -286,10 +287,11 @@ export class IntroScene extends Phaser.Scene {
     }
     lines.forEach((line) => line.setText(""));
     this.midiTalking = true;
-    this.flapMouth();
     let lineIndex = 0;
     let letterIndex = 0;
+    let syllable = 0;
     const typeNext = () => {
+      if (!this.midiTalking) return;
       const full = INTRO_MIDI_LINES[lineIndex];
       if (letterIndex >= full.length) {
         lineIndex += 1;
@@ -298,41 +300,40 @@ export class IntroScene extends Phaser.Scene {
           this.stopTalking();
           return;
         }
+        // Mouth closes for the short pause between lines.
+        this.setMidiFrame(MIDI_FRAMES.idle);
         this.speechTimer = this.time.delayedCall(MIDI_SPEECH.lineBreakMs, typeNext);
         return;
       }
       const letter = full[letterIndex];
       letterIndex += 1;
       lines[lineIndex].setText(full.slice(0, letterIndex));
-      this.speechTimer = this.time.delayedCall(letter === " " ? MIDI_SPEECH.spaceMs : MIDI_SPEECH.letterMs, typeNext);
+      if (letter === " ") {
+        this.setMidiFrame(MIDI_FRAMES.idle);
+      } else {
+        // One syllable per letter: wide and small mouths alternate, with an
+        // occasional round "o" so the rhythm doesn't feel mechanical.
+        syllable += 1;
+        const open = Math.random() < 0.15 ? MIDI_FRAMES.talkO : MIDI_FRAMES.talkBig;
+        this.setMidiFrame(syllable % 2 === 1 ? open : MIDI_FRAMES.talkSmall);
+      }
+      this.speechTimer = this.time.delayedCall(
+        letter === " " ? MIDI_SPEECH.spaceMs : MIDI_SPEECH.letterMs,
+        typeNext,
+      );
     };
     typeNext();
   }
 
-  /** Mouth opens and closes in a loose rhythm (closed, small, wide, small...). */
-  private flapMouth() {
-    const sprite = this.midiSprite;
-    if (!sprite) return;
-    const pattern = [MIDI_FRAMES.talkSmall, MIDI_FRAMES.talkBig, MIDI_FRAMES.talkSmall, MIDI_FRAMES.idle];
-    let step = 0;
-    const next = () => {
-      if (!this.midiTalking) return;
-      // Now and then a round "o" mouth, so the rhythm doesn't feel mechanical.
-      const frame = Math.random() < 0.12 ? MIDI_FRAMES.talkO : pattern[step % pattern.length];
-      step += 1;
-      sprite.setTexture(frame);
-      this.mouthTimer = this.time.delayedCall(MIDI_SPEECH.mouthMs + Phaser.Math.Between(-15, 25), next);
-    };
-    next();
+  private setMidiFrame(frame: string) {
+    if (this.midiSprite?.active) this.midiSprite.setTexture(frame);
   }
 
   private stopTalking() {
     this.midiTalking = false;
     this.speechTimer?.remove(false);
-    this.mouthTimer?.remove(false);
     this.speechTimer = undefined;
-    this.mouthTimer = undefined;
-    this.midiSprite?.setTexture(MIDI_FRAMES.idle);
+    this.setMidiFrame(MIDI_FRAMES.idle);
   }
 
   /** While Midi is quiet it blinks every few seconds, sometimes twice. */
