@@ -3,6 +3,7 @@ import { GAME_ASSETS } from "../../../assets";
 import { getPointerWorldPoint } from "../../../core/input/pointerCoordinates";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
+import { DISPLAY_FONT_FAMILY } from "../../../core/visual/fonts";
 import { FONT_FAMILY, UI_MOTION } from "../../../core/visual/theme";
 
 /**
@@ -29,7 +30,6 @@ const INTRO_COLORS = {
   titlePurple: "#a347b8",
   noteText: "#2f3d68",
   buttonFill: 0x5a6fe0,
-  buttonFillDark: 0x4a4bb8,
   buttonEdge: 0xffffff,
 } as const;
 
@@ -156,22 +156,31 @@ export class IntroScene extends Phaser.Scene {
    */
   private createTitle() {
     const style: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontFamily: FONT_FAMILY, fontSize: "66px", fontStyle: "bold", color: "#ffffff",
+      fontFamily: DISPLAY_FONT_FAMILY, fontSize: "70px", color: "#ffffff",
+      padding: { x: 16, y: 16 },
     };
     const layer = (y: number, extra: Phaser.Types.GameObjects.Text.TextStyle = {}) =>
       this.add.text(0, y, INTRO_TITLE.text, { ...style, ...extra }).setOrigin(0.5).setResolution(3);
-    // Back to front: navy drop edge, thin white rim, blue-to-purple outline, white face.
-    const shadow = layer(6, { color: "#2b3f86", stroke: "#2b3f86", strokeThickness: 22 });
-    const rim = layer(0, { stroke: "#ffffff", strokeThickness: 22 });
-    const outline = layer(0, { strokeThickness: 13 });
-    const gradient = outline.context.createLinearGradient(0, 0, outline.width, 0);
-    gradient.addColorStop(0, INTRO_COLORS.titleBlue);
-    gradient.addColorStop(0.5, "#5b7fd6");
-    gradient.addColorStop(1, INTRO_COLORS.titlePurple);
-    outline.setStroke(gradient as unknown as string, 13);
+    const paintGradient = (text: Phaser.GameObjects.Text, target: "fill" | "stroke", thickness = 0) => {
+      const gradient = text.context.createLinearGradient(0, 0, text.width, 0);
+      gradient.addColorStop(0.12, INTRO_COLORS.titleBlue);
+      gradient.addColorStop(0.55, "#6a6fd2");
+      gradient.addColorStop(0.9, INTRO_COLORS.titlePurple);
+      if (target === "fill") text.setFill(gradient as unknown as string);
+      else text.setStroke(gradient as unknown as string, thickness);
+    };
+    // Textbook lettering, back to front: soft navy shadow, thick white rim,
+    // blue-to-purple extruded depth under each letter, then the white face.
+    const shadow = layer(9, { color: "#2b3f86", stroke: "#2b3f86", strokeThickness: 20 }).setAlpha(0.28);
+    const rim = layer(0, { stroke: "#ffffff", strokeThickness: 20 });
+    // The coloured layer is slightly fatter and sits lower, so it reads as a thin
+    // outline on top and a thicker extruded edge underneath.
+    const depth = layer(5, { strokeThickness: 8 });
+    paintGradient(depth, "fill");
+    paintGradient(depth, "stroke", 8);
     const face = layer(0);
     this.titleGroup = this.add
-      .container(INTRO_TITLE.x, INTRO_TITLE.y, [shadow, rim, outline, face])
+      .container(INTRO_TITLE.x, INTRO_TITLE.y, [shadow, rim, depth, face])
       .setDepth(INTRO_DEPTH.title);
     if (!this.prefersReducedMotion) {
       this.titleGroup.setAlpha(0).setY(INTRO_TITLE.y - 18).setScale(0.96);
@@ -241,65 +250,48 @@ export class IntroScene extends Phaser.Scene {
     this.tweens.add({ targets: bubbleGroup, alpha: 1, scale: 1, delay: 900, duration: 260, ease: "Back.easeOut" });
   }
 
-  /** A compact pill button that clearly invites a tap: solid colour, soft pulse, a shine sweep. */
+  /**
+   * A clean, solid pill: one gradient fill, a white border, a soft drop shadow.
+   * It gently breathes, and a thin ring ripples outward now and then to say "tap me".
+   */
   private createEnterButton() {
     const { width, height } = INTRO_BUTTON;
     const radius = height / 2;
-    const halo = this.add.graphics();
-    halo.fillStyle(0xffffff, 0.55).fillRoundedRect(-width / 2 - 8, -height / 2 - 8, width + 16, height + 16, radius + 8);
+    const ripple = this.add.graphics();
+    ripple.lineStyle(3, 0xffffff, 1).strokeRoundedRect(-width / 2, -height / 2, width, height, radius);
+    ripple.setAlpha(0);
     const plate = this.add.graphics();
-    plate.fillStyle(0x2b3f86, 0.28).fillRoundedRect(-width / 2 + 2, -height / 2 + 6, width, height, radius);
-    plate.fillGradientStyle(
-      INTRO_COLORS.buttonFill, INTRO_COLORS.buttonFill,
-      INTRO_COLORS.buttonFillDark, INTRO_COLORS.buttonFillDark, 1,
-    );
-    plate.fillRoundedRect(-width / 2, -height / 2, width, height, radius);
-    plate.fillStyle(0xffffff, 0.22).fillRoundedRect(-width / 2 + 10, -height / 2 + 5, width - 20, height * 0.36, radius * 0.6);
+    plate.fillStyle(0x2b3f86, 0.25).fillRoundedRect(-width / 2 + 1, -height / 2 + 6, width, height, radius);
+    // Solid fill: a gradient on a rounded rect shows a diagonal seam in WebGL.
+    plate.fillStyle(INTRO_COLORS.buttonFill, 1).fillRoundedRect(-width / 2, -height / 2, width, height, radius);
     plate.lineStyle(3, INTRO_COLORS.buttonEdge, 1).strokeRoundedRect(-width / 2, -height / 2, width, height, radius);
     const label = this.add
-      .text(0, -1, "배움마을 입장하기  ▶", {
+      .text(-14, 0, "배움마을 입장하기", {
         color: "#ffffff",
-        fontFamily: FONT_FAMILY,
-        fontSize: "23px",
-        fontStyle: "bold",
-        stroke: "#3a3c9c",
-        strokeThickness: 3,
+        fontFamily: DISPLAY_FONT_FAMILY,
+        fontSize: "25px",
+        padding: { x: 4, y: 6 },
       })
       .setOrigin(0.5)
       .setResolution(3);
-    // A narrow light band that sweeps across the pill every few seconds.
-    const shine = this.add.graphics();
-    shine.fillStyle(0xffffff, 0.28).fillRect(-14, -height / 2 + 4, 28, height - 8);
-    shine.setAngle(18).setX(-width / 2 - 30);
-    const maskShape = this.make.graphics({ x: INTRO_BUTTON.x, y: INTRO_BUTTON.y });
-    maskShape.fillStyle(0xffffff, 1).fillRoundedRect(-width / 2, -height / 2, width, height, radius);
-    if (this.game.renderer.type === Phaser.CANVAS) {
-      shine.setMask(maskShape.createGeometryMask());
-    } else {
-      shine.enableFilters();
-      shine.filters?.external.addMask(maskShape, false, this.cameras.main, "world");
-    }
-    // Halo, plate, shine and label breathe together as one button.
-    const pulse = this.add.container(0, 0, [halo, plate, shine, label]);
+    const arrowX = label.x + label.width / 2 + 16;
+    const arrow = this.add.graphics();
+    arrow.fillStyle(0xffffff, 1).fillTriangle(arrowX - 6, -9, arrowX - 6, 9, arrowX + 8, 0);
+    const pulse = this.add.container(0, 0, [plate, label, arrow]);
     if (!this.prefersReducedMotion) {
       this.tweens.add({
-        targets: pulse, scale: { from: 1, to: 1.06 },
+        targets: pulse, scale: { from: 1, to: 1.05 },
         duration: 1_000, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
       });
       this.tweens.add({
-        targets: halo, alpha: { from: 0.2, to: 0.85 },
-        duration: 1_000, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+        targets: ripple, scaleX: { from: 1, to: 1.12 }, scaleY: { from: 1, to: 1.4 }, alpha: { from: 0.9, to: 0 },
+        duration: 1_200, repeat: -1, repeatDelay: 900, ease: "Cubic.easeOut",
       });
-      this.tweens.add({
-        targets: shine, x: width / 2 + 30, duration: 900, delay: 600,
-        repeat: -1, repeatDelay: 2_200, ease: "Sine.easeInOut",
-      });
-    } else {
-      shine.setVisible(false);
+      this.tweens.add({ targets: arrow, x: 4, duration: 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     }
 
     this.enterButton = this.add
-      .container(INTRO_BUTTON.x, INTRO_BUTTON.y, [pulse])
+      .container(INTRO_BUTTON.x, INTRO_BUTTON.y, [ripple, pulse])
       .setDepth(INTRO_DEPTH.button)
       .setSize(width, height)
       .setInteractive({ useHandCursor: true });

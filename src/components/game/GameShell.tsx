@@ -61,7 +61,11 @@ export function GameShell() {
 
       const sceneToRestore = readDevelopmentScene();
 
-      const { createLearningGame } = await import("@/game/createLearningGame");
+      const [{ createLearningGame }, { loadGameFonts }] = await Promise.all([
+        import("@/game/createLearningGame"),
+        import("@/game/core/visual/fonts"),
+      ]);
+      await loadGameFonts();
       if (cancelled) return;
 
       const nextGame = createLearningGame(parent, () => {

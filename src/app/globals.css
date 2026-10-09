@@ -1,3 +1,9 @@
+@font-face {
+  font-family: "Black Han Sans";
+  src: url("/fonts/black-han-sans/BlackHanSans-ks.woff") format("woff");
+  font-display: swap;
+}
+
 :root {
   --ink: #173f43;
   --cream: #fff5dc;
