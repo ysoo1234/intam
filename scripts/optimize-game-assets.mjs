@@ -163,6 +163,16 @@ const ASSETS = [
     output: "intro/village-intro-background-v2.webp",
     quality: 94,
   }),
+  // Textbook-style title, generated from page 1 lettering; source is pre-cropped
+  // to the visible glow (raw generation kept as intro-title-ai-world-raw-v1.png).
+  {
+    source: "intro/intro-title-ai-world-v1.png",
+    output: "intro/intro-title-ai-world-v1.webp",
+    width: 1100,
+    fit: "inside",
+    quality: 94,
+    alphaQuality: 100,
+  },
   {
     source: "intro/village-intro-entry-button-v1.png",
     output: "intro/village-intro-entry-button-v1.webp",

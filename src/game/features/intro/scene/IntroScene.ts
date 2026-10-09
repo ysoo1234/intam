@@ -13,7 +13,8 @@ import { FONT_FAMILY, UI_MOTION } from "../../../core/visual/theme";
  * here by scanning the QR code that appears once all nine gems are attached
  * (after textbook p.101, before the epilogue), so the board is shown complete.
  */
-const INTRO_TITLE = { x: 640, y: 66, text: "AI 월드 마법판" } as const;
+// Title artwork: AI 월드 마법판 (public/assets/intro/intro-title-ai-world-v1.webp).
+const INTRO_TITLE = { x: 640, y: 70, width: 560 } as const;
 const INTRO_BOARD = { x: 640, y: 362, width: 600, height: 450 } as const;
 const INTRO_BUTTON = { x: 640, y: 654, width: 280, height: 58 } as const;
 const INTRO_MASCOT = { x: 124, y: 640, width: 118, height: 152 } as const;
@@ -26,8 +27,6 @@ const INTRO_COLORS = {
   skyTop: 0x7fd0f2,
   skyBottom: 0xa99ad8,
   titleOuter: 0x2b3f86,
-  titleBlue: "#2f8fd8",
-  titlePurple: "#a347b8",
   noteText: "#2f3d68",
   buttonFill: 0x5a6fe0,
   buttonEdge: 0xffffff,
@@ -52,6 +51,7 @@ export class IntroScene extends Phaser.Scene {
 
   preload() {
     this.load.image("gem-board", GAME_ASSETS.intro.board);
+    this.load.image("intro-title", GAME_ASSETS.intro.title);
     this.load.image("player-front", GAME_ASSETS.characters.player.front);
     this.load.image("player-back", GAME_ASSETS.characters.player.back);
     this.load.image("player-left", GAME_ASSETS.characters.player.left);
@@ -154,33 +154,12 @@ export class IntroScene extends Phaser.Scene {
    * "AI 월드 마법판" in the textbook's chunky style: white letters, a blue to
    * purple outline, and a deep navy outer edge with a drop shadow.
    */
+  /** "AI 월드 마법판" artwork drawn in the textbook's lettering style. */
   private createTitle() {
-    const style: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontFamily: DISPLAY_FONT_FAMILY, fontSize: "70px", color: "#ffffff",
-      padding: { x: 16, y: 16 },
-    };
-    const layer = (y: number, extra: Phaser.Types.GameObjects.Text.TextStyle = {}) =>
-      this.add.text(0, y, INTRO_TITLE.text, { ...style, ...extra }).setOrigin(0.5).setResolution(3);
-    const paintGradient = (text: Phaser.GameObjects.Text, target: "fill" | "stroke", thickness = 0) => {
-      const gradient = text.context.createLinearGradient(0, 0, text.width, 0);
-      gradient.addColorStop(0.12, INTRO_COLORS.titleBlue);
-      gradient.addColorStop(0.55, "#6a6fd2");
-      gradient.addColorStop(0.9, INTRO_COLORS.titlePurple);
-      if (target === "fill") text.setFill(gradient as unknown as string);
-      else text.setStroke(gradient as unknown as string, thickness);
-    };
-    // Textbook lettering, back to front: soft navy shadow, thick white rim,
-    // blue-to-purple extruded depth under each letter, then the white face.
-    const shadow = layer(9, { color: "#2b3f86", stroke: "#2b3f86", strokeThickness: 20 }).setAlpha(0.28);
-    const rim = layer(0, { stroke: "#ffffff", strokeThickness: 20 });
-    // The coloured layer is slightly fatter and sits lower, so it reads as a thin
-    // outline on top and a thicker extruded edge underneath.
-    const depth = layer(5, { strokeThickness: 8 });
-    paintGradient(depth, "fill");
-    paintGradient(depth, "stroke", 8);
-    const face = layer(0);
+    const title = this.add.image(0, 0, "intro-title");
+    title.setScale(INTRO_TITLE.width / title.width);
     this.titleGroup = this.add
-      .container(INTRO_TITLE.x, INTRO_TITLE.y, [shadow, rim, depth, face])
+      .container(INTRO_TITLE.x, INTRO_TITLE.y, [title])
       .setDepth(INTRO_DEPTH.title);
     if (!this.prefersReducedMotion) {
       this.titleGroup.setAlpha(0).setY(INTRO_TITLE.y - 18).setScale(0.96);
@@ -233,13 +212,14 @@ export class IntroScene extends Phaser.Scene {
     bubble.fillStyle(0x2b3f86, 0.14).fillRoundedRect(-bubbleWidth / 2 + 3, -half + 4, bubbleWidth, bubbleHeight, 16);
     bubble.fillStyle(0xffffff, 1).fillRoundedRect(-bubbleWidth / 2, -half, bubbleWidth, bubbleHeight, 16);
     bubble.lineStyle(2, 0xc9c2ec, 1).strokeRoundedRect(-bubbleWidth / 2, -half, bubbleWidth, bubbleHeight, 16);
-    const tailX = -bubbleWidth / 2 + 28;
+    // Tail leaves the bubble a little right of Midi's head, not straight above it.
+    const tailX = -bubbleWidth / 2 + 62;
     bubble.fillStyle(0xffffff, 1).fillTriangle(tailX, half - 2, tailX + 18, half - 2, tailX + 2, half + 14);
     bubble.lineStyle(2, 0xc9c2ec, 1).lineBetween(tailX, half - 2, tailX + 2, half + 14);
     bubble.lineBetween(tailX + 2, half + 14, tailX + 18, half - 2);
     // Bubble sits above Midi and leans right, staying clear of the board's left edge.
     // Bubble starts just right of Midi's head so it no longer covers Midi.
-    const bubbleGroup = this.add.container(bubbleWidth / 2 - 30, -INTRO_MASCOT.height - half - 4, [bubble, bubbleText]);
+    const bubbleGroup = this.add.container(bubbleWidth / 2 - 40, -INTRO_MASCOT.height - half - 8, [bubble, bubbleText]);
     // Midi and the bubble bob together, so the bubble never drifts away from Midi.
     const body = this.add.container(0, 0, [sprite, bubbleGroup]);
     this.mascot = this.add

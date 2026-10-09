@@ -17,6 +17,7 @@ export const GAME_ASSETS = {
     board: "/assets/intro/gem-board.webp",
     backdrop: "/assets/intro/village-intro-background-v2.webp",
     entryButton: "/assets/intro/village-intro-entry-button-v1.webp",
+    title: "/assets/intro/intro-title-ai-world-v1.webp",
   },
   world: {
     ground: "/assets/world/village-ground.webp",

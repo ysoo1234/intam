@@ -118,6 +118,7 @@ const RUNTIME_SPECS = new Map([
     { format: "webp", width: 674, height: 144 },
   ],
   ["intro/gem-board.webp", { format: "webp", width: 1448, height: 1086 }],
+  ["intro/intro-title-ai-world-v1.webp", { format: "webp", width: 1100, height: 192, hasAlpha: true }],
   [
     "intro/village-intro-background-v2.webp",
     { format: "webp", width: 1522, height: 855 },

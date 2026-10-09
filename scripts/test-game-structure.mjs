@@ -351,7 +351,7 @@ assert.match(villageTutorial, /건물 앞으로 가면 입장 버튼이 나와�
 assert.match(worldScene, /createVillageTutorial\(this,/, "World must mount the village tutorial.");
 assert.match(worldScene, /loadStoredWorldProgress\(\)/, "Stars must be restored from browser storage.");
 assert.match(worldScene, /saveStoredWorldProgress\(this\.progress\)/, "Stars must be saved to browser storage.");
-assert.match(introScene, /AI 월드 마법판/, "The intro mirrors textbook page 1.");
+assert.match(introScene, /intro-title/, "The intro shows the textbook-style title artwork.");
 assert.match(floatingJoystick, /pointerdown/);
 assert.match(floatingJoystick, /pointermove/);
 assert.match(floatingJoystick, /pointerupoutside/);
