@@ -16,7 +16,7 @@ import { FONT_FAMILY, UI_MOTION } from "../../../core/visual/theme";
 const INTRO_TITLE = { x: 640, y: 66, text: "AI 월드 마법판" } as const;
 const INTRO_BOARD = { x: 640, y: 362, width: 600, height: 450 } as const;
 const INTRO_BUTTON = { x: 640, y: 654, width: 280, height: 58 } as const;
-const INTRO_MASCOT = { x: 150, y: 640, width: 118, height: 152 } as const;
+const INTRO_MASCOT = { x: 124, y: 640, width: 118, height: 152 } as const;
 const INTRO_DEPTH = {
   wash: 1, rays: 2, sparkles: 3, boardShadow: 4, board: 5,
   mascot: 7, title: 8, button: 15,
@@ -221,7 +221,7 @@ export class IntroScene extends Phaser.Scene {
       .setOrigin(0.5, 0.97);
     const bubbleText = this.add
       .text(0, 0, "마법판에 보석을 모두 모아\n배움마을로 갈 수 있게 되었어!", {
-        fontFamily: FONT_FAMILY, fontSize: "17px", fontStyle: "bold", color: "#315567",
+        fontFamily: FONT_FAMILY, fontSize: "16px", fontStyle: "bold", color: "#315567",
         align: "center", lineSpacing: 4,
       })
       .setOrigin(0.5)
@@ -233,11 +233,13 @@ export class IntroScene extends Phaser.Scene {
     bubble.fillStyle(0x2b3f86, 0.14).fillRoundedRect(-bubbleWidth / 2 + 3, -half + 4, bubbleWidth, bubbleHeight, 16);
     bubble.fillStyle(0xffffff, 1).fillRoundedRect(-bubbleWidth / 2, -half, bubbleWidth, bubbleHeight, 16);
     bubble.lineStyle(2, 0xc9c2ec, 1).strokeRoundedRect(-bubbleWidth / 2, -half, bubbleWidth, bubbleHeight, 16);
-    bubble.fillStyle(0xffffff, 1).fillTriangle(-26, half - 2, -8, half - 2, -22, half + 12);
-    bubble.lineStyle(2, 0xc9c2ec, 1).lineBetween(-26, half - 2, -22, half + 12);
-    bubble.lineBetween(-22, half + 12, -8, half - 2);
+    const tailX = -bubbleWidth / 2 + 28;
+    bubble.fillStyle(0xffffff, 1).fillTriangle(tailX, half - 2, tailX + 18, half - 2, tailX + 2, half + 14);
+    bubble.lineStyle(2, 0xc9c2ec, 1).lineBetween(tailX, half - 2, tailX + 2, half + 14);
+    bubble.lineBetween(tailX + 2, half + 14, tailX + 18, half - 2);
     // Bubble sits above Midi and leans right, staying clear of the board's left edge.
-    const bubbleGroup = this.add.container(30, -INTRO_MASCOT.height - half + 6, [bubble, bubbleText]);
+    // Bubble starts just right of Midi's head so it no longer covers Midi.
+    const bubbleGroup = this.add.container(bubbleWidth / 2 - 30, -INTRO_MASCOT.height - half - 4, [bubble, bubbleText]);
     // Midi and the bubble bob together, so the bubble never drifts away from Midi.
     const body = this.add.container(0, 0, [sprite, bubbleGroup]);
     this.mascot = this.add
@@ -258,13 +260,17 @@ export class IntroScene extends Phaser.Scene {
     const { width, height } = INTRO_BUTTON;
     const radius = height / 2;
     const ripple = this.add.graphics();
-    ripple.lineStyle(3, 0xffffff, 1).strokeRoundedRect(-width / 2, -height / 2, width, height, radius);
+    ripple.lineStyle(2, 0xffffff, 1).strokeRoundedRect(-width / 2 - 2, -height / 2 - 2, width + 4, height + 4, radius + 2);
     ripple.setAlpha(0);
+    // A chunky "game button": soft shadow, darker base peeking out below, bright top
+    // face with a lighter inner band, framed by a white border. Solid fills only
+    // (a gradient on a rounded rect shows a diagonal seam in WebGL).
     const plate = this.add.graphics();
-    plate.fillStyle(0x2b3f86, 0.25).fillRoundedRect(-width / 2 + 1, -height / 2 + 6, width, height, radius);
-    // Solid fill: a gradient on a rounded rect shows a diagonal seam in WebGL.
-    plate.fillStyle(INTRO_COLORS.buttonFill, 1).fillRoundedRect(-width / 2, -height / 2, width, height, radius);
-    plate.lineStyle(3, INTRO_COLORS.buttonEdge, 1).strokeRoundedRect(-width / 2, -height / 2, width, height, radius);
+    plate.fillStyle(0x2b3f86, 0.22).fillRoundedRect(-width / 2 + 1, -height / 2 + 10, width, height, radius);
+    plate.fillStyle(0xffffff, 1).fillRoundedRect(-width / 2 - 3, -height / 2 - 3, width + 6, height + 9, radius + 3);
+    plate.fillStyle(0x3d46a8, 1).fillRoundedRect(-width / 2, -height / 2 + 3, width, height + 3, radius);
+    plate.fillStyle(INTRO_COLORS.buttonFill, 1).fillRoundedRect(-width / 2, -height / 2, width, height - 2, radius);
+    plate.fillStyle(0x7488ee, 1).fillRoundedRect(-width / 2 + 8, -height / 2 + 4, width - 16, height / 2 - 4, radius - 6);
     const label = this.add
       .text(-14, 0, "배움마을 입장하기", {
         color: "#ffffff",
@@ -280,12 +286,12 @@ export class IntroScene extends Phaser.Scene {
     const pulse = this.add.container(0, 0, [plate, label, arrow]);
     if (!this.prefersReducedMotion) {
       this.tweens.add({
-        targets: pulse, scale: { from: 1, to: 1.05 },
-        duration: 1_000, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+        targets: pulse, scale: { from: 1, to: 1.02 },
+        duration: 1_400, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
       });
       this.tweens.add({
-        targets: ripple, scaleX: { from: 1, to: 1.12 }, scaleY: { from: 1, to: 1.4 }, alpha: { from: 0.9, to: 0 },
-        duration: 1_200, repeat: -1, repeatDelay: 900, ease: "Cubic.easeOut",
+        targets: ripple, scaleX: { from: 1, to: 1.04 }, scaleY: { from: 1, to: 1.14 }, alpha: { from: 0.6, to: 0 },
+        duration: 1_100, repeat: -1, repeatDelay: 2_400, ease: "Sine.easeOut",
       });
       this.tweens.add({ targets: arrow, x: 4, duration: 500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     }
