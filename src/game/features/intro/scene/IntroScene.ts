@@ -15,7 +15,7 @@ import { FONT_FAMILY, UI_MOTION } from "../../../core/visual/theme";
 const INTRO_TITLE = { x: 640, y: 66, text: "AI 월드 마법판" } as const;
 const INTRO_BOARD = { x: 640, y: 362, width: 600, height: 450 } as const;
 const INTRO_BUTTON = { x: 640, y: 654, width: 280, height: 58 } as const;
-const INTRO_MASCOT = { x: 190, y: 640, width: 118, height: 152 } as const;
+const INTRO_MASCOT = { x: 150, y: 640, width: 118, height: 152 } as const;
 const INTRO_DEPTH = {
   wash: 1, rays: 2, sparkles: 3, boardShadow: 4, board: 5,
   mascot: 7, title: 8, button: 15,
@@ -117,6 +117,21 @@ export class IntroScene extends Phaser.Scene {
       this.tweens.add({ targets: this.rays, alpha: { from: 0.75, to: 1 }, duration: 3_200, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     }
 
+    // Fade the rays out toward the left and right edges so the canvas melts
+    // into the page colour (pageBackdrop.ts) on wide windows.
+    const edgeFade = this.add.graphics().setDepth(INTRO_DEPTH.rays + 0.5);
+    const fadeWidth = 170;
+    edgeFade.fillGradientStyle(
+      INTRO_COLORS.skyTop, INTRO_COLORS.skyTop, INTRO_COLORS.skyBottom, INTRO_COLORS.skyBottom,
+      1, 0, 1, 0,
+    );
+    edgeFade.fillRect(0, 0, fadeWidth, 720);
+    edgeFade.fillGradientStyle(
+      INTRO_COLORS.skyTop, INTRO_COLORS.skyTop, INTRO_COLORS.skyBottom, INTRO_COLORS.skyBottom,
+      0, 1, 0, 1,
+    );
+    edgeFade.fillRect(1280 - fadeWidth, 0, fadeWidth, 720);
+
     // Four-point sparkles scattered around the board, like the printed page.
     const sparkleSpots = [
       [168, 210, 1], [116, 360, 0.7], [250, 470, 0.55], [1080, 196, 0.9], [1170, 330, 0.65],
@@ -212,12 +227,15 @@ export class IntroScene extends Phaser.Scene {
     bubble.fillStyle(0xffffff, 1).fillTriangle(-26, half - 2, -8, half - 2, -22, half + 12);
     bubble.lineStyle(2, 0xc9c2ec, 1).lineBetween(-26, half - 2, -22, half + 12);
     bubble.lineBetween(-22, half + 12, -8, half - 2);
-    const bubbleGroup = this.add.container(42, -INTRO_MASCOT.height - half + 6, [bubble, bubbleText]);
+    // Bubble sits above Midi and leans right, staying clear of the board's left edge.
+    const bubbleGroup = this.add.container(30, -INTRO_MASCOT.height - half + 6, [bubble, bubbleText]);
+    // Midi and the bubble bob together, so the bubble never drifts away from Midi.
+    const body = this.add.container(0, 0, [sprite, bubbleGroup]);
     this.mascot = this.add
-      .container(INTRO_MASCOT.x, INTRO_MASCOT.y, [shadow, sprite, bubbleGroup])
+      .container(INTRO_MASCOT.x, INTRO_MASCOT.y, [shadow, body])
       .setDepth(INTRO_DEPTH.mascot);
     if (this.prefersReducedMotion) return;
-    this.tweens.add({ targets: sprite, y: -6, duration: 1_300, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    this.tweens.add({ targets: body, y: -6, duration: 1_300, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     this.tweens.add({ targets: shadow, scaleX: 0.9, duration: 1_300, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     bubbleGroup.setAlpha(0).setScale(0.7);
     this.tweens.add({ targets: bubbleGroup, alpha: 1, scale: 1, delay: 900, duration: 260, ease: "Back.easeOut" });
@@ -261,9 +279,15 @@ export class IntroScene extends Phaser.Scene {
       shine.enableFilters();
       shine.filters?.external.addMask(maskShape, false, this.cameras.main, "world");
     }
+    // Halo, plate, shine and label breathe together as one button.
+    const pulse = this.add.container(0, 0, [halo, plate, shine, label]);
     if (!this.prefersReducedMotion) {
       this.tweens.add({
-        targets: halo, alpha: { from: 0.15, to: 0.85 }, scale: { from: 1, to: 1.08 },
+        targets: pulse, scale: { from: 1, to: 1.06 },
+        duration: 1_000, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+      });
+      this.tweens.add({
+        targets: halo, alpha: { from: 0.2, to: 0.85 },
         duration: 1_000, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
       });
       this.tweens.add({
@@ -275,13 +299,10 @@ export class IntroScene extends Phaser.Scene {
     }
 
     this.enterButton = this.add
-      .container(INTRO_BUTTON.x, INTRO_BUTTON.y, [halo, plate, shine, label])
+      .container(INTRO_BUTTON.x, INTRO_BUTTON.y, [pulse])
       .setDepth(INTRO_DEPTH.button)
       .setSize(width, height)
       .setInteractive({ useHandCursor: true });
-    if (!this.prefersReducedMotion) {
-      this.tweens.add({ targets: label, scale: 1.05, duration: 1_000, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-    }
     this.enterButton.on(
       "pointerdown",
       (

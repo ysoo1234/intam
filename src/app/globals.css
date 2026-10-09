@@ -3,6 +3,10 @@
   --cream: #fff5dc;
   --coral: #f87962;
   --mint: #70cfaa;
+  /* Page colour behind the 16:9 game; updated per scene by pageBackdrop.ts. */
+  --page-top: #7fd0f2;
+  --page-middle: #94b5e5;
+  --page-bottom: #a99ad8;
 }
 
 * {
@@ -21,9 +25,8 @@ body {
 
 body {
   color: var(--ink);
-  background:
-    radial-gradient(circle at 50% 30%, #fff7dd 0 8%, transparent 42%),
-    linear-gradient(155deg, #f7c976 0%, #ef8e6d 46%, #76c8b0 100%);
+  background: linear-gradient(180deg, var(--page-top) 0%, var(--page-middle) 50%, var(--page-bottom) 100%);
+  background-attachment: fixed;
   font-family:
     "Arial Rounded MT Bold", "NanumSquareRound", "Apple SD Gothic Neo",
     "Malgun Gothic", sans-serif;
@@ -42,19 +45,19 @@ canvas {
   min-height: 100svh;
   place-items: center;
   padding:
-    max(10px, env(safe-area-inset-top))
-    max(10px, env(safe-area-inset-right))
-    max(10px, env(safe-area-inset-bottom))
-    max(10px, env(safe-area-inset-left));
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
 }
 
 .game-shell {
   position: relative;
-  width: min(100%, calc((100svh - 20px) * 16 / 9));
+  /* Full-bleed: no frame or rounded corners; the page colour continues the scene. */
+  width: min(100%, calc(100svh * 16 / 9));
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  background: #f8d792;
-  border-radius: clamp(18px, 2.2vw, 34px);
+  background: transparent;
   isolation: isolate;
 }
 

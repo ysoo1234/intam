@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { GAME_SIZE } from "./assets";
+import { syncPageBackdrop } from "./core/runtime/pageBackdrop";
 import { selectRenderScale } from "./core/runtime/renderResolution";
 import { createRegisteredScenes } from "./sceneRegistry";
 
@@ -18,7 +19,7 @@ export function createLearningGame(
   const renderWidth = GAME_SIZE.width * renderScale;
   const renderHeight = GAME_SIZE.height * renderScale;
 
-  return new Phaser.Game({
+  const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
     width: renderWidth,
@@ -42,4 +43,6 @@ export function createLearningGame(
     },
     scene: createRegisteredScenes({ onReady, renderScale }),
   });
+  syncPageBackdrop(game);
+  return game;
 }
