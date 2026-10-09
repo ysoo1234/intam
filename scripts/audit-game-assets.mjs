@@ -175,6 +175,11 @@ const RUNTIME_SPECS = new Map([
   ["characters/midi_left_game.png", { format: "png", width: 176, height: 226 }],
   ["characters/midi_right_game.png", { format: "png", width: 176, height: 226 }],
   ["characters/midi_fly.webp", { format: "webp", width: 512, height: 238 }],
+  ["characters/midi-v2/front-idle.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
+  ["characters/midi-v2/front-blink.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
+  ["characters/midi-v2/front-talk-small.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
+  ["characters/midi-v2/front-talk-big.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
+  ["characters/midi-v2/front-talk-o.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
   [
     "shop/ai-workshop-interior-v6.webp",
     { format: "webp", width: 1672, height: 941 },

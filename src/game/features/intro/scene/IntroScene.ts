@@ -19,7 +19,24 @@ const INTRO_TITLE = { x: 640, y: 82, width: 450 } as const;
 const INTRO_BOARD = { x: 640, y: 362, width: 600, height: 450 } as const;
 // Hit area of the button plate artwork (intro-entry-button-v3, 640x134 at 2x).
 const INTRO_BUTTON = { x: 640, y: 654, width: 300, height: 62 } as const;
-const INTRO_MASCOT = { x: 124, y: 640, width: 118, height: 152 } as const;
+// Textbook Midi front frames are 259 x 320; the body ends 6 px (of 415) above the frame bottom.
+const INTRO_MASCOT = { x: 124, y: 640, width: 124, height: 153, originY: 0.985 } as const;
+const INTRO_MIDI_LINES = ["마법판에 보석을 모두 모아", "배움마을로 갈 수 있게 되었어!"] as const;
+const MIDI_FRAMES = {
+  idle: "intro-midi-idle",
+  blink: "intro-midi-blink",
+  talkSmall: "intro-midi-talk-small",
+  talkBig: "intro-midi-talk-big",
+  talkO: "intro-midi-talk-o",
+} as const;
+// Speech pacing: one letter at a time, like Midi is actually saying it.
+const MIDI_SPEECH = {
+  startDelayMs: 1_000,
+  letterMs: 55,
+  spaceMs: 30,
+  lineBreakMs: 260,
+  mouthMs: 85,
+} as const;
 const INTRO_DEPTH = {
   wash: 1, rays: 2, sparkles: 3, boardShadow: 4, board: 5,
   mascot: 7, title: 8, button: 15,
@@ -41,6 +58,10 @@ export class IntroScene extends Phaser.Scene {
   private pressedPointerId: number | null = null;
   private prefersReducedMotion = false;
   private entering = false;
+  private midiSprite?: Phaser.GameObjects.Image;
+  private midiTalking = false;
+  private speechTimer?: Phaser.Time.TimerEvent;
+  private mouthTimer?: Phaser.Time.TimerEvent;
 
   constructor(
     private readonly onReady: () => void,
@@ -53,6 +74,13 @@ export class IntroScene extends Phaser.Scene {
     this.load.image("gem-board", GAME_ASSETS.intro.board);
     this.load.image("intro-title", GAME_ASSETS.intro.title);
     this.load.image("intro-enter-button", GAME_ASSETS.intro.enterButton);
+    const midi = GAME_ASSETS.characters.midi.front;
+    this.load.image(MIDI_FRAMES.idle, midi.idle);
+    this.load.image(MIDI_FRAMES.blink, midi.blink);
+    this.load.image(MIDI_FRAMES.talkSmall, midi.talkSmall);
+    this.load.image(MIDI_FRAMES.talkBig, midi.talkBig);
+    this.load.image(MIDI_FRAMES.talkO, midi.talkO);
+    // Village sprites are fetched now so the village opens without a wait.
     this.load.image("player-front", GAME_ASSETS.characters.player.front);
     this.load.image("player-back", GAME_ASSETS.characters.player.back);
     this.load.image("player-left", GAME_ASSETS.characters.player.left);
@@ -192,22 +220,29 @@ export class IntroScene extends Phaser.Scene {
     });
   }
 
-  /** Midi waits beside the board with a short invitation. */
+  /** Midi waits beside the board and says the invitation letter by letter. */
   private createMascot() {
-    const shadow = this.add.ellipse(0, 4, 88, 16, 0x2b3f86, 0.22);
+    const shadow = this.add.ellipse(0, 4, 92, 16, 0x2b3f86, 0.22);
     const sprite = this.add
-      .image(0, 0, "player-front")
+      .image(0, 0, MIDI_FRAMES.idle)
       .setDisplaySize(INTRO_MASCOT.width, INTRO_MASCOT.height)
-      .setOrigin(0.5, 0.97);
-    const bubbleText = this.add
-      .text(0, 0, "마법판에 보석을 모두 모아\n배움마을로 갈 수 있게 되었어!", {
-        fontFamily: FONT_FAMILY, fontSize: "16px", fontStyle: "bold", color: "#315567",
-        align: "center", lineSpacing: 4,
-      })
-      .setOrigin(0.5)
-      .setResolution(3);
-    const bubbleWidth = bubbleText.width + 34;
-    const bubbleHeight = bubbleText.height + 22;
+      .setOrigin(0.5, INTRO_MASCOT.originY);
+    this.midiSprite = sprite;
+    const textStyle = {
+      fontFamily: FONT_FAMILY, fontSize: "16px", fontStyle: "bold", color: "#315567",
+    } as const;
+    // One text per line, laid out from the full sentence so the bubble and the
+    // centred lines never move while letters appear.
+    const lineHeight = 20;
+    const lines = INTRO_MIDI_LINES.map((line, index) => {
+      const text = this.add.text(0, 0, line, textStyle).setOrigin(0, 0.5).setResolution(3);
+      const y = (index - (INTRO_MIDI_LINES.length - 1) / 2) * lineHeight;
+      text.setPosition(-text.width / 2, y);
+      return text;
+    });
+    const textWidth = Math.max(...lines.map((line) => line.width));
+    const bubbleWidth = textWidth + 34;
+    const bubbleHeight = lineHeight * lines.length + 22;
     const half = bubbleHeight / 2;
     const bubble = this.add.graphics();
     bubble.fillStyle(0x2b3f86, 0.14).fillRoundedRect(-bubbleWidth / 2 + 3, -half + 4, bubbleWidth, bubbleHeight, 16);
@@ -218,19 +253,109 @@ export class IntroScene extends Phaser.Scene {
     bubble.fillStyle(0xffffff, 1).fillTriangle(tailX, half - 2, tailX + 18, half - 2, tailX + 2, half + 14);
     bubble.lineStyle(2, 0xc9c2ec, 1).lineBetween(tailX, half - 2, tailX + 2, half + 14);
     bubble.lineBetween(tailX + 2, half + 14, tailX + 18, half - 2);
-    // Bubble sits above Midi and leans right, staying clear of the board's left edge.
-    // Bubble starts just right of Midi's head so it no longer covers Midi.
-    const bubbleGroup = this.add.container(bubbleWidth / 2 - 40, -INTRO_MASCOT.height - half - 8, [bubble, bubbleText]);
+    // Bubble starts just right of Midi's head so it never covers Midi.
+    const bubbleGroup = this.add.container(bubbleWidth / 2 - 40, -INTRO_MASCOT.height - half - 8, [bubble, ...lines]);
     // Midi and the bubble bob together, so the bubble never drifts away from Midi.
     const body = this.add.container(0, 0, [sprite, bubbleGroup]);
     this.mascot = this.add
       .container(INTRO_MASCOT.x, INTRO_MASCOT.y, [shadow, body])
       .setDepth(INTRO_DEPTH.mascot);
+    // Tapping Midi replays the line.
+    sprite.setInteractive({ useHandCursor: true }).on("pointerdown", () => {
+      if (!this.entering) this.speak(lines);
+    });
+    this.scheduleBlink();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.stopTalking());
     if (this.prefersReducedMotion) return;
     this.tweens.add({ targets: body, y: -6, duration: 1_300, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     this.tweens.add({ targets: shadow, scaleX: 0.9, duration: 1_300, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    for (const line of lines) line.setText("");
     bubbleGroup.setAlpha(0).setScale(0.7);
-    this.tweens.add({ targets: bubbleGroup, alpha: 1, scale: 1, delay: 900, duration: 260, ease: "Back.easeOut" });
+    this.tweens.add({
+      targets: bubbleGroup, alpha: 1, scale: 1, delay: MIDI_SPEECH.startDelayMs - 260, duration: 260, ease: "Back.easeOut",
+      onComplete: () => this.speak(lines),
+    });
+  }
+
+  /** Types the line out letter by letter while Midi's mouth moves. */
+  private speak(lines: Phaser.GameObjects.Text[]) {
+    this.stopTalking();
+    if (this.prefersReducedMotion) {
+      lines.forEach((line, index) => line.setText(INTRO_MIDI_LINES[index]));
+      return;
+    }
+    lines.forEach((line) => line.setText(""));
+    this.midiTalking = true;
+    this.flapMouth();
+    let lineIndex = 0;
+    let letterIndex = 0;
+    const typeNext = () => {
+      const full = INTRO_MIDI_LINES[lineIndex];
+      if (letterIndex >= full.length) {
+        lineIndex += 1;
+        letterIndex = 0;
+        if (lineIndex >= INTRO_MIDI_LINES.length) {
+          this.stopTalking();
+          return;
+        }
+        this.speechTimer = this.time.delayedCall(MIDI_SPEECH.lineBreakMs, typeNext);
+        return;
+      }
+      const letter = full[letterIndex];
+      letterIndex += 1;
+      lines[lineIndex].setText(full.slice(0, letterIndex));
+      this.speechTimer = this.time.delayedCall(letter === " " ? MIDI_SPEECH.spaceMs : MIDI_SPEECH.letterMs, typeNext);
+    };
+    typeNext();
+  }
+
+  /** Mouth opens and closes in a loose rhythm (closed, small, wide, small...). */
+  private flapMouth() {
+    const sprite = this.midiSprite;
+    if (!sprite) return;
+    const pattern = [MIDI_FRAMES.talkSmall, MIDI_FRAMES.talkBig, MIDI_FRAMES.talkSmall, MIDI_FRAMES.idle];
+    let step = 0;
+    const next = () => {
+      if (!this.midiTalking) return;
+      // Now and then a round "o" mouth, so the rhythm doesn't feel mechanical.
+      const frame = Math.random() < 0.12 ? MIDI_FRAMES.talkO : pattern[step % pattern.length];
+      step += 1;
+      sprite.setTexture(frame);
+      this.mouthTimer = this.time.delayedCall(MIDI_SPEECH.mouthMs + Phaser.Math.Between(-15, 25), next);
+    };
+    next();
+  }
+
+  private stopTalking() {
+    this.midiTalking = false;
+    this.speechTimer?.remove(false);
+    this.mouthTimer?.remove(false);
+    this.speechTimer = undefined;
+    this.mouthTimer = undefined;
+    this.midiSprite?.setTexture(MIDI_FRAMES.idle);
+  }
+
+  /** While Midi is quiet it blinks every few seconds, sometimes twice. */
+  private scheduleBlink() {
+    this.time.delayedCall(Phaser.Math.Between(2_200, 4_600), () => {
+      const sprite = this.midiSprite;
+      if (!sprite || !sprite.active) return;
+      if (!this.midiTalking) {
+        const twice = Math.random() < 0.25;
+        sprite.setTexture(MIDI_FRAMES.blink);
+        this.time.delayedCall(120, () => {
+          if (this.midiTalking) return;
+          sprite.setTexture(MIDI_FRAMES.idle);
+          if (!twice) return;
+          this.time.delayedCall(140, () => {
+            if (this.midiTalking) return;
+            sprite.setTexture(MIDI_FRAMES.blink);
+            this.time.delayedCall(110, () => { if (!this.midiTalking) sprite.setTexture(MIDI_FRAMES.idle); });
+          });
+        });
+      }
+      this.scheduleBlink();
+    });
   }
 
   /**
@@ -381,6 +506,7 @@ export class IntroScene extends Phaser.Scene {
       return;
     }
     this.entering = true;
+    this.stopTalking();
     const enterButton = this.enterButton;
     const board = this.board;
     enterButton.disableInteractive();

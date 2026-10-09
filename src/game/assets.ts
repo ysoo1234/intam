@@ -44,6 +44,16 @@ export const GAME_ASSETS = {
       right: "/assets/characters/midi_right_game.png",
       fly: "/assets/characters/midi_fly.webp",
     },
+    // Textbook Midi (v2). Front frames share one body; only the face screen changes.
+    midi: {
+      front: {
+        idle: "/assets/characters/midi-v2/front-idle.webp",
+        blink: "/assets/characters/midi-v2/front-blink.webp",
+        talkSmall: "/assets/characters/midi-v2/front-talk-small.webp",
+        talkBig: "/assets/characters/midi-v2/front-talk-big.webp",
+        talkO: "/assets/characters/midi-v2/front-talk-o.webp",
+      },
+    },
   },
   shop: {
     workshop: "/assets/shop/ai-workshop-interior-v6.webp",

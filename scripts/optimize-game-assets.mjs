@@ -153,6 +153,16 @@ const ASSETS = [
     output: `ethics-review/stamp-midi-${facing}-v1.webp`,
     quality: 96, alphaQuality: 100,
   }, { width: 230, height: 295 })),
+  // Textbook Midi (v2), front view. Every frame shares one body; only the face
+  // screen differs (built by assets-source/characters/midi-v2/build_front_frames.py).
+  ...["idle", "blink", "talk-small", "talk-big", "talk-o"].map(frame => ({
+    source: `characters/midi-v2/front-${frame}.png`,
+    output: `characters/midi-v2/front-${frame}.webp`,
+    height: 320,
+    fit: "inside",
+    quality: 94,
+    alphaQuality: 100,
+  })),
   fullScreenAsset({
     source: "intro/gem-board-blue-cutout-v1.png",
     output: "intro/gem-board.webp",
