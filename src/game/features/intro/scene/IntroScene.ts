@@ -17,7 +17,8 @@ import { FONT_FAMILY, UI_MOTION } from "../../../core/visual/theme";
 // Sized like textbook page 1: title about four-fifths the width of the board frame.
 const INTRO_TITLE = { x: 640, y: 82, width: 450 } as const;
 const INTRO_BOARD = { x: 640, y: 362, width: 600, height: 450 } as const;
-const INTRO_BUTTON = { x: 640, y: 654, width: 280, height: 58 } as const;
+// Hit area of the button plate artwork (intro-entry-button-v2, 640x133 at 2x).
+const INTRO_BUTTON = { x: 640, y: 654, width: 300, height: 62 } as const;
 const INTRO_MASCOT = { x: 124, y: 640, width: 118, height: 152 } as const;
 const INTRO_DEPTH = {
   wash: 1, rays: 2, sparkles: 3, boardShadow: 4, board: 5,
@@ -29,8 +30,6 @@ const INTRO_COLORS = {
   skyBottom: 0xa99ad8,
   titleOuter: 0x2b3f86,
   noteText: "#2f3d68",
-  buttonFill: 0x5a6fe0,
-  buttonEdge: 0xffffff,
 } as const;
 
 export class IntroScene extends Phaser.Scene {
@@ -53,6 +52,7 @@ export class IntroScene extends Phaser.Scene {
   preload() {
     this.load.image("gem-board", GAME_ASSETS.intro.board);
     this.load.image("intro-title", GAME_ASSETS.intro.title);
+    this.load.image("intro-enter-button", GAME_ASSETS.intro.enterButton);
     this.load.image("player-front", GAME_ASSETS.characters.player.front);
     this.load.image("player-back", GAME_ASSETS.characters.player.back);
     this.load.image("player-left", GAME_ASSETS.characters.player.left);
@@ -241,29 +241,25 @@ export class IntroScene extends Phaser.Scene {
     const { width, height } = INTRO_BUTTON;
     const radius = height / 2;
     const ripple = this.add.graphics();
-    ripple.lineStyle(2, 0xffffff, 1).strokeRoundedRect(-width / 2 - 2, -height / 2 - 2, width + 4, height + 4, radius + 2);
+    ripple.lineStyle(2, 0xffffff, 1).strokeRoundedRect(-width / 2 + 2, -height / 2 + 2, width - 4, height - 6, radius - 2);
     ripple.setAlpha(0);
-    // A chunky "game button": soft shadow, darker base peeking out below, bright top
-    // face with a lighter inner band, framed by a white border. Solid fills only
-    // (a gradient on a rounded rect shows a diagonal seam in WebGL).
-    const plate = this.add.graphics();
-    plate.fillStyle(0x2b3f86, 0.22).fillRoundedRect(-width / 2 + 1, -height / 2 + 10, width, height, radius);
-    plate.fillStyle(0xffffff, 1).fillRoundedRect(-width / 2 - 3, -height / 2 - 3, width + 6, height + 9, radius + 3);
-    plate.fillStyle(0x3d46a8, 1).fillRoundedRect(-width / 2, -height / 2 + 3, width, height + 3, radius);
-    plate.fillStyle(INTRO_COLORS.buttonFill, 1).fillRoundedRect(-width / 2, -height / 2, width, height - 2, radius);
-    plate.fillStyle(0x7488ee, 1).fillRoundedRect(-width / 2 + 8, -height / 2 + 4, width - 16, height / 2 - 4, radius - 6);
+    // Generated plate artwork; the label and arrow are drawn on top so the text stays crisp and editable.
+    const plate = this.add.image(0, 0, "intro-enter-button");
+    plate.setScale(width / plate.width);
     const label = this.add
-      .text(-14, 0, "배움마을 입장하기", {
+      .text(-14, -3, "배움마을 입장하기", {
         color: "#ffffff",
         fontFamily: DISPLAY_FONT_FAMILY,
-        fontSize: "25px",
+        fontSize: "24px",
         padding: { x: 4, y: 6 },
+        shadow: { offsetX: 0, offsetY: 2, color: "#2b3f86", blur: 0, fill: true },
       })
       .setOrigin(0.5)
       .setResolution(3);
     const arrowX = label.x + label.width / 2 + 16;
     const arrow = this.add.graphics();
-    arrow.fillStyle(0xffffff, 1).fillTriangle(arrowX - 6, -9, arrowX - 6, 9, arrowX + 8, 0);
+    arrow.fillStyle(0x2b3f86, 1).fillTriangle(arrowX - 6, -10, arrowX - 6, 8, arrowX + 8, -1);
+    arrow.fillStyle(0xffffff, 1).fillTriangle(arrowX - 6, -12, arrowX - 6, 6, arrowX + 8, -3);
     const pulse = this.add.container(0, 0, [plate, label, arrow]);
     if (!this.prefersReducedMotion) {
       this.tweens.add({
