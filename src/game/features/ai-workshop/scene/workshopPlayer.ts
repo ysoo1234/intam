@@ -60,19 +60,6 @@ export function getWorkshopMaximumY(x: number) {
   return sampleWorkshopBoundary(x, AI_WORKSHOP_LAYOUT.walkableFloor);
 }
 
-export function isWorkshopPointWalkable(x: number, y: number) {
-  const bounds = AI_WORKSHOP_LAYOUT.playerBounds;
-  if (
-    x < bounds.left ||
-    x > bounds.right ||
-    y < getWorkshopMinimumY(x) ||
-    y > getWorkshopMaximumY(x)
-  ) {
-    return false;
-  }
-  return true;
-}
-
 export function projectWorkshopPointToWalkableArea(
   x: number,
   y: number,

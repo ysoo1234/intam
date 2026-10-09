@@ -12,6 +12,12 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local scratch and generated folders, not part of the game.
+    "tmp/**",
+    "output/**",
+    "outputs/**",
+    "Claude outputs/**",
+    "assets-source/**",
   ]),
 ]);
 

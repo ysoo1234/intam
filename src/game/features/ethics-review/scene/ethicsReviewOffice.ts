@@ -13,6 +13,8 @@ export const ETHICS_TEXTURES = {
   midiFront: "ethics-midi-front",
   midiLeft: "ethics-midi-left",
   midiRight: "ethics-midi-right",
+  midiHappy: "ethics-midi-happy",
+  midiWorried: "ethics-midi-worried",
 } as const;
 
 export function getEthicsVisitorTexture(id: string, mood: "waiting" | "happy") {
@@ -53,6 +55,8 @@ export function preloadEthicsReviewAssets(scene: Phaser.Scene) {
     [ETHICS_TEXTURES.midiFront]: source.midiFront,
     [ETHICS_TEXTURES.midiLeft]: source.midiLeft,
     [ETHICS_TEXTURES.midiRight]: source.midiRight,
+    [ETHICS_TEXTURES.midiHappy]: source.midiHappy,
+    [ETHICS_TEXTURES.midiWorried]: source.midiWorried,
     ...Object.fromEntries(
       Object.entries(source.visitors).flatMap(([id, art]) => [
         [getEthicsVisitorTexture(id, "waiting"), art.waiting],

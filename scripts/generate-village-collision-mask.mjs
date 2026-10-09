@@ -4,7 +4,7 @@ import path from "node:path";
 import sharp from "sharp";
 
 const SOURCE_PATH = path.resolve(
-  "assets-source/world/ai-village-main-background-v4.png",
+  "assets-source/world/village-walkable-mask-v9.png",
 );
 const OUTPUT_PATH = path.resolve(
   "src/game/features/world/model/villageCollisionMask.ts",
@@ -15,20 +15,10 @@ const MAP_WIDTH = 1_280;
 const MAP_HEIGHT = 720;
 
 function isPathPixel(red, green, blue) {
-  // The approved village path is a warm sand color. Requiring each channel
-  // relationship keeps the green lawn, cyan trim, trees, walls, and sky out
-  // of the walkable mask even where their brightness is similar.
-  return (
-    red >= 220 &&
-    green >= 165 &&
-    green <= 232 &&
-    blue >= 100 &&
-    blue <= 190 &&
-    red - green >= 20 &&
-    red - green <= 72 &&
-    green - blue >= 24 &&
-    green - blue <= 90
-  );
+  // v5: the plaza floor and its walls share the same cream, so the walkable
+  // area is a hand-drawn mask (white = walkable) made by
+  // assets-source/world/build_garden_walkable_mask_v8.py (v9 output).
+  return red >= 128 && green >= 128 && blue >= 128;
 }
 
 function removeIsolatedCells(source, columns, rows) {

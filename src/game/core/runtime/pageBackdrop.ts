@@ -14,8 +14,6 @@ export const PAGE_BACKDROPS: Readonly<Record<SceneKey, PageBackdrop>> = {
   [SCENE_KEYS.airport]: { top: "#92cfe8", middle: "#a8d7d8", bottom: "#855d3d" },
   [SCENE_KEYS.aiWorkshop]: { top: "#bf9574", middle: "#b08e6c", bottom: "#cf9669" },
   [SCENE_KEYS.ethicsReview]: { top: "#cfaf89", middle: "#9e7b56", bottom: "#9a673d" },
-  [SCENE_KEYS.coreKitchen]: { top: "#f7d9a0", middle: "#f2c98a", bottom: "#e9b874" },
-  [SCENE_KEYS.aiServiceShop]: { top: "#f7d9a0", middle: "#f2c98a", bottom: "#e9b874" },
 };
 
 export function applyPageBackdrop(sceneKey: string) {

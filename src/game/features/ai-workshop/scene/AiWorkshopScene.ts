@@ -2,7 +2,9 @@ import Phaser from "phaser";
 import { GAME_ASSETS } from "../../../assets";
 import type { ControlKeys } from "../../../core/input/controlKeys";
 import type { PlayerFacing } from "../../../core/player/playerFacing";
+import { preloadPlayerTextures } from "../../../core/player/playerSprite";
 import { createWorldReturnSceneData } from "../../../core/navigation";
+import { markTutorialSeen, shouldPlayTutorial } from "../../../core/navigation/tutorialProgressStorage";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import { generateCustomerTexture, generatePlayerTexture } from "../../../core/visual/fallbackTextures";
@@ -10,12 +12,13 @@ import { preloadGameChromeAssets } from "../../../core/visual/gameChrome";
 import { preloadGameResultOverlayAssets } from "../../../core/visual/gameResultOverlay";
 import { createGameStartOverlay, isGameStartOverlayOpen, preloadGameStartOverlayAssets } from "../../../core/visual/gameStartOverlay";
 import { AI_WORKSHOP_START } from "./workshopStart";
+import { isCoachCardOpen, playCoachCountdown, preloadCoachAssets } from "../../../core/visual/coachGuide";
+import { createWorkshopTutorial, type WorkshopTutorial } from "./workshopTutorial";
 import { COLORS } from "../../../core/visual/theme";
 import { WORKSHOP_PRODUCT_BY_ID, WORKSHOP_REQUESTS, type WorkshopProduct, type WorkshopRequest } from "../../../content/aiWorkshop";
 import {
   AI_WORKSHOP_CONFIG,
   createWorkshopOrder,
-  getStarCatchDifficulty,
   getWorkshopReward,
   getWorkshopStars,
   isWorkshopDeliveryCorrect,
@@ -35,12 +38,7 @@ import {
 import { createWorkshopItemPanel, createWorkshopProductChoices, hideWorkshopItemPanel, rebuildWorkshopCarriedVisuals, returnWorkshopProductToPanel, showWorkshopItemPanel, type WorkshopProductChoice, type WorkshopProductOrigin } from "./workshopProducts";
 import { updateWorkshopPlayer, updateWorkshopPlayerPerspective } from "./workshopPlayer";
 import { createWorkshopResultOverlay } from "./workshopResult";
-import {
-  createWorkshopStarCatchView,
-  drawWorkshopStarZone,
-  randomizeWorkshopStarZone,
-  WORKSHOP_STAR_CATCH_HALF_WIDTH, WORKSHOP_STAR_CATCH_TRACK_Y, WORKSHOP_STAR_CATCH_TUNING,
-} from "./workshopStarCatchView";
+import { WorkshopStarCatch } from "./workshopStarCatch";
 import { findNearestWorkshopProduct, findNearestWorkshopProductOrigin, renderWorkshopHud, updateWorkshopInteractionPrompt, vibrateDevice } from "./workshopStatus";
 import { createWorkshopBackground, createWorkshopCustomer, createWorkshopHud, createWorkshopPlayer, setWorkshopCustomerRole, syncWorkshopDialoguePanel } from "./workshopView";
 export class AiWorkshopScene extends Phaser.Scene {
@@ -83,20 +81,15 @@ export class AiWorkshopScene extends Phaser.Scene {
   private joystick = new Phaser.Math.Vector2();
   private updateTouchDirection?: () => void;
   private actionQueued = false;
-  private starCatchContainer?: Phaser.GameObjects.Container;
-  private starMarker?: Phaser.GameObjects.Graphics;
-  private starStatusText?: Phaser.GameObjects.Text;
+  private starCatch?: WorkshopStarCatch;
   private craftingAnimationContainer?: Phaser.GameObjects.Container;
   private craftingSparkTimer?: Phaser.Time.TimerEvent;
-  private starZoneCenter = 0;
-  private starZoneWidth = 120;
-  private starX = -WORKSHOP_STAR_CATCH_HALF_WIDTH;
-  private starDirection: 1 | -1 = 1;
-  private starHits = 0;
-  private starMisses = 0;
-  private starCatchLocked = false;
   private finished = false;
   private earnedStars?: 1 | 2 | 3;
+  /** Set while the first customer is taught step by step (first play only). */
+  private tutorial?: WorkshopTutorial;
+  /** The clock runs only in the real game, not during the tutorial or countdown. */
+  private timerRunning = false;
 
   constructor(private readonly renderScale: number) {
     super(SCENE_KEYS.aiWorkshop);
@@ -123,12 +116,8 @@ export class AiWorkshopScene extends Phaser.Scene {
         request.customerHappyImage,
       );
     });
-    if (!this.textures.exists("player-front")) {
-      this.load.image("player-front", GAME_ASSETS.characters.player.front);
-      this.load.image("player-back", GAME_ASSETS.characters.player.back);
-      this.load.image("player-left", GAME_ASSETS.characters.player.left);
-      this.load.image("player-right", GAME_ASSETS.characters.player.right);
-    }
+    preloadPlayerTextures(this);
+    preloadCoachAssets(this);
   }
 
   create() {
@@ -147,6 +136,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     });
     generatePlayerTexture(this);
     generateCustomerTexture(this);
+    this.starCatch = new WorkshopStarCatch(this, (text) => this.promptText?.setText(text));
     this.resetState();
     ({ workbenchGlow: this.workbenchGlow, workbenchSprite: this.workbenchSprite } =
       createWorkshopBackground(this));
@@ -187,12 +177,64 @@ export class AiWorkshopScene extends Phaser.Scene {
       },
       () => this.player,
     ));
-    createGameStartOverlay(this, AI_WORKSHOP_START, () => this.createNextOrder());
+    createGameStartOverlay(this, AI_WORKSHOP_START, (withTutorial) => this.handleStart(withTutorial), {
+      help: { question: "튜토리얼을 보고 시작할까요?" },
+    });
     this.cameras.main.fadeIn(320, 255, 244, 210);
+  }
+
+  /** `withTutorial` is set by the ? button; otherwise first plays get the tutorial. */
+  private handleStart(withTutorial?: boolean) {
+    const playTutorial = withTutorial ?? shouldPlayTutorial("ai-workshop");
+    if (!playTutorial) {
+      playCoachCountdown(this, () => this.beginRealGame());
+      return;
+    }
+    this.tutorial = createWorkshopTutorial(
+      this,
+      () => ({ order: this.currentOrder, carried: this.carriedProducts, hanging: this.hangingProducts }),
+      () => this.openShelfForOrder(),
+      () => {
+        markTutorialSeen("ai-workshop");
+        this.resetForRealGame();
+        playCoachCountdown(this, () => this.beginRealGame());
+      },
+    );
+    this.createNextOrder();
+  }
+
+  /** The tutorial opens the shelf itself, after its first card. */
+  private openShelfForOrder() {
+    if (this.finished || this.phase !== "request") return;
+    this.phase = "choosing";
+    this.spawnProductChoices();
+  }
+
+  /** The tutorial customer does not count toward the real game. */
+  private resetForRealGame() {
+    this.tutorial = undefined;
+    this.customerNumber = 0;
+    this.completedCustomers = 0;
+    this.coins = 0;
+    this.wrongDeliveries = 0;
+    this.remainingMs = AI_WORKSHOP_CONFIG.gameDurationMs;
+    this.updateHud();
+    this.promptText?.setText("");
+    syncWorkshopDialoguePanel(this.dialoguePanel, this.dialogueText?.setText(""));
+  }
+
+  /** Starts the timed game. */
+  private beginRealGame() {
+    if (this.finished) return;
+    this.tutorial = undefined;
+    this.timerRunning = true;
+    this.createNextOrder();
   }
 
   private resetState() {
     this.earnedStars = undefined;
+    this.tutorial = undefined;
+    this.timerRunning = false;
     this.hangingProducts = [];
     this.itemPanel = undefined;
     this.carriedProducts = [];
@@ -208,9 +250,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     this.coins = 0;
     this.wrongDeliveries = 0;
     this.remainingMs = AI_WORKSHOP_CONFIG.gameDurationMs;
-    this.starHits = 0;
-    this.starMisses = 0;
-    this.starCatchLocked = false;
+    this.starCatch?.resetCounts();
     this.craftingAnimationContainer = undefined;
     this.craftingSparkTimer = undefined;
     this.joystick.set(0, 0);
@@ -229,8 +269,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     const first = this.requestDeck.pop() ?? WORKSHOP_REQUESTS[0];
     this.currentOrder = createWorkshopOrder(first, WORKSHOP_PRODUCT_BY_ID);
     this.phase = "request";
-    this.starHits = 0;
-    this.starMisses = 0;
+    this.starCatch?.resetCounts();
     this.clearCarriedProducts();
     this.clearHangingProducts();
     this.customerCountText?.setText(`손님 ${this.customerNumber}명`);
@@ -252,10 +291,13 @@ export class AiWorkshopScene extends Phaser.Scene {
       .setAlpha(1);
     const beginDialogue = () => {
       this.typeDialogue(first.dialogue, () => {
-        if (!this.finished && this.phase === "request") {
-          this.phase = "choosing";
-          this.spawnProductChoices();
+        if (this.finished || this.phase !== "request") return;
+        if (this.tutorial) {
+          // The tutorial explains the request first; the shelf waits.
+          this.tutorial.notify("request-read");
+          return;
         }
+        this.openShelfForOrder();
       });
     };
     if (this.customerContainer) {
@@ -298,6 +340,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     );
     this.promptText?.setText("");
     this.actionText?.setText("집기");
+    this.tutorial?.notify("choosing");
   }
 
   private clearHangingProducts() {
@@ -322,7 +365,7 @@ export class AiWorkshopScene extends Phaser.Scene {
   private interact() {
     if (this.finished) return;
     if (this.phase === "crafting") {
-      this.tryStarCatch();
+      this.starCatch?.tryCatch(() => this.completeCrafting());
       return;
     }
     if (!this.player || !this.currentOrder) return;
@@ -377,6 +420,7 @@ export class AiWorkshopScene extends Phaser.Scene {
           this.promptText?.setText(
             "상품을 바꿨어요! 작업대로 가져가거나 다시 바꿀 수 있어요",
           );
+          this.tutorial?.notify("picked");
           return;
         }
         this.carriedProducts.push(nearbyProduct.product);
@@ -392,6 +436,7 @@ export class AiWorkshopScene extends Phaser.Scene {
             ? "상품을 하나 더 골라 주세요"
             : "작업대로 가져가거나 다른 상품 앞에서 바꿀 수 있어요",
         );
+        this.tutorial?.notify("picked");
         return;
       }
 
@@ -440,7 +485,8 @@ export class AiWorkshopScene extends Phaser.Scene {
       return;
     }
 
-    this.wrongDeliveries += 1;
+    // A wrong pick in the tutorial is a lesson, not a mistake.
+    if (!this.tutorial) this.wrongDeliveries += 1;
     this.updateHud();
     this.phase = "transition";
     this.cameras.main.shake(160, 0.005);
@@ -476,35 +522,10 @@ export class AiWorkshopScene extends Phaser.Scene {
     const order = this.currentOrder;
     if (!order) return;
     this.phase = "crafting";
-    this.starHits = 0;
-    this.starMisses = 0;
-    this.starCatchLocked = false;
-    this.starDirection = 1;
-    this.starX = -WORKSHOP_STAR_CATCH_HALF_WIDTH;
-    this.promptText?.setText(
-      `빛나는 구역에서 멈추세요 · 성공 0 / ${order.requiredStarHits}`,
-    );
+    this.starCatch?.start(order, this.customerNumber);
     this.actionText?.setText("멈춤!");
-    this.createStarCatchPanel();
     this.createWorkbenchCraftingAnimation();
-  }
-
-  private createStarCatchPanel() {
-    const order = this.currentOrder;
-    if (!order) return;
-    this.starCatchContainer?.destroy(true);
-    this.starZoneWidth = getStarCatchDifficulty(this.customerNumber).zoneWidth;
-    this.starZoneCenter = randomizeWorkshopStarZone();
-    const view = createWorkshopStarCatchView(
-      this,
-      order,
-      this.starX,
-      this.starZoneCenter,
-      this.starZoneWidth,
-    );
-    this.starCatchContainer = view.container;
-    this.starMarker = view.marker;
-    this.starStatusText = view.statusText;
+    this.tutorial?.notify("crafting");
   }
 
   private createWorkbenchCraftingAnimation() {
@@ -527,90 +548,12 @@ export class AiWorkshopScene extends Phaser.Scene {
     this.craftingAnimationContainer = undefined;
   }
 
-  private resetStarCatchRound() {
-    if (!this.starCatchContainer || !this.currentOrder) return;
-    this.starCatchLocked = false;
-    this.starX = this.starDirection === 1 ? -WORKSHOP_STAR_CATCH_HALF_WIDTH : WORKSHOP_STAR_CATCH_HALF_WIDTH;
-    this.starZoneCenter = randomizeWorkshopStarZone();
-    const zone = this.starCatchContainer.getByName("star-zone") as Phaser.GameObjects.Graphics | null;
-    if (zone) {
-      drawWorkshopStarZone(zone, this.starZoneCenter, this.starZoneWidth);
-    }
-    this.starMarker
-      ?.setPosition(
-        WORKSHOP_STAR_CATCH_TUNING.trackX + this.starX,
-        WORKSHOP_STAR_CATCH_TRACK_Y,
-      )
-      .setAlpha(1)
-      .setScale(1)
-      .setAngle(0);
-  }
-
-  private tryStarCatch() {
-    const order = this.currentOrder;
-    if (
-      !order ||
-      this.phase !== "crafting" ||
-      this.starCatchLocked
-    ) {
-      return;
-    }
-    this.starCatchLocked = true;
-    const success =
-      Math.abs(this.starX - this.starZoneCenter) <= this.starZoneWidth / 2;
-    if (success) {
-      this.starHits += 1;
-      this.starStatusText?.setText(
-        `성공 횟수 ${this.starHits} / ${order.requiredStarHits}`,
-      );
-      this.promptText?.setText(
-        `좋아요! 성공 ${this.starHits} / ${order.requiredStarHits}`,
-      );
-      this.cameras.main.flash(120, 255, 232, 120);
-      createWorkshopSparkBurst(
-        this,
-        WORKSHOP_STAR_CATCH_TUNING.centerX +
-          WORKSHOP_STAR_CATCH_TUNING.trackX +
-          this.starX,
-        WORKSHOP_STAR_CATCH_TUNING.centerY + WORKSHOP_STAR_CATCH_TRACK_Y,
-        COLORS.yellow,
-      );
-      this.tweens.add({
-        targets: this.starMarker,
-        scaleX: 1.7,
-        scaleY: 1.12,
-        duration: 180,
-        yoyo: true,
-      });
-      if (this.starHits >= order.requiredStarHits) {
-        this.time.delayedCall(420, () => this.completeCrafting());
-        return;
-      }
-    } else {
-      this.starMisses += 1;
-      this.starStatusText?.setText(
-        `성공 횟수 ${this.starHits} / ${order.requiredStarHits}`,
-      );
-      this.promptText?.setText("괜찮아요! 성공 횟수는 그대로예요. 다시 도전!");
-      this.cameras.main.shake(90, 0.003);
-      this.tweens.add({
-        targets: this.starMarker,
-        y: WORKSHOP_STAR_CATCH_TRACK_Y + 18,
-        alpha: 0.25,
-        angle: 45,
-        duration: 180,
-      });
-    }
-    this.time.delayedCall(430, () => this.resetStarCatchRound());
-  }
-
   private completeCrafting() {
     const order = this.currentOrder;
     if (!order || this.finished) return;
     this.phase = "delivery";
     this.clearWorkbenchCraftingAnimation();
-    this.starCatchContainer?.destroy(true);
-    this.starCatchContainer = undefined;
+    this.starCatch?.destroy();
     this.carriedProducts = [...order.products];
     this.carriedOrigins = [];
     this.updateCarriedVisuals();
@@ -625,6 +568,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     this.time.delayedCall(500, () =>
       this.workbenchGlow?.setFillStyle(0xffd978, 0.08),
     );
+    this.tutorial?.notify("delivery");
   }
 
   private completeCustomer() {
@@ -633,7 +577,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     this.phase = "transition";
     const { perfectBonus, reward } = getWorkshopReward(
       this.customerNumber,
-      this.starMisses,
+      this.starCatch?.misses ?? 0,
     );
     this.coins += reward;
     this.completedCustomers += 1;
@@ -666,7 +610,14 @@ export class AiWorkshopScene extends Phaser.Scene {
         alpha: 0,
         duration: 470,
         ease: "Back.easeIn",
-        onComplete: () => this.createNextOrder(),
+        onComplete: () => {
+          if (!this.tutorial) {
+            this.createNextOrder();
+            return;
+          }
+          syncWorkshopDialoguePanel(this.dialoguePanel, this.dialogueText?.setText(""));
+          this.tutorial.notify("served");
+        },
       });
     });
   }
@@ -691,8 +642,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     this.clearHangingProducts();
     this.clearCarriedProducts();
     this.clearWorkbenchCraftingAnimation();
-    this.starCatchContainer?.destroy(true);
-    this.starCatchContainer = undefined;
+    this.starCatch?.destroy();
     this.customerContainer?.setVisible(false);
     syncWorkshopDialoguePanel(this.dialoguePanel, this.dialogueText?.setText(""));
     this.player?.setVisible(false);
@@ -737,27 +687,6 @@ export class AiWorkshopScene extends Phaser.Scene {
     });
   }
 
-  private updateStarCatch(delta: number) {
-    if (
-      this.phase !== "crafting" ||
-      this.starCatchLocked ||
-      !this.starMarker ||
-      !this.currentOrder
-    ) {
-      return;
-    }
-    const speed = getStarCatchDifficulty(this.customerNumber).speed;
-    this.starX += this.starDirection * speed * (delta / 1000);
-    if (this.starX >= WORKSHOP_STAR_CATCH_HALF_WIDTH) {
-      this.starX = WORKSHOP_STAR_CATCH_HALF_WIDTH;
-      this.starDirection = -1;
-    } else if (this.starX <= -WORKSHOP_STAR_CATCH_HALF_WIDTH) {
-      this.starX = -WORKSHOP_STAR_CATCH_HALF_WIDTH;
-      this.starDirection = 1;
-    }
-    this.starMarker.setX(WORKSHOP_STAR_CATCH_TUNING.trackX + this.starX);
-  }
-
   private returnToWorld() {
     this.cameras.main.fadeOut(220, 255, 245, 220);
     this.time.delayedCall(220, () =>
@@ -765,14 +694,15 @@ export class AiWorkshopScene extends Phaser.Scene {
     );
   }
   update(_time: number, delta: number) {
-    if (this.finished || isGameStartOverlayOpen(this)) return;
+    if (this.finished || isGameStartOverlayOpen(this) || isCoachCardOpen(this)) return;
     const safeDelta = Math.min(delta, 50);
-    this.remainingMs = Math.max(0, this.remainingMs - safeDelta);
+    if (this.timerRunning) this.remainingMs = Math.max(0, this.remainingMs - safeDelta);
     this.updateHud();
+    this.tutorial?.update();
     if (this.phase === "transition" && this.wrongDeliveries >= AI_WORKSHOP_CONFIG.maxWrongDeliveries) return;
     this.updateTouchDirection?.();
     this.updatePlayer(safeDelta);
-    this.updateStarCatch(safeDelta);
+    if (this.phase === "crafting") this.starCatch?.update(safeDelta);
     this.updateInteractionPrompt();
     syncWorkshopDialoguePanel(this.dialoguePanel, this.dialogueText);
 

@@ -7,13 +7,11 @@
 - Next.js production build: 성공, `/` 정적 생성
 - ESLint: 오류 0, 경고 0
 - `src/game/createLearningGame.ts`: 약 1.2KB, 44줄
-- `src/game/sceneRegistry.ts`: 약 4.7KB, 172줄. 활성 5개·보관 2개의 고유 키와 에셋 범위를 선언하고 보관 장면은 import하지 않음
+- `src/game/sceneRegistry.ts`: 약 4.7KB, 172줄. 활성 5개의 고유 키와 에셋 범위를 선언
 - `features/data-flight/scene/AirportScene.ts`: 659줄, 점수 단계·표현·입력·플레이어 이동·에셋 수명주기·피드백 보조 모듈로 분리. 생성 오브젝트 192줄은 `airportObjects.ts`가 소유
 - `features/ai-workshop/scene/AiWorkshopScene.ts`: 799줄, 모델·표현·조작 보조 모듈 15개로 분리
-- `features/core-kitchen/scene/CoreKitchenScene.ts`: 681줄, 모델·표현·조작·연출 보조 모듈로 분리(제품 등록은 보류)
-- `features/ai-service-shop/scene/ShopScene.ts`: 737줄, 모델·도구 텍스처·표현·조작·연출 보조 모듈로 분리(제품 등록은 보류)
 - `features/ethics-review/scene/EthicsReviewScene.ts`: 328줄, 사건 파일 뷰 554줄·브리핑/결과 189줄·판정 효과 264줄·단일 선택 조작·플레이어·12개 사례·순수 규칙으로 분리
-- Data Flight, AI Workshop, Core Kitchen, AI Service Shop 순수 규칙은 `npm run test:models`에서 경계값을 검증
+- Data Flight, AI Workshop 순수 규칙은 `npm run test:models`에서 경계값을 검증
 - `public/assets`: 92개, 5.97MB(편집 원본·구버전 이동 전 122.55MB)
 - `assets-source`: 225개, 165.81MB의 편집 원본·구버전 보존 위치(웹 배포 대상 아님)
 - 실제 참조되는 런타임 에셋 전체: 3.33MB, 장면별 지연 로드

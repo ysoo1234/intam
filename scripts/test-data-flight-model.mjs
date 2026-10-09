@@ -257,178 +257,6 @@ assert.deepEqual(workshopRules.getStarCatchDifficulty(13), {
 
 console.log("AI Workshop model rules passed.");
 
-const coreKitchenModelRoot = path.resolve(
-  "src/game/features/core-kitchen/model",
-);
-const {
-  CORE_KINDS,
-  CORE_KITCHEN_RULES,
-  CORE_LANE_Y,
-} = loadTypeScriptModule(path.join(coreKitchenModelRoot, "config.ts"));
-const coreKitchenRules = loadTypeScriptModule(
-  path.join(coreKitchenModelRoot, "rules.ts"),
-);
-const {
-  AI_CORES,
-  KITCHEN_ORDERS,
-  KITCHEN_ROUND_COUNT,
-} = loadTypeScriptModule("src/game/content/coreKitchen.ts");
-
-assert.deepEqual(CORE_KINDS, ["input", "process", "output"]);
-assert.deepEqual(CORE_LANE_Y, {
-  input: 455,
-  process: 535,
-  output: 615,
-});
-assert.deepEqual(CORE_KITCHEN_RULES, {
-  machineInteractionDistance: 155,
-  corePickupDistance: 82,
-  playerSpeed: 205,
-  conveyorWrapMinX: 235,
-  conveyorWrapMaxX: 850,
-});
-assert.equal(KITCHEN_ROUND_COUNT, 5);
-
-const coreById = new Map(AI_CORES.map((core) => [core.id, core]));
-for (const order of KITCHEN_ORDERS) {
-  for (const kind of CORE_KINDS) {
-    const referencedCore = coreById.get(order.recipe[kind]);
-    assert.ok(
-      referencedCore,
-      `${order.id} references missing ${kind} core ${order.recipe[kind]}.`,
-    );
-    assert.equal(
-      referencedCore.kind,
-      kind,
-      `${order.id} references a ${referencedCore.kind} core in its ${kind} slot.`,
-    );
-  }
-}
-
-const recipe = KITCHEN_ORDERS[0].recipe;
-const installed = {
-  input: { core: { id: recipe.input } },
-  process: { core: { id: "wrong" } },
-};
-assert.equal(coreKitchenRules.countInstalledCoreKinds(installed), 2);
-assert.deepEqual(
-  coreKitchenRules.getWrongCoreKinds(recipe, installed),
-  ["process", "output"],
-);
-const completeInstallation = Object.fromEntries(
-  CORE_KINDS.map((kind) => [kind, { core: { id: recipe[kind] } }]),
-);
-assert.deepEqual(
-  coreKitchenRules.getWrongCoreKinds(recipe, completeInstallation),
-  [],
-);
-assert.deepEqual(coreKitchenRules.getKitchenMistakeProgress(2), {
-  mistakeCount: 3,
-  combo: 0,
-});
-assert.deepEqual(coreKitchenRules.getKitchenSuccessProgress(4, 2), {
-  correctCount: 5,
-  combo: 3,
-});
-assert.equal(coreKitchenRules.getKitchenStarRating(0), "★★★");
-assert.equal(coreKitchenRules.getKitchenStarRating(1), "★★★");
-assert.equal(coreKitchenRules.getKitchenStarRating(2), "★★☆");
-assert.equal(coreKitchenRules.getKitchenStarRating(3), "★★☆");
-assert.equal(coreKitchenRules.getKitchenStarRating(4), "★☆☆");
-
-console.log("Core Kitchen model rules passed.");
-
-const serviceShopModelRoot = path.resolve(
-  "src/game/features/ai-service-shop/model",
-);
-const { AI_SERVICE_SHOP_LAYOUT } = loadTypeScriptModule(
-  path.join(serviceShopModelRoot, "config.ts"),
-);
-const serviceShopRules = loadTypeScriptModule(
-  path.join(serviceShopModelRoot, "rules.ts"),
-);
-const {
-  AI_SERVICE_QUESTIONS,
-  AI_SERVICE_ROUND_COUNT,
-  AI_TOOLS,
-} = loadTypeScriptModule("src/game/content/questions.ts");
-
-assert.deepEqual(AI_SERVICE_SHOP_LAYOUT, {
-  padXs: [175, 410, 640, 870, 1105],
-  padY: 535,
-});
-assert.equal(AI_SERVICE_ROUND_COUNT, 6);
-assert.equal(serviceShopRules.getServiceChoiceCount(0), 3);
-assert.equal(serviceShopRules.getServiceChoiceCount(1), 3);
-assert.equal(serviceShopRules.getServiceChoiceCount(2), 4);
-assert.equal(serviceShopRules.getServiceChoiceCount(3), 4);
-assert.equal(serviceShopRules.getServiceChoiceCount(4), 5);
-assert.equal(serviceShopRules.getServiceChoiceCount(5), 5);
-assert.deepEqual(serviceShopRules.getServicePadIndices(3), [1, 2, 3]);
-assert.deepEqual(serviceShopRules.getServicePadIndices(4), [0, 1, 3, 4]);
-assert.deepEqual(serviceShopRules.getServicePadIndices(5), [0, 1, 2, 3, 4]);
-assert.equal(serviceShopRules.isCorrectServiceChoice("tool", "tool"), true);
-assert.equal(serviceShopRules.isCorrectServiceChoice("wrong", "tool"), false);
-assert.deepEqual(serviceShopRules.getServiceMistakeProgress(2), {
-  mistakeCount: 3,
-  combo: 0,
-});
-assert.deepEqual(serviceShopRules.getServiceSuccessProgress(4, 2, false), {
-  correctCount: 5,
-  combo: 3,
-});
-assert.deepEqual(serviceShopRules.getServiceSuccessProgress(4, 2, true), {
-  correctCount: 5,
-  combo: 0,
-});
-assert.equal(serviceShopRules.getServiceStarCount(0), 3);
-assert.equal(serviceShopRules.getServiceStarCount(1), 3);
-assert.equal(serviceShopRules.getServiceStarCount(2), 2);
-assert.equal(serviceShopRules.getServiceStarCount(3), 2);
-assert.equal(serviceShopRules.getServiceStarCount(4), 1);
-
-const serviceToolById = new Map(AI_TOOLS.map((tool) => [tool.id, tool]));
-assert.equal(
-  serviceToolById.size,
-  AI_TOOLS.length,
-  "AI service tool IDs must be unique.",
-);
-assert.equal(
-  new Set(AI_SERVICE_QUESTIONS.map((question) => question.id)).size,
-  AI_SERVICE_QUESTIONS.length,
-  "AI service question IDs must be unique.",
-);
-for (const question of AI_SERVICE_QUESTIONS) {
-  assert.equal(
-    question.choiceIds.length,
-    5,
-    `${question.id} must provide exactly five choices for later rounds.`,
-  );
-  assert.equal(
-    new Set(question.choiceIds).size,
-    question.choiceIds.length,
-    `${question.id} contains duplicate choices.`,
-  );
-  assert.ok(
-    serviceToolById.has(question.answerId),
-    `${question.id} references missing answer ${question.answerId}.`,
-  );
-  assert.equal(
-    question.choiceIds.filter((choiceId) => choiceId === question.answerId)
-      .length,
-    1,
-    `${question.id} must include its answer exactly once.`,
-  );
-  for (const choiceId of question.choiceIds) {
-    assert.ok(
-      serviceToolById.has(choiceId),
-      `${question.id} references missing choice ${choiceId}.`,
-    );
-  }
-}
-
-console.log("AI Service Shop model rules passed.");
-
 runEthicsDeliveryTests(loadTypeScriptModule);
 
 const villageMovement = loadTypeScriptModule(
@@ -560,136 +388,112 @@ assert.equal(
   "The default village spawn must remain walkable.",
 );
 assert.equal(
-  villageCollision.isBlocked(280, 214),
+  villageCollision.isBlocked(500, 90),
   true,
-  "The northwest garden must remain blocked by the checked-in mask.",
+  "The forest edge behind the garden must remain blocked by the checked-in mask.",
 );
 assert.equal(
-  villageCollision.isBlocked(640, 590),
+  villageCollision.isBlocked(640, 565),
   false,
-  "The central south path must remain walkable.",
+  "The central south plaza must remain walkable.",
 );
 
 for (const point of [
-  { x: 100, y: 300 },
-  { x: 450, y: 140 },
-  { x: 1_000, y: 560 },
-  { x: 1_180, y: 500 },
-  { x: 80, y: 650 },
+  { x: 30, y: 300 },
+  { x: 1_250, y: 300 },
+  { x: 640, y: 10 },
+  { x: 300, y: 40 },
+  { x: 500, y: 90 },
+  // garden trees stay blocked even though the bushes around them are not
+  { x: 455, y: 135 },
+  { x: 1_095, y: 455 },
 ]) {
   assert.equal(
     villageCollision.isBlocked(point.x, point.y),
     true,
-    `Visible village greenery at (${point.x}, ${point.y}) must be blocked.`,
+    `Village trees, hills and sky at (${point.x}, ${point.y}) must be blocked.`,
   );
 }
 
 for (const point of [
-  { x: 500, y: 400 },
-  { x: 800, y: 500 },
-  { x: 640, y: 650 },
+  { x: 450, y: 470 },
+  { x: 830, y: 330 },
+  { x: 640, y: 660 },
+  // small bushes and flower beds inside the garden
+  { x: 425, y: 300 },
+  { x: 545, y: 655 },
+  { x: 765, y: 570 },
+  // beside the fountain basin, where Midi is drawn in front of it
+  { x: 790, y: 380 },
 ]) {
   assert.equal(
     villageCollision.isBlocked(point.x, point.y),
     false,
-    `Visible village paving at (${point.x}, ${point.y}) must stay walkable.`,
+    `Village paving and small bushes at (${point.x}, ${point.y}) must stay walkable.`,
   );
 }
 
-for (const probe of [
-  { label: "AI shop body", point: { x: 300, y: 250 } },
-  { label: "data airport body", point: { x: 1_080, y: 320 } },
-  { label: "Ethics Review right wall", point: { x: 365, y: 540 } },
-  { label: "Ethics Review tight right wall", point: { x: 392, y: 540 } },
-  { label: "AI world portal barrier", point: { x: 744, y: 205 } },
+// Building probes follow villageLayoutGrid.ts, so moving or resizing a
+// building there keeps these checks meaningful without editing coordinates.
+const polygonCentre = (id) => {
+  const polygon = VILLAGE_MAP.collision.polygons.find((entry) => entry.id === id);
+  assert.ok(polygon, `Village collision polygon ${id} must exist.`);
+  const sum = polygon.points.reduce(
+    (total, point) => ({ x: total.x + point.x, y: total.y + point.y }),
+    { x: 0, y: 0 },
+  );
+  return { x: sum.x / polygon.points.length, y: sum.y / polygon.points.length };
+};
+for (const [label, id] of [
+  ["AI shop body", "ai-shop-building"],
+  ["data airport body", "airport-building"],
+  ["Ethics Review body", "ethics-office-building"],
+  ["AI world tablet and cover", "ai-world-gate-tablet"],
 ]) {
+  const point = polygonCentre(id);
   assert.equal(
-    villageCollision.isBlocked(probe.point.x, probe.point.y),
+    villageCollision.isBlocked(point.x, point.y),
     true,
-    `${probe.label} must keep the player's feet out of the building.`,
+    `${label} must keep the player's feet out of the building.`,
   );
 }
 
-assert.equal(
-  villageCollision.isBlocked(405, 540),
-  false,
-  "Open paving beside the Ethics Review office must remain walkable.",
-);
-
-assert.equal(
-  villageCollision.isBlocked(230, 445),
-  false,
-  "The player may overlap the Ethics Review roof, but not its wall below.",
-);
-
-for (const probe of [
-  {
-    portalId: "shop",
-    excludedPoint: { x: 590, y: 285 },
-    includedPoints: [
-      { x: 180, y: 285 },
-      { x: 520, y: 285 },
-      { x: 356, y: 380 },
-    ],
-  },
-  {
-    portalId: "workshop",
-    excludedPoint: { x: 330, y: 440 },
-    includedPoints: [
-      { x: 110, y: 650 },
-      { x: 480, y: 650 },
-      { x: 295, y: 680 },
-    ],
-  },
-  {
-    portalId: "library",
-    excludedPoint: { x: 800, y: 520 },
-    includedPoints: [
-      { x: 850, y: 380 },
-      { x: 1_220, y: 380 },
-      { x: 1_045, y: 475 },
-    ],
-  },
-]) {
-  const portal = VILLAGE_MAP.portals.find(({ id }) => id === probe.portalId);
-  assert.ok(portal, `Village portal ${probe.portalId} must exist.`);
-  assert.equal(
-    isPointWithinPortalInteractionArea(portal, probe.excludedPoint),
-    false,
-    `Village portal ${probe.portalId} must stay outside its marked approach area.`,
-  );
-  for (const includedPoint of probe.includedPoints) {
+for (const portalId of ["shop", "workshop", "library"]) {
+  const portal = VILLAGE_MAP.portals.find(({ id }) => id === portalId);
+  assert.ok(portal, `Village portal ${portalId} must exist.`);
+  assert.ok(portal.interactionArea, `Village portal ${portalId} must mark an approach area.`);
+  const { x, y } = portal.position;
+  const { radiusX, radiusY } = portal.interactionArea;
+  for (const outside of [
+    { x, y: y - radiusY * 1.1 },
+    { x: x - radiusX * 1.1, y },
+    { x: x + radiusX * 1.1, y },
+  ]) {
     assert.equal(
-      isPointWithinPortalInteractionArea(portal, includedPoint),
+      isPointWithinPortalInteractionArea(portal, outside),
+      false,
+      `Village portal ${portalId} must stay outside its marked approach area.`,
+    );
+  }
+  for (const inside of [
+    { x: x - radiusX * 0.75, y },
+    { x: x + radiusX * 0.75, y },
+    { x, y: y + radiusY * 0.75 },
+  ]) {
+    assert.equal(
+      isPointWithinPortalInteractionArea(portal, inside),
       true,
-      `Village portal ${probe.portalId} must activate throughout its marked approach area.`,
+      `Village portal ${portalId} must activate throughout its marked approach area.`,
+    );
+  }
+  if (portal.returnSpawn) {
+    assert.equal(
+      villageCollision.isBlocked(portal.returnSpawn.position.x, portal.returnSpawn.position.y),
+      false,
+      `Returning from ${portalId} must place Midi on walkable paving.`,
     );
   }
 }
-
-const ethicsPortal = VILLAGE_MAP.portals.find(({ id }) => id === "workshop");
-assert.ok(ethicsPortal, "Ethics Review portal must exist.");
-for (const point of [
-  { x: 405, y: 540 },
-  { x: 429, y: 540 },
-  { x: 295, y: 540 },
-]) {
-  assert.equal(
-    isPointWithinPortalInteractionArea(ethicsPortal, point),
-    false,
-    `Ethics Review must not activate beside or behind the building at (${point.x}, ${point.y}).`,
-  );
-}
-assert.equal(
-  isPointWithinPortalInteractionArea(ethicsPortal, { x: 429, y: 580 }),
-  true,
-  "Ethics Review must activate at the requested front-right approach point.",
-);
-assert.equal(
-  isPointWithinPortalInteractionArea(ethicsPortal, { x: 500, y: 650 }),
-  false,
-  "Ethics Review front approach must stop about 15px before its former right edge.",
-);
 
 for (const portal of VILLAGE_MAP.portals) {
   let reachableApproach = false;
@@ -798,7 +602,7 @@ const replacementBackgroundCollision = createVillageCollision({
 });
 for (const point of [
   VILLAGE_MAP.defaultSpawn.position,
-  { x: 280, y: 214 },
+  { x: 60, y: 200 },
   { x: 640, y: 590 },
   ...VILLAGE_MAP.portals.map((portal) => portal.position),
 ]) {

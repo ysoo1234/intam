@@ -27,10 +27,6 @@ const worldTouchDirection = await readFile(
   "src/game/features/world/scene/worldTouchDirection.ts",
   "utf8",
 );
-const floatingJoystick = await readFile(
-  "src/game/core/input/floatingJoystick.ts",
-  "utf8",
-);
 const pointerCoordinates = await readFile(
   "src/game/core/input/pointerCoordinates.ts",
   "utf8",
@@ -178,26 +174,6 @@ const workshopRandomFiles = await Promise.all(
     readFile(`src/game/features/ai-workshop/scene/${file}`, "utf8"),
   ),
 );
-const coreKitchenScene = await readFile(
-  "src/game/features/core-kitchen/scene/CoreKitchenScene.ts",
-  "utf8",
-);
-const coreKitchenEffects = await readFile(
-  "src/game/features/core-kitchen/scene/coreKitchenEffects.ts",
-  "utf8",
-);
-const serviceShopScene = await readFile(
-  "src/game/features/ai-service-shop/scene/ShopScene.ts",
-  "utf8",
-);
-const serviceShopEffects = await readFile(
-  "src/game/features/ai-service-shop/scene/shopEffects.ts",
-  "utf8",
-);
-const serviceShopToolTextures = await readFile(
-  "src/game/features/ai-service-shop/scene/shopToolTextures.ts",
-  "utf8",
-);
 
 assert.doesNotMatch(
   composition,
@@ -223,7 +199,7 @@ assert.match(sceneRegistry, /code: "duplicate-scene-key"/);
 const declaredSceneKeyValues = [
   ...sceneKeys.matchAll(/^\s+\w+: "([^"]+)",$/gmu),
 ].map((match) => match[1]);
-assert.equal(declaredSceneKeyValues.length, 7);
+assert.equal(declaredSceneKeyValues.length, 5);
 assert.equal(
   new Set(declaredSceneKeyValues).size,
   declaredSceneKeyValues.length,
@@ -232,7 +208,7 @@ assert.equal(
 const registeredSceneIds = [
   ...sceneRegistry.matchAll(/^\s+id: "([^"]+)",$/gmu),
 ].map((match) => match[1]);
-assert.equal(registeredSceneIds.length, 7);
+assert.equal(registeredSceneIds.length, 5);
 assert.equal(
   new Set(registeredSceneIds).size,
   registeredSceneIds.length,
@@ -241,7 +217,7 @@ assert.equal(
 const registeredSceneKeyNames = [
   ...sceneRegistry.matchAll(/^\s+sceneKey: SCENE_KEYS\.(\w+),$/gmu),
 ].map((match) => match[1]);
-assert.equal(registeredSceneKeyNames.length, 7);
+assert.equal(registeredSceneKeyNames.length, 5);
 assert.equal(
   new Set(registeredSceneKeyNames).size,
   registeredSceneKeyNames.length,
@@ -262,7 +238,7 @@ assert.match(
 );
 assert.match(
   villageMap,
-  /id: "fountain",[\s\S]*?center: offsetVillagePoint\("fountain", \{ x: 636, y: 372 \}\),[\s\S]*?offsetVillageSize\("fountain", \{[\s\S]*?width: 166, height: 122,[\s\S]*?boundary: "inclusive"/,
+  /id: "fountain",[\s\S]*?center: offsetVillagePoint\("fountain", \{ x: 634, y: 308 \}\),[\s\S]*?offsetVillageSize\("fountain", \{[\s\S]*?width: 149, height: 128,[\s\S]*?boundary: "inclusive"/,
   "The fountain collision must follow its editable grid placement.",
 );
 assert.match(villageMap, /id: "ethics-office-footprint"/);
@@ -270,8 +246,8 @@ assert.doesNotMatch(villageMap, /northwest-garden|northeast-garden|southwest-gar
 assert.doesNotMatch(villageMap, /maskWalkableOverrides/);
 assert.match(
   villageMap,
-  /id: "ethics-office-building",[\s\S]*?offsetVillagePoints\("ethics-office", \[[\s\S]*?\{ x: 149, y: 455 \}/,
-  "The Ethics Review collision must block the wall below its roof overlap.",
+  /id: "ethics-office-building",[\s\S]*?offsetVillagePoints\("ethics-office", \[[\s\S]*?\{ x: 295, y: 346 \}/,
+  "The Ethics Review collision must block the ground behind its dome.",
 );
 assert.match(villageLayoutGrid, /VILLAGE_LAYOUT_GRID_MAX = 1_000/);
 assert.match(villageLayoutGrid, /VILLAGE_STAR_GRID/);
@@ -296,8 +272,8 @@ assert.match(villageMap, /displaySize: getVillageBuildingSize\("airport"\)/);
 assert.match(villageMap, /occlusionArea: offsetVillageBounds\("ethics-office"/);
 assert.match(
   villageMap,
-  /occlusionArea: offsetVillageBounds\("ethics-office", \{[\s\S]*?minX: 105, maxX: 510, minY: 350, maxY: 590/,
-  "The Ethics Review office must occlude the player through its visible base.",
+  /occlusionArea: offsetVillageBounds\("ethics-office", \{[\s\S]*?minX: 125, maxX: 410, minY: 252, maxY: 372/,
+  "The Ethics Review office must occlude only the strip above its dome.",
 );
 for (const sceneryKey of [
   "village-ai-shop",
@@ -318,8 +294,8 @@ assert.match(villageScenery, /depthBackdrops/);
 assert.match(villageScenery, /GAME_ASSETS\.world\.aiWorldPortalNight/);
 assert.doesNotMatch(villageScenery, /AI_WORLD_PORTAL_ANIMATION/);
 assert.doesNotMatch(villageScenery, /AI_WORLD_PORTAL_FRAME_COUNT/);
-assert.match(villageScenery, /point\(76, 192\)/);
-assert.match(villageScenery, /\[188, 207\]/);
+assert.match(villageScenery, /const AI_WORLD_PORTAL_SCREEN = \[/);
+assert.match(villageScenery, /screen\.corners\.map/);
 assert.match(villageScenery, /duration: 42_000/);
 assert.match(villageScenery, /stars\.fillStyle\(0xffffff/);
 assert.match(villageScenery, /renderer\.type === Phaser\.CANVAS/);
@@ -347,22 +323,29 @@ assert.match(
   /방향키 또는 화면을 터치해서 미디를 움직여 보세요!/,
   "World onboarding must explain keyboard and touch movement without arrow clutter.",
 );
-assert.match(villageTutorial, /건물 앞으로 가면 입장 버튼이 나와요/, "The second tip must point to the buildings.");
+assert.match(villageTutorial, /"좋아요!"/, "Moving Midi for the first time must be praised over her head.");
+assert.match(villageTutorial, /firstVisit\s*\?\s*"ai-workshop"/, "The first visit must light up the AI workshop first.");
+assert.match(villageTutorial, /Space 키를 누르거나 '입장하기' 버튼을 눌러 들어가요!/, "Near the building the tip must explain how to enter.");
+assert.match(worldScene, /markTutorialSeen\("village"\)/, "Entering a building must finish the village tutorial.");
+const workshopTutorial = await readFile(
+  "src/game/features/ai-workshop/scene/workshopTutorial.ts",
+  "utf8",
+);
+for (const event of ["choosing", "picked", "crafting", "delivery", "served"]) {
+  assert.match(workshopTutorial, new RegExp(`case "${event}"`), `The workshop tutorial must handle "${event}".`);
+}
+assert.match(workshopScene, /shouldPlayTutorial\("ai-workshop"\)/, "The workshop tutorial plays on the first visit only.");
+assert.match(workshopScene, /playCoachCountdown\(this, \(\) => this\.beginRealGame\(\)\)/, "The real game starts after a 3-2-1 countdown.");
+assert.match(workshopScene, /if \(this\.timerRunning\) this\.remainingMs/, "The clock must not run during the tutorial.");
 assert.match(worldScene, /createVillageTutorial\(this,/, "World must mount the village tutorial.");
 assert.match(worldScene, /loadStoredWorldProgress\(\)/, "Stars must be restored from browser storage.");
 assert.match(worldScene, /saveStoredWorldProgress\(this\.progress\)/, "Stars must be saved to browser storage.");
 assert.match(introScene, /intro-title/, "The intro shows the textbook-style title artwork.");
-assert.match(floatingJoystick, /pointerdown/);
-assert.match(floatingJoystick, /pointermove/);
-assert.match(floatingJoystick, /pointerupoutside/);
-assert.match(floatingJoystick, /Scenes\.Events\.SHUTDOWN/);
-assert.match(floatingJoystick, /setVisible\(false\)/);
 assert.match(
   pointerCoordinates,
   /getWorldPoint\(pointer\.x, pointer\.y, output\)/,
   "Pointer input must be translated through the active camera before gameplay uses it.",
 );
-assert.match(floatingJoystick, /getPointerWorldPoint\(scene, pointer/);
 assert.match(worldTouchDirection, /pointerdown/);
 assert.match(worldTouchDirection, /pointermove/);
 assert.match(worldTouchDirection, /pointerupoutside/);
@@ -400,12 +383,11 @@ assert.match(
   /id: "workshop",[\s\S]*?position: offsetVillagePoint\("ethics-office", \{ x: 318, y: 665 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 183, height: 130/,
   "The Ethics Review office must activate only on its front paved approach.",
 );
-assert.match(villageScenery, /const AI_WORLD_PORTAL_OFFSET_X_PX = -?\d+/);
-assert.match(villageScenery, /const AI_WORLD_PORTAL_OFFSET_Y_PX = -?\d+/);
+assert.match(villageScenery, /function getAiWorldPortalScreen/);
 assert.match(
   villageScenery,
-  /const portalCenterY = y \+ AI_WORLD_PORTAL_OFFSET_Y_PX/,
-  "The AI-world portal center must expose a direct game-pixel Y offset.",
+  /const portalCenterY = screen\.top \+ screen\.height \/ 2/,
+  "The AI-world portal swirl must be centred on the gate's screen.",
 );
 assert.match(
   villageMap,
@@ -541,9 +523,10 @@ assert.match(
 assert.match(airportPlayer, /DATA_FLIGHT_CONFIG\.playerBounds\.minX/);
 assert.match(airportPlayer, /DATA_FLIGHT_CONFIG\.playerBounds\.maxY/);
 assert.doesNotMatch(airportView, /\.ellipse\(18, 39, 92, 22/);
-assert.match(airportView, /const playerShadowBack = scene\.add/);
-assert.match(airportView, /const playerShadowNear = scene\.add/);
-assert.match(airportView, /\.image\(5, 2, "airport-midi"\)/);
+assert.match(airportView, /const playerShadowBack = shadow\(5, 2,/);
+assert.match(airportView, /const playerShadowNear = shadow\(2, 1,/);
+assert.match(airportView, /const AIRPORT_MIDI_FLY = "airport-midi-1";/);
+assert.match(airportView, /react: \(reaction: AirportPlayerReaction\) =>/);
 assert.match(airportView, /setTintMode\(Phaser\.TintModes\.FILL\)/);
 
 assert.match(airportScene, /getDifficultyTier\(this\.difficultyScore\)/);
@@ -795,63 +778,6 @@ for (const marker of orderedWorkshopSceneMarkers) {
 
 console.log("AI Workshop structure checks passed.");
 
-assert.doesNotMatch(
-  composition,
-  /class CoreKitchenScene/,
-  "CoreKitchenScene must stay in its feature-owned module.",
-);
-assert.doesNotMatch(
-  `${composition}\n${sceneRegistry}`,
-  /CoreKitchenScene/,
-  "Dormant CoreKitchenScene must not be imported or registered implicitly.",
-);
-assert.match(
-  coreKitchenScene,
-  /super\(SCENE_KEYS\.coreKitchen\)/,
-  "Core Kitchen must use its unique dormant scene key.",
-);
-assert.match(sceneRegistry, /id: "core-kitchen",[\s\S]*?status: "dormant"/);
-const coreKitchenLineCount = coreKitchenScene.split(/\r?\n/).length;
-assert.ok(
-  coreKitchenLineCount <= 800,
-  `CoreKitchenScene exceeds its 800-line split threshold (${coreKitchenLineCount}).`,
-);
-
-const coreKitchenRandomSource = `${coreKitchenScene}\n${coreKitchenEffects}`;
-const countCoreKitchen = (pattern) =>
-  coreKitchenRandomSource.match(pattern)?.length ?? 0;
-assert.equal(countCoreKitchen(/Phaser\.Utils\.Array\.Shuffle\(/g), 3);
-assert.equal(countCoreKitchen(/Phaser\.Utils\.Array\.GetRandom\(/g), 0);
-assert.equal(countCoreKitchen(/Phaser\.Math\.FloatBetween\(/g), 0);
-assert.equal(countCoreKitchen(/Phaser\.Math\.Between\(/g), 9);
-
-const orderedCoreKitchenSceneMarkers = [
-  "Phaser.Utils.Array.Shuffle([...KITCHEN_ORDERS])",
-  "Phaser.Utils.Array.Shuffle(\n        AI_CORES.filter(",
-  "Phaser.Utils.Array.Shuffle([correct, ...distractors])",
-];
-previousIndex = -1;
-for (const marker of orderedCoreKitchenSceneMarkers) {
-  const markerIndex = coreKitchenScene.indexOf(marker);
-  assert.ok(
-    markerIndex > previousIndex,
-    `Core Kitchen RNG marker moved or disappeared: ${marker}`,
-  );
-  previousIndex = markerIndex;
-}
-
-console.log("Core Kitchen structure checks passed.");
-
-assert.doesNotMatch(
-  composition,
-  /class ShopScene|generateAiToolTextures/,
-  "AI Service Shop must stay in its feature-owned modules.",
-);
-assert.doesNotMatch(
-  `${composition}\n${sceneRegistry}`,
-  /ShopScene/,
-  "Dormant ShopScene must not be imported or registered implicitly.",
-);
 const registeredSceneMarkers = [
   "new IntroScene(onReady, renderScale)",
   "new WorldScene(renderScale)",
@@ -868,47 +794,5 @@ for (const marker of registeredSceneMarkers) {
   );
   previousIndex = markerIndex;
 }
-assert.match(
-  serviceShopScene,
-  /super\(SCENE_KEYS\.aiServiceShop\)/,
-  "AI Service Shop must use its unique dormant scene key.",
-);
-assert.match(sceneRegistry, /id: "ai-service-shop",[\s\S]*?status: "dormant"/);
-const serviceShopLineCount = serviceShopScene.split(/\r?\n/).length;
-assert.ok(
-  serviceShopLineCount <= 800,
-  `ShopScene exceeds its 800-line split threshold (${serviceShopLineCount}).`,
-);
 
-const serviceShopRandomSource = `${serviceShopScene}\n${serviceShopEffects}`;
-const countServiceShop = (pattern) =>
-  serviceShopRandomSource.match(pattern)?.length ?? 0;
-assert.equal(countServiceShop(/Phaser\.Utils\.Array\.Shuffle\(/g), 3);
-assert.equal(countServiceShop(/Phaser\.Utils\.Array\.GetRandom\(/g), 0);
-assert.equal(countServiceShop(/Phaser\.Math\.FloatBetween\(/g), 0);
-assert.equal(countServiceShop(/Phaser\.Math\.Between\(/g), 9);
-assert.match(serviceShopToolTextures, /scene\.textures\.exists\(textureKey\)/);
-assert.match(serviceShopToolTextures, /g\.generateTexture\(textureKey, 128, 128\)/);
-assert.match(serviceShopToolTextures, /g\.destroy\(\)/);
-assert.doesNotMatch(
-  `${serviceShopScene}\n${coreKitchenScene}`,
-  /textures\.remove\("ai-shop-interior"\)/,
-  "Dormant shop scenes must preserve their shared texture lifetime contract.",
-);
-
-const orderedServiceShopSceneMarkers = [
-  "Phaser.Utils.Array.Shuffle([\n      ...AI_SERVICE_QUESTIONS",
-  "Phaser.Utils.Array.Shuffle(\n      question.choiceIds",
-  "Phaser.Utils.Array.Shuffle([answer, ...distractors])",
-];
-previousIndex = -1;
-for (const marker of orderedServiceShopSceneMarkers) {
-  const markerIndex = serviceShopScene.indexOf(marker);
-  assert.ok(
-    markerIndex > previousIndex,
-    `AI Service Shop RNG marker moved or disappeared: ${marker}`,
-  );
-  previousIndex = markerIndex;
-}
-
-console.log("AI Service Shop structure checks passed.");
+console.log("Scene registry structure checks passed.");

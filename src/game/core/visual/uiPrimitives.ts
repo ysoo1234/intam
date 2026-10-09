@@ -173,19 +173,6 @@ export function addUiButton(
   return { container, label };
 }
 
-export function addSpeechBubble(
-  scene: Phaser.Scene,
-  width: number,
-  height: number,
-) {
-  return addUiSurface(
-    scene,
-    { x: 0, y: 0, width, height },
-    "paper",
-    { radius: UI_RADII.panel, shadow: "medium" },
-  );
-}
-
 export function addFlowerBadge(
   scene: Phaser.Scene,
   x: number,

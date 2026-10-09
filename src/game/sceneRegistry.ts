@@ -12,9 +12,7 @@ export type GameSceneId =
   | "world"
   | "ai-workshop"
   | "data-flight"
-  | "ethics-review"
-  | "core-kitchen"
-  | "ai-service-shop";
+  | "ethics-review";
 
 export type SceneAssetScope =
   | "intro"
@@ -24,10 +22,7 @@ export type SceneAssetScope =
   | "ai-workshop"
   | "ai-workshop-customers"
   | "data-flight"
-  | "ethics-review"
-  | "legacy-ai-shop"
-  | "legacy-ai-tools"
-  | "legacy-customers";
+  | "ethics-review";
 
 export type SceneFactoryContext = Readonly<{
   onReady: () => void;
@@ -36,27 +31,12 @@ export type SceneFactoryContext = Readonly<{
 
 type SceneFactory = (context: SceneFactoryContext) => Phaser.Scene;
 
-type SceneRegistrationBase = Readonly<{
+export type SceneRegistration = Readonly<{
   id: GameSceneId;
   sceneKey: SceneKey;
   assetScopes: readonly SceneAssetScope[];
+  create: SceneFactory;
 }>;
-
-export type ActiveSceneRegistration = SceneRegistrationBase &
-  Readonly<{
-    status: "active";
-    create: SceneFactory;
-  }>;
-
-export type DormantSceneRegistration = SceneRegistrationBase &
-  Readonly<{
-    status: "dormant";
-    activationNote: string;
-  }>;
-
-export type SceneRegistration =
-  | ActiveSceneRegistration
-  | DormantSceneRegistration;
 
 export type SceneRegistryValidationIssue = Readonly<{
   code: "duplicate-scene-id" | "duplicate-scene-key";
@@ -114,7 +94,6 @@ export const GAME_SCENE_REGISTRY = defineSceneRegistry([
   {
     id: "intro",
     sceneKey: SCENE_KEYS.intro,
-    status: "active",
     assetScopes: ["intro", "world", "player"],
     create: ({ onReady, renderScale }) =>
       new IntroScene(onReady, renderScale),
@@ -122,51 +101,33 @@ export const GAME_SCENE_REGISTRY = defineSceneRegistry([
   {
     id: "world",
     sceneKey: SCENE_KEYS.world,
-    status: "active",
     assetScopes: ["world", "player"],
     create: ({ renderScale }) => new WorldScene(renderScale),
   },
   {
     id: "ai-workshop",
     sceneKey: SCENE_KEYS.aiWorkshop,
-    status: "active",
     assetScopes: ["ai-workshop", "ai-workshop-customers", "player"],
     create: ({ renderScale }) => new AiWorkshopScene(renderScale),
   },
   {
     id: "data-flight",
     sceneKey: SCENE_KEYS.airport,
-    status: "active",
     assetScopes: ["data-flight", "player-flight"],
     create: ({ renderScale }) => new AirportScene(renderScale),
   },
   {
     id: "ethics-review",
     sceneKey: SCENE_KEYS.ethicsReview,
-    status: "active",
     assetScopes: ["ethics-review", "player"],
     create: ({ renderScale }) => new EthicsReviewScene(renderScale),
-  },
-  {
-    id: "core-kitchen",
-    sceneKey: SCENE_KEYS.coreKitchen,
-    status: "dormant",
-    assetScopes: ["legacy-ai-shop"],
-    activationNote: "고유 월드 입구와 학습 정책이 승인되면 활성화합니다.",
-  },
-  {
-    id: "ai-service-shop",
-    sceneKey: SCENE_KEYS.aiServiceShop,
-    status: "dormant",
-    assetScopes: ["legacy-ai-shop", "legacy-ai-tools", "legacy-customers"],
-    activationNote: "고유 월드 입구와 콘텐츠 정책이 승인되면 활성화합니다.",
   },
 ]);
 
 export function createRegisteredScenes(
   context: SceneFactoryContext,
 ): Phaser.Scene[] {
-  return GAME_SCENE_REGISTRY.flatMap((registration) =>
-    registration.status === "active" ? [registration.create(context)] : [],
+  return GAME_SCENE_REGISTRY.map((registration) =>
+    registration.create(context),
   );
 }

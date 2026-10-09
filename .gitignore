@@ -42,3 +42,9 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# Python helper caches (asset build scripts)
+__pycache__/
+
+# Unused source art and old build scripts, kept locally only (see assets-source/README.md)
+/assets-source/_archive/

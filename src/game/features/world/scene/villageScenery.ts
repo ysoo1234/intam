@@ -29,76 +29,47 @@ const FOUNTAIN_WATER_ANIMATION = "village-fountain-water-flow";
 const FOUNTAIN_WATER_FRAME_SIZE = 313;
 const FOUNTAIN_WATER_FRAME_COUNT = 16;
 const AI_WORLD_PORTAL_TEXTURE = "village-ai-world-portal-night";
-const AI_WORLD_PORTAL_MASK_WIDTH = 256;
-const AI_WORLD_PORTAL_MASK_HEIGHT = 244;
-// 포탈 중심 미세 조정값(1280x720 게임 좌표 px)입니다.
-// X는 커질수록 오른쪽, Y는 커질수록 아래로 이동합니다.
-const AI_WORLD_PORTAL_OFFSET_X_PX = -2;
-const AI_WORLD_PORTAL_OFFSET_Y_PX = 22;
+// The starlight gate is an open tablet seen at an angle; its screen (cut out
+// of the artwork) shows the swirling portal. Screen corners as fractions of
+// the gate image (1153 x 1096): top-left, bottom-left, bottom-right, top-right.
+const AI_WORLD_PORTAL_SCREEN = [
+  [0.5421, 0.2035],
+  [0.5351, 0.7965],
+  [0.8482, 0.8923],
+  [0.856, 0.292],
+] as const;
+
+function getAiWorldPortalScreen(scenery: SceneryDefinition) {
+  const { x, y } = scenery.position;
+  const { width, height } = scenery.displaySize;
+  const corners = AI_WORLD_PORTAL_SCREEN.map(([fx, fy]) => ({
+    x: x - width / 2 + fx * width,
+    y: y - height / 2 + fy * height,
+  }));
+  const xs = corners.map((corner) => corner.x);
+  const ys = corners.map((corner) => corner.y);
+  const left = Math.min(...xs);
+  const top = Math.min(...ys);
+  return { corners, left, top, width: Math.max(...xs) - left, height: Math.max(...ys) - top };
+}
 
 function createAiWorldPortalMask(
   scene: Phaser.Scene,
   scenery: SceneryDefinition,
 ) {
-  const { x, y } = scenery.position;
-  const { width, height } = scenery.displaySize;
-  const left = x - width / 2;
-  const top = y - height / 2;
-  const scaleX = width / AI_WORLD_PORTAL_MASK_WIDTH;
-  const scaleY = height / AI_WORLD_PORTAL_MASK_HEIGHT;
+  const screen = getAiWorldPortalScreen(scenery);
   const maskShape = scene.make.graphics({ x: 0, y: 0 });
-  const maskX = (value: number) => left + value * scaleX;
-  const maskY = (value: number) => top + value * scaleY;
-  const point = (pointX: number, pointY: number) =>
-    new Phaser.Math.Vector2(maskX(pointX), maskY(pointY));
-  // The gate is drawn in perspective: its right foot sits lower than its left.
-  // Closing this silhouette on a tilted threshold prevents the portal texture
-  // from reading as a rectangular card below the arch.
-  const points = [point(76, 192), point(57, 138)];
-  const appendCubic = (
-    from: readonly [number, number],
-    controlA: readonly [number, number],
-    controlB: readonly [number, number],
-    to: readonly [number, number],
-  ) => {
-    for (let step = 1; step <= 10; step += 1) {
-      const progress = step / 10;
-      const inverse = 1 - progress;
-      const curveX =
-        inverse ** 3 * from[0] +
-        3 * inverse ** 2 * progress * controlA[0] +
-        3 * inverse * progress ** 2 * controlB[0] +
-        progress ** 3 * to[0];
-      const curveY =
-        inverse ** 3 * from[1] +
-        3 * inverse ** 2 * progress * controlA[1] +
-        3 * inverse * progress ** 2 * controlB[1] +
-        progress ** 3 * to[1];
-      points.push(point(curveX, curveY));
-    }
-  };
-
-  appendCubic(
-    [57, 138],
-    [52, 103],
-    [78, 64],
-    [113, 58],
-  );
-  appendCubic(
-    [113, 58],
-    [151, 53],
-    [187, 83],
-    [198, 116],
-  );
-  appendCubic(
-    [198, 116],
-    [205, 143],
-    [201, 188],
-    [188, 207],
-  );
   maskShape.fillStyle(0xffffff);
-  maskShape.fillPoints(points, true);
-
+  // A touch larger than the hole so no gap shows at its anti-aliased edge.
+  const cx = screen.left + screen.width / 2;
+  const cy = screen.top + screen.height / 2;
+  maskShape.fillPoints(
+    screen.corners.map((corner) => new Phaser.Math.Vector2(
+      cx + (corner.x - cx) * 1.03,
+      cy + (corner.y - cy) * 1.03,
+    )),
+    true,
+  );
   return maskShape;
 }
 
@@ -156,13 +127,11 @@ function createAiWorldPortal(
   scenery: SceneryDefinition,
 ): DepthFollower[] {
   if (scenery.id !== "ai-world-gate") return [];
-  const { x, y } = scenery.position;
-  const portalCenterX = x + AI_WORLD_PORTAL_OFFSET_X_PX;
-  const portalCenterY = y + AI_WORLD_PORTAL_OFFSET_Y_PX;
-  const portalSize = Math.max(
-    scenery.displaySize.width,
-    scenery.displaySize.height,
-  ) * 1.38;
+  const screen = getAiWorldPortalScreen(scenery);
+  const portalCenterX = screen.left + screen.width / 2;
+  const portalCenterY = screen.top + screen.height / 2;
+  // Big enough that the slowly turning swirl always covers the whole screen.
+  const portalSize = Math.hypot(screen.width, screen.height) * 1.15;
   const portal = scene.add
     .image(portalCenterX, portalCenterY, AI_WORLD_PORTAL_TEXTURE)
     .setDisplaySize(portalSize, portalSize)
@@ -170,32 +139,27 @@ function createAiWorldPortal(
   const openingMask = createAiWorldPortalMask(scene, scenery);
   applyAiWorldPortalMask(portal, openingMask, scene);
 
-  const portalLeft = x - scenery.displaySize.width / 2;
-  const portalTop = y - scenery.displaySize.height / 2;
-  const portalScaleX =
-    scenery.displaySize.width / AI_WORLD_PORTAL_MASK_WIDTH;
-  const portalScaleY =
-    scenery.displaySize.height / AI_WORLD_PORTAL_MASK_HEIGHT;
+  // Twinkling dots inside the screen, as fractions of its width and height.
   const starGroups = [
     [
-      [88, 127],
-      [111, 88],
-      [169, 111],
-      [151, 172],
-      [103, 177],
+      [0.2, 0.42],
+      [0.36, 0.2],
+      [0.76, 0.33],
+      [0.64, 0.7],
+      [0.3, 0.76],
     ],
     [
-      [137, 101],
-      [181, 145],
-      [93, 153],
-      [128, 190],
+      [0.55, 0.14],
+      [0.84, 0.55],
+      [0.24, 0.6],
+      [0.5, 0.88],
     ],
   ].map((coordinates, groupIndex) => {
     const stars = scene.add.graphics();
     coordinates.forEach(([starX, starY], starIndex) => {
-      const worldX = portalLeft + starX * portalScaleX;
-      const worldY = portalTop + starY * portalScaleY;
-      const radius = starIndex % 2 === 0 ? 0.9 : 0.55;
+      const worldX = screen.left + starX * screen.width;
+      const worldY = screen.top + starY * screen.height;
+      const radius = starIndex % 2 === 0 ? 1.1 : 0.7;
       stars.fillStyle(0xffffff, 0.95);
       stars.fillCircle(worldX, worldY, radius);
     });
@@ -298,6 +262,7 @@ export function createVillageScenery(
     const image = scene.add
       .image(scenery.position.x, scenery.position.y, scenery.assetKey)
       .setDisplaySize(scenery.displaySize.width, scenery.displaySize.height)
+      .setFlipX(scenery.flipX === true)
       .setDepth(VILLAGE_SCENERY_DEPTH_BASE);
     const depthBackdrops = createAiWorldPortal(scene, scenery);
     const depthFollowers = [

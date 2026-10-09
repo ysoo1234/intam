@@ -15,11 +15,31 @@ export const AIRPORT_BACKGROUND_TEXTURE_CONTRACT = {
   targetTextureHeight: 1440,
 } as const;
 
+/** ouch: a hit or a wrong answer. (No smile on pickups: data comes too often.) */
+export type AirportPlayerReaction = "ouch";
+
 export type AirportPlayerView = {
   player: Phaser.GameObjects.Container;
   playerArt: Phaser.GameObjects.Image;
   playerAura: Phaser.GameObjects.Ellipse;
+  /** Shows a short reaction face, then goes back to the flying pose. */
+  react: (reaction: AirportPlayerReaction) => void;
+  /** Fever time: sparkling eyes with little twinkles; safe to call every frame. */
+  setFever: (active: boolean) => void;
 };
+
+// One flying pose, moved smoothly in code: swapping several generated frames made
+// the outline "boil" (each drawing differs slightly), so it read as jittery.
+// Reactions share the pose's 340 x 340 canvas, lined up on the body.
+const AIRPORT_MIDI_FLY = "airport-midi-1";
+const AIRPORT_MIDI_FEVER = "airport-midi-fever";
+const AIRPORT_MIDI_REACTION = {
+  ouch: { texture: "airport-midi-ouch", ms: 820 },
+} as const;
+// Twinkles around the face during fever, relative to the flying sprite.
+const AIRPORT_FEVER_TWINKLES = [[32, -31, 8], [49, -7, 5], [7, -42, 5]] as const;
+// 340 px canvas shown at 140 px.
+const AIRPORT_MIDI_SIZE = 140;
 
 function createAirportBackgroundLayer(
   scene: Phaser.Scene,
@@ -63,37 +83,24 @@ export function createAirportBackground(scene: Phaser.Scene): AirportBackground 
 }
 
 export function createAirportPlayer(scene: Phaser.Scene): AirportPlayerView {
-  const playerShadowBack = scene.add
-    .image(5, 2, "airport-midi")
-    .setOrigin(0.72, 0.5)
-    .setDisplaySize(194, 90)
+  const shadow = (x: number, y: number, size: number, alpha: number) => scene.add
+    .image(x, y, AIRPORT_MIDI_FLY)
+    .setOrigin(0.5, 0.62)
+    .setDisplaySize(size, size)
     .setTint(0x263d46)
     .setTintMode(Phaser.TintModes.FILL)
-    .setAlpha(0.07)
+    .setAlpha(alpha)
     .setBlendMode(Phaser.BlendModes.MULTIPLY);
-  const playerShadowMiddle = scene.add
-    .image(3, 1, "airport-midi")
-    .setOrigin(0.72, 0.5)
-    .setDisplaySize(192, 89)
-    .setTint(0x263d46)
-    .setTintMode(Phaser.TintModes.FILL)
-    .setAlpha(0.11)
-    .setBlendMode(Phaser.BlendModes.MULTIPLY);
-  const playerShadowNear = scene.add
-    .image(2, 1, "airport-midi")
-    .setOrigin(0.72, 0.5)
-    .setDisplaySize(190, 88)
-    .setTint(0x263d46)
-    .setTintMode(Phaser.TintModes.FILL)
-    .setAlpha(0.16)
-    .setBlendMode(Phaser.BlendModes.MULTIPLY);
+  const playerShadowBack = shadow(5, 2, AIRPORT_MIDI_SIZE + 5, 0.07);
+  const playerShadowMiddle = shadow(3, 1, AIRPORT_MIDI_SIZE + 3, 0.11);
+  const playerShadowNear = shadow(2, 1, AIRPORT_MIDI_SIZE + 2, 0.16);
   const playerAura = scene.add
     .ellipse(18, 0, 160, 104, 0x77edff, 0)
     .setBlendMode(Phaser.BlendModes.ADD);
   const playerArt = scene.add
-    .image(0, 0, "airport-midi")
-    .setOrigin(0.72, 0.5)
-    .setDisplaySize(188, 87);
+    .image(0, 0, AIRPORT_MIDI_FLY)
+    .setOrigin(0.5, 0.62)
+    .setDisplaySize(AIRPORT_MIDI_SIZE, AIRPORT_MIDI_SIZE);
   const playerSprite = scene.add.container(0, 0, [
     playerShadowBack,
     playerShadowMiddle,
@@ -114,5 +121,71 @@ export function createAirportPlayer(scene: Phaser.Scene): AirportPlayerView {
     ease: "Sine.easeInOut",
   });
 
-  return { player, playerArt, playerAura };
+  // A soft wing-beat: the body stretches and settles a little, never a frame swap.
+  scene.tweens.add({
+    targets: playerSprite,
+    scaleX: { from: 1, to: 1.025 },
+    scaleY: { from: 1, to: 0.975 },
+    duration: 260,
+    yoyo: true,
+    repeat: -1,
+    ease: "Sine.easeInOut",
+  });
+
+  // A reaction face briefly replaces the flying face.
+  const layers = [playerShadowBack, playerShadowMiddle, playerShadowNear, playerArt];
+  const show = (texture: string) => {
+    for (const layer of layers) {
+      if (layer.active && layer.texture.key !== texture) layer.setTexture(texture);
+    }
+  };
+  let base: string = AIRPORT_MIDI_FLY;
+  let reactionTimer: Phaser.Time.TimerEvent | undefined;
+  let reacting = false;
+  player.once(Phaser.GameObjects.Events.DESTROY, () => reactionTimer?.remove(false));
+  const react = (reaction: AirportPlayerReaction) => {
+    const { texture, ms } = AIRPORT_MIDI_REACTION[reaction];
+    reacting = true;
+    show(texture);
+    reactionTimer?.remove(false);
+    reactionTimer = scene.time.delayedCall(ms, () => {
+      reacting = false;
+      show(base);
+    });
+    // A hit also flickers red for the invulnerable moment.
+    scene.tweens.killTweensOf(playerArt);
+    scene.tweens.add({
+      targets: playerArt,
+      tint: 0xff786c,
+      alpha: 0.35,
+      duration: 110,
+      yoyo: true,
+      repeat: 4,
+      onComplete: () => playerArt.clearTint().setAlpha(1),
+    });
+  };
+
+  // Fever: sparkling "found a gem" eyes and a few twinkles beside the face.
+  const twinkles = AIRPORT_FEVER_TWINKLES.map(([x, y, size], index) => {
+    const twinkle = scene.add
+      .star(x, y, 4, size * 0.22, size, 0xffffff, 1)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setVisible(false);
+    scene.tweens.add({
+      targets: twinkle, scale: { from: 0.3, to: 1.1 }, alpha: { from: 0.2, to: 1 }, angle: 45,
+      duration: 380, delay: index * 140, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+    });
+    return twinkle;
+  });
+  playerSprite.add(twinkles);
+  let feverOn = false;
+  const setFever = (active: boolean) => {
+    if (active === feverOn) return;
+    feverOn = active;
+    base = active ? AIRPORT_MIDI_FEVER : AIRPORT_MIDI_FLY;
+    if (!reacting) show(base);
+    for (const twinkle of twinkles) twinkle.setVisible(active);
+  };
+
+  return { player, playerArt, playerAura, react, setFever };
 }

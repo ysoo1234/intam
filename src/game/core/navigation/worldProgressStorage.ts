@@ -47,15 +47,6 @@ export function saveStoredWorldProgress(progress: WorldProgressSnapshot, storage
   }
 }
 
-export function clearStoredWorldProgress(storage?: StorageLike) {
-  const target = resolveStorage(storage);
-  try {
-    target?.removeItem(WORLD_PROGRESS_STORAGE_KEY);
-  } catch {
-    // Nothing to clear.
-  }
-}
-
 /** Keeps the best stars from both the live registry and the saved copy. */
 export function mergeWorldProgressSnapshots(
   first: WorldProgressSnapshot,

@@ -6,6 +6,7 @@ import {
   getVillageBuildingPosition,
   getVillageBuildingSize,
   getVillageStarPosition,
+  isVillageBuildingMirrored,
   offsetVillageBounds,
   offsetVillagePoint,
   offsetVillagePoints,
@@ -23,7 +24,8 @@ export const VILLAGE_MAP = defineMap({
     fit: "stretch",
   },
   defaultSpawn: {
-    position: { x: 628, y: 610 },
+    // Midi starts a little below the middle, under the fountain.
+    position: { x: 642, y: 604 },
     facing: "front",
   },
   scenery: [
@@ -33,8 +35,9 @@ export const VILLAGE_MAP = defineMap({
       url: GAME_ASSETS.world.shop,
       position: getVillageBuildingPosition("ai-shop"),
       displaySize: getVillageBuildingSize("ai-shop"),
+      flipX: isVillageBuildingMirrored("ai-shop"),
       occlusionArea: offsetVillageBounds("ai-shop", {
-        minX: 112, maxX: 448, minY: 42, maxY: 225,
+        minX: 111, maxX: 428, minY: -48, maxY: 64,
       }),
       progressMarker: {
         kind: "activity-stars",
@@ -49,8 +52,9 @@ export const VILLAGE_MAP = defineMap({
       url: GAME_ASSETS.world.airport,
       position: getVillageBuildingPosition("airport"),
       displaySize: getVillageBuildingSize("airport"),
+      flipX: isVillageBuildingMirrored("airport"),
       occlusionArea: offsetVillageBounds("airport", {
-        minX: 875, maxX: 1_115, minY: 5, maxY: 205,
+        minX: 824, maxX: 1_154, minY: -88, maxY: 37,
       }),
       progressMarker: {
         kind: "activity-stars",
@@ -65,8 +69,9 @@ export const VILLAGE_MAP = defineMap({
       url: GAME_ASSETS.world.ethicsOffice,
       position: getVillageBuildingPosition("ethics-office"),
       displaySize: getVillageBuildingSize("ethics-office"),
+      flipX: isVillageBuildingMirrored("ethics-office"),
       occlusionArea: offsetVillageBounds("ethics-office", {
-        minX: 105, maxX: 510, minY: 350, maxY: 590,
+        minX: 125, maxX: 410, minY: 252, maxY: 372,
       }),
       progressMarker: {
         kind: "activity-stars",
@@ -81,13 +86,14 @@ export const VILLAGE_MAP = defineMap({
       url: GAME_ASSETS.world.aiWorldGate,
       position: getVillageBuildingPosition("ai-world-gate"),
       displaySize: getVillageBuildingSize("ai-world-gate"),
+      flipX: isVillageBuildingMirrored("ai-world-gate"),
       occlusionArea: offsetVillageBounds("ai-world-gate", {
-        minX: 850, maxX: 1_220, minY: 340, maxY: 600,
+        minX: 906, maxX: 1_292, minY: 240, maxY: 380,
       }),
       progressMarker: {
         kind: "starlight-exit",
         position: offsetVillagePoint("ai-world-gate", { x: 1_085, y: 347 }),
-        requiredStars: 9,
+        requiredStars: 7,
       },
     },
     {
@@ -96,8 +102,11 @@ export const VILLAGE_MAP = defineMap({
       url: GAME_ASSETS.world.fountain,
       position: getVillageBuildingPosition("fountain"),
       displaySize: getVillageBuildingSize("fountain"),
+      flipX: isVillageBuildingMirrored("fountain"),
+      // Only Midi behind the tiers is drawn under the fountain; beside the
+      // basin and in front of it she stays on top.
       occlusionArea: offsetVillageBounds("fountain", {
-        minX: 500, maxX: 772, minY: 174, maxY: 426,
+        minX: 557, maxX: 710, minY: 174, maxY: 365,
       }),
     },
   ],
@@ -112,7 +121,9 @@ export const VILLAGE_MAP = defineMap({
         featureId: "ai-workshop",
       },
       returnSpawn: {
-        position: offsetVillagePoint("ai-shop", { x: 360, y: 318 }),
+        // Beside the door, toward the plaza: the doors of the front row face
+        // the bottom edge of the screen.
+        position: offsetVillagePoint("ai-shop", { x: 440, y: 274 }),
         facing: "front",
       },
       interactionRadius: offsetVillageRadius("ai-shop", 205),
@@ -140,7 +151,7 @@ export const VILLAGE_MAP = defineMap({
         featureId: "ethics-review",
       },
       returnSpawn: {
-        position: offsetVillagePoint("ethics-office", { x: 310, y: 680 }),
+        position: offsetVillagePoint("ethics-office", { x: 427, y: 537 }),
         facing: "front",
       },
       interactionRadius: offsetVillageRadius("ethics-office", 200),
@@ -165,7 +176,7 @@ export const VILLAGE_MAP = defineMap({
         featureId: "data-flight",
       },
       returnSpawn: {
-        position: offsetVillagePoint("airport", { x: 910, y: 318 }),
+        position: offsetVillagePoint("airport", { x: 827, y: 295 }),
         facing: "front",
       },
       interactionRadius: offsetVillageRadius("airport", 208),
@@ -186,7 +197,7 @@ export const VILLAGE_MAP = defineMap({
       label: "별빛 졸업길",
       availability: {
         kind: "world-star-total",
-        requiredStars: 9,
+        requiredStars: 7,
       },
       destination: {
         kind: "world-completion-placeholder",
@@ -197,49 +208,85 @@ export const VILLAGE_MAP = defineMap({
     },
   ],
   collision: {
-    movementBounds: { minX: 60, maxX: 1220, minY: 80, maxY: 680 },
-    blockedOutsideBounds: { minX: 32, maxX: 1248, minY: 30, maxY: 700 },
+    movementBounds: { minX: 20, maxX: 1260, minY: 100, maxY: 705 },
+    blockedOutsideBounds: { minX: 14, maxX: 1266, minY: 90, maxY: 714 },
     resolution: "x-then-y",
+    // Each building's footprint plus the strip of ground behind it where
+    // Midi would be drawn under the artwork, so she never slips behind a
+    // building. Outlines follow the artwork's silhouette, widened by half of
+    // Midi's width (measured from the runtime WebPs).
     polygons: [
       {
         id: "ai-shop-building",
         points: offsetVillagePoints("ai-shop", [
-          { x: 137, y: 49 }, { x: 403, y: 49 }, { x: 403, y: 275 },
-          { x: 385, y: 302 }, { x: 155, y: 302 }, { x: 137, y: 275 },
+          { x: 111, y: 223 }, { x: 121, y: 215 }, { x: 126, y: 115 },
+          { x: 135, y: 96 }, { x: 164, y: 83 }, { x: 169, y: 56 },
+          { x: 222, y: 55 }, { x: 232, y: 62 }, { x: 251, y: 58 },
+          { x: 294, y: 40 }, { x: 362, y: 43 }, { x: 381, y: 51 },
+          { x: 410, y: 75 }, { x: 414, y: 82 }, { x: 419, y: 185 },
+          { x: 424, y: 215 }, { x: 424, y: 237 }, { x: 395, y: 250 },
+          { x: 390, y: 260 }, { x: 347, y: 279 }, { x: 304, y: 285 },
+          { x: 265, y: 301 }, { x: 222, y: 297 }, { x: 121, y: 241 },
+          { x: 111, y: 241 },
         ]),
       },
       {
         id: "airport-building",
         points: offsetVillagePoints("airport", [
-          { x: 854, y: 7 }, { x: 1_124, y: 7 }, { x: 1_124, y: 254 },
-          { x: 1_100, y: 283 }, { x: 875, y: 283 }, { x: 854, y: 254 },
+          { x: 1_154, y: 93 }, { x: 1_148, y: 79 }, { x: 1_131, y: 68 },
+          { x: 1_119, y: 12 }, { x: 1_051, y: 10 }, { x: 1_039, y: 21 },
+          { x: 982, y: 21 }, { x: 965, y: 30 }, { x: 936, y: 34 },
+          { x: 907, y: 55 }, { x: 862, y: 73 }, { x: 850, y: 85 },
+          { x: 833, y: 94 }, { x: 827, y: 103 }, { x: 827, y: 224 },
+          { x: 839, y: 224 }, { x: 844, y: 231 }, { x: 856, y: 233 },
+          { x: 862, y: 264 }, { x: 867, y: 266 }, { x: 902, y: 266 },
+          { x: 913, y: 256 }, { x: 919, y: 261 }, { x: 953, y: 261 },
+          { x: 970, y: 251 }, { x: 976, y: 260 }, { x: 993, y: 269 },
+          { x: 1_034, y: 268 }, { x: 1_131, y: 216 }, { x: 1_137, y: 110 },
+          { x: 1_142, y: 105 }, { x: 1_154, y: 105 },
         ]),
       },
       {
         id: "ethics-office-building",
         points: offsetVillagePoints("ethics-office", [
-          { x: 149, y: 455 }, { x: 400, y: 455 }, { x: 420, y: 567 },
-          { x: 405, y: 593 }, { x: 155, y: 593 }, { x: 134, y: 567 },
-          { x: 134, y: 480 },
+          { x: 410, y: 466 }, { x: 381, y: 402 }, { x: 334, y: 356 },
+          { x: 295, y: 346 }, { x: 223, y: 350 }, { x: 199, y: 362 },
+          { x: 180, y: 383 }, { x: 166, y: 392 }, { x: 156, y: 404 },
+          { x: 152, y: 422 }, { x: 142, y: 431 }, { x: 137, y: 470 },
+          { x: 132, y: 476 }, { x: 128, y: 529 }, { x: 128, y: 557 },
+          { x: 137, y: 557 }, { x: 142, y: 566 }, { x: 156, y: 578 },
+          { x: 195, y: 596 }, { x: 262, y: 607 }, { x: 314, y: 607 },
+          { x: 348, y: 598 }, { x: 391, y: 566 }, { x: 396, y: 558 },
+          { x: 401, y: 511 }, { x: 410, y: 511 },
         ]),
       },
       {
-        id: "ai-world-gate-portal-barrier",
+        // The whole tablet, cover included: Midi enters the portal from the
+        // front and cannot walk through or behind either half.
+        id: "ai-world-gate-tablet",
         points: offsetVillagePoints("ai-world-gate", [
-          { x: 1_020, y: 600 }, { x: 1_185, y: 615 },
-          { x: 1_185, y: 645 }, { x: 1_020, y: 630 },
+          { x: 906, y: 551 }, { x: 912, y: 362 }, { x: 936, y: 350 },
+          { x: 996, y: 350 }, { x: 1_092, y: 378 }, { x: 1_134, y: 378 },
+          { x: 1_218, y: 400 }, { x: 1_272, y: 406 }, { x: 1_284, y: 418 },
+          { x: 1_290, y: 502 }, { x: 1_290, y: 554 }, { x: 1_278, y: 554 },
+          { x: 1_272, y: 560 }, { x: 1_266, y: 652 }, { x: 1_242, y: 667 },
+          { x: 1_194, y: 663 }, { x: 1_086, y: 626 }, { x: 1_038, y: 627 },
+          { x: 966, y: 604 }, { x: 948, y: 604 }, { x: 930, y: 598 },
+          { x: 918, y: 588 }, { x: 906, y: 588 },
         ]),
       },
     ],
     ellipses: [
       {
         id: "fountain",
-        center: offsetVillagePoint("fountain", { x: 636, y: 372 }),
+        // The basin and the ground behind its tiers, where Midi would vanish
+        // behind the fountain; she walks around its back over the lawn.
+        center: offsetVillagePoint("fountain", { x: 634, y: 308 }),
         radiusX: offsetVillageSize("fountain", {
-          width: 166, height: 122,
+          width: 149, height: 128,
         }).width,
         radiusY: offsetVillageSize("fountain", {
-          width: 166, height: 122,
+          width: 149, height: 128,
         }).height,
         boundary: "inclusive",
       },
@@ -266,4 +313,3 @@ export const VILLAGE_MAP = defineMap({
   },
 } as const);
 
-export type VillageMapDefinition = typeof VILLAGE_MAP;

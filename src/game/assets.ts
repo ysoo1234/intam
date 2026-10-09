@@ -8,6 +8,8 @@ export const GAME_ASSETS = {
     gameResultRetryButton: "/assets/ui/game-result-retry-button-v1.webp",
     gameResultReturnButton: "/assets/ui/game-result-return-button-v1.webp",
     villageEntryButton: "/assets/ui/village-entry-button-v1.webp",
+    /** Tutorial arrow, drawn pointing right. */
+    coachArrow: "/assets/ui/coach-arrow-v1.webp",
     villageActivityStarEmpty:
       "/assets/ui/village-activity-star-empty-v1.webp",
     villageActivityStarFilled:
@@ -15,34 +17,45 @@ export const GAME_ASSETS = {
   },
   intro: {
     board: "/assets/intro/gem-board.webp",
-    backdrop: "/assets/intro/village-intro-background-v2.webp",
-    entryButton: "/assets/intro/village-intro-entry-button-v1.webp",
     title: "/assets/intro/intro-title-ai-world-v1.webp",
     enterButton: "/assets/intro/intro-entry-button-v3.webp",
+    // Clean snapshot of the real village map (no UI, Midi or stars), seen through the story door.
+    storyVillage: "/assets/intro/story-village-v5.webp",
+    // Generated door frame around the story's view into the village.
+    storyFrame: "/assets/intro/story-portal-frame-v1.webp",
   },
   world: {
-    ground: "/assets/world/village-ground.webp",
+    // v8: garden village (lawns, stone paths, forest edge and far hills).
+    ground: "/assets/world/village-ground-v8.webp",
     shop: "/assets/world/village-ai-shop.webp",
     airport: "/assets/world/village-airport.webp",
     ethicsOffice: "/assets/world/village-ethics-office.webp",
-    aiWorldGate: "/assets/world/village-ai-world-gate.webp",
-    aiWorldPortalFrames:
-      "/assets/world/village-ai-world-portal-frames-v3.webp",
+    // Starlight gate: an open tablet whose screen shows the portal.
+    aiWorldGate: "/assets/world/village-tablet-gate-v4.webp",
     aiWorldPortalNight:
       "/assets/world/village-ai-world-portal-night-v4.webp",
     fountain: "/assets/world/village-fountain.webp",
-    fountainWaterOverlay:
-      "/assets/world/village-fountain-water-overlay-v1.webp",
     fountainWaterFrames:
       "/assets/world/village-fountain-water-frames-v1.webp",
   },
   characters: {
+    // The player in the village and workshop: textbook Midi (v2) at 2x of the
+    // 113 px village height. Left/right moving frames lean into the walk.
     player: {
-      front: "/assets/characters/midi_front_game.png",
-      back: "/assets/characters/midi_back_game.png",
-      left: "/assets/characters/midi_left_game.png",
-      right: "/assets/characters/midi_right_game.png",
-      fly: "/assets/characters/midi_fly.webp",
+      front: "/assets/characters/midi-v2/player-front.webp",
+      blink: "/assets/characters/midi-v2/player-blink.webp",
+      back: "/assets/characters/midi-v2/player-back.webp",
+      left: "/assets/characters/midi-v2/player-left.webp",
+      right: "/assets/characters/midi-v2/player-right.webp",
+      moveLeft: "/assets/characters/midi-v2/player-move-left.webp",
+      moveRight: "/assets/characters/midi-v2/player-move-right.webp",
+      glideFront: "/assets/characters/midi-v2/player-glide-front.webp",
+      glideBack: "/assets/characters/midi-v2/player-glide-back.webp",
+      // Data flight: one flying pose (moved in code), a hit face and a fever face, on one canvas.
+      fly: "/assets/characters/midi-v2/fly-1.webp",
+      // Fever: sparkling eyes set into the flying pose.
+      flyFever: "/assets/characters/midi-v2/fly-fever.webp",
+      flyOuch: "/assets/characters/midi-v2/fly-ouch.webp",
     },
     // Textbook Midi (v2). Front frames share one body; only the face screen changes.
     midi: {
@@ -52,6 +65,20 @@ export const GAME_ASSETS = {
         talkSmall: "/assets/characters/midi-v2/front-talk-small.webp",
         talkBig: "/assets/characters/midi-v2/front-talk-big.webp",
         talkO: "/assets/characters/midi-v2/front-talk-o.webp",
+        happy: "/assets/characters/midi-v2/front-happy.webp",
+        happyRest: "/assets/characters/midi-v2/front-happy-rest.webp",
+        happyTalkSmall: "/assets/characters/midi-v2/front-happy-talk-small.webp",
+        happyTalkO: "/assets/characters/midi-v2/front-happy-talk-o.webp",
+        surprised: "/assets/characters/midi-v2/front-surprised.webp",
+        surprisedTalkSmall: "/assets/characters/midi-v2/front-surprised-talk-small.webp",
+        surprisedTalkBig: "/assets/characters/midi-v2/front-surprised-talk-big.webp",
+        worried: "/assets/characters/midi-v2/front-worried.webp",
+        worriedTalkO: "/assets/characters/midi-v2/front-worried-talk-o.webp",
+      },
+      pose: {
+        wave: "/assets/characters/midi-v2/pose-wave.webp",
+        cheer: "/assets/characters/midi-v2/pose-cheer.webp",
+        flyRight: "/assets/characters/midi-v2/pose-fly-right.webp",
       },
     },
   },
@@ -152,15 +179,14 @@ export const GAME_ASSETS = {
         happy: `/assets/customers/v3-game/${id}-happy.webp`,
       }]),
     ) as Readonly<Record<string, Readonly<{ waiting: string; happy: string }>>>,
-    legacyWindowQueue: {
-      girl: "/assets/ethics-review/inspection-window-girl-v1.webp",
-      boy: "/assets/ethics-review/inspection-window-boy-v1.webp",
-    },
     stampApprove: "/assets/ethics-review/stamp-tool-approve-v1.webp",
     stampReject: "/assets/ethics-review/stamp-tool-reject-v1.webp",
-    midiFront: "/assets/ethics-review/stamp-midi-front-v1.webp",
-    midiLeft: "/assets/ethics-review/stamp-midi-left-v1.webp",
-    midiRight: "/assets/ethics-review/stamp-midi-right-v1.webp",
+    // Textbook Midi (v2), all at the front frames' scale so they swap cleanly.
+    midiFront: "/assets/characters/midi-v2/front-idle.webp",
+    midiLeft: "/assets/characters/midi-v2/pose-side-left.webp",
+    midiRight: "/assets/characters/midi-v2/pose-side-right.webp",
+    midiHappy: "/assets/characters/midi-v2/front-happy.webp",
+    midiWorried: "/assets/characters/midi-v2/front-worried.webp",
     topics: {
       permission: "/assets/ethics-review/stamp-topic-permission-v2.webp",
       privacy: "/assets/ethics-review/stamp-topic-privacy-v1.webp",
@@ -168,18 +194,7 @@ export const GAME_ASSETS = {
       honesty: "/assets/ethics-review/stamp-topic-honesty-v1.webp",
       respect: "/assets/ethics-review/stamp-topic-respect-v1.webp",
     },
-    // Earlier iterations, kept for comparison and recovery.
-    stampStage: "/assets/ethics-review/stamp-stage-v2.webp",
-    inspectionBooth: "/assets/ethics-review/inspection-booth-simple-v1.webp",
-    inspectionApproveStamp: "/assets/ethics-review/inspection-approve-stamp-v2.webp",
-    inspectionReturnStamp: "/assets/ethics-review/inspection-return-stamp-v2.webp",
-    inspectionVisitorGirl: "/assets/ethics-review/inspection-window-girl-simple-v1.webp",
-    inspectionVisitorBoy: "/assets/ethics-review/inspection-window-boy-simple-v1.webp",
-    deliveryRoom: "/assets/ethics-review/delivery-room-final-v1.webp",
-    deliveryCardPanel: "/assets/ethics-review/delivery-card-panel-v1.webp",
     office: "/assets/ethics-review/office-v2.webp",
-    briefingDossier: "/assets/ethics-review/briefing-sheet-v2.webp",
-    caseDossier: "/assets/ethics-review/case-file-v2.webp",
   },
 } as const;
 

@@ -33,7 +33,9 @@ export type WorldExitState =
     }>;
 
 export const WORLD_PROGRESS_REGISTRY_KEY = "world:activity-stars";
-export const WORLD_EXIT_REQUIRED_STARS = 9 as const;
+// Three places offer up to nine stars; seven open the graduation path, so a
+// student can miss a couple and still finish.
+export const WORLD_EXIT_REQUIRED_STARS = 7 as const;
 export const WORLD_COMPLETION_READY_EVENT =
   "world:starlight-graduation-path-ready" as const;
 

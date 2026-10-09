@@ -37,6 +37,8 @@ export type SceneryDefinition = Readonly<{
   position: Point;
   displaySize: Size;
   occlusionArea: AxisAlignedBounds;
+  /** Drawn mirrored left-to-right (its points are mirrored to match). */
+  flipX?: boolean;
   progressMarker?:
     | Readonly<{
         kind: "activity-stars";
@@ -47,7 +49,7 @@ export type SceneryDefinition = Readonly<{
     | Readonly<{
         kind: "starlight-exit";
         position: Point;
-        requiredStars: 9;
+        requiredStars: 7;
       }>;
 }>;
 
@@ -75,7 +77,7 @@ export type CompletionPortalDefinition = PortalBase &
   Readonly<{
     availability: Readonly<{
       kind: "world-star-total";
-      requiredStars: 9;
+      requiredStars: 7;
     }>;
     destination: Readonly<{
       kind: "world-completion-placeholder";

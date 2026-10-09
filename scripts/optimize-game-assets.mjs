@@ -132,30 +132,50 @@ const ASSETS = [
     source: `ethics-review/stamp-tool-${verdict}-v1.png`,
     trim: true, quality: 96, alphaQuality: 100,
   }, { width: 160, height: 150 })),
-  fullScreenAsset({ source: "ethics-review/stamp-stage-v1.png", quality: 96 }),
-  fullScreenAsset({ source: "ethics-review/stamp-stage-v2.png", quality: 96 }),
   ...["permission", "privacy", "checking", "honesty", "respect"].map(topic => highDpiPanelAsset({
     source: `ethics-review/stamp-topic-${topic}-${topic === "permission" ? "v2" : "v1"}.png`,
     trim: true, quality: 96, alphaQuality: 100,
   }, { width: 160, height: 140 })),
-  highDpiPanelAsset({
-    source: "ethics-review/inspection-approve-stamp-v2.png",
-    output: "ethics-review/stamp-approve-v1.webp",
-    trim: true, quality: 96, alphaQuality: 100,
-  }, { width: 220, height: 275 }),
-  highDpiPanelAsset({
-    source: "ethics-review/inspection-return-stamp-v2.png",
-    output: "ethics-review/stamp-reject-v1.webp",
-    trim: true, quality: 96, alphaQuality: 100,
-  }, { width: 220, height: 275 }),
-  ...["front", "left", "right"].map(facing => highDpiPanelAsset({
-    source: `characters/midi_${facing}.png`,
-    output: `ethics-review/stamp-midi-${facing}-v1.webp`,
-    quality: 96, alphaQuality: 100,
-  }, { width: 230, height: 295 })),
+  // Textbook Midi (v2): talking faces in other moods, story poses (front-frame
+  // scale) and village player frames (2x of the 113 px village height). Sizes
+  // keep one shared scale, so every frame lines up when Midi switches pose.
+  ...[
+    ["front-happy-rest", "front-happy-rest", 259, 320],
+    ["front-happy-talk-small", "front-happy-talk-small", 259, 320],
+    ["front-happy-talk-o", "front-happy-talk-o", 259, 320],
+    ["front-surprised-talk-small", "front-surprised-talk-small", 259, 320],
+    ["front-surprised-talk-big", "front-surprised-talk-big", 259, 320],
+    ["front-worried", "front-worried", 259, 320],
+    ["front-worried-talk-o", "front-worried-talk-o", 259, 320],
+    ["pose-wave", "pose-wave", 259, 326],
+    ["pose-cheer", "pose-cheer", 336, 325],
+    ["pose-fly-right", "pose-fly-right", 372, 271],
+    ["pose-side-left", "pose-side-left", 230, 328],
+    ["pose-side-right", "pose-side-right", 231, 329],
+    ["front-idle", "player-front", 183, 226],
+    ["front-blink", "player-blink", 183, 226],
+    ["pose-back", "player-back", 185, 227],
+    ["pose-side-left", "player-left", 162, 231],
+    ["pose-side-right", "player-right", 163, 233],
+    ["pose-move-left", "player-move-left", 192, 197],
+    ["pose-move-right", "player-move-right", 191, 199],
+    ["pose-glide-front", "player-glide-front", 186, 204],
+    ["pose-glide-back", "player-glide-back", 180, 200],
+    ["fly-1", "fly-1", 340, 340],
+    ["fly-ouch", "fly-ouch", 340, 340],
+    ["fly-fever", "fly-fever", 340, 340],
+  ].map(([source, output, width, height]) => ({
+    source: `characters/midi-v2/${source}.png`,
+    output: `characters/midi-v2/${output}.webp`,
+    width,
+    height,
+    fit: "fill",
+    quality: 94,
+    alphaQuality: 100,
+  })),
   // Textbook Midi (v2), front view. Every frame shares one body; only the face
   // screen differs (built by assets-source/characters/midi-v2/build_front_frames.py).
-  ...["idle", "blink", "talk-small", "talk-big", "talk-o"].map(frame => ({
+  ...["idle", "blink", "talk-small", "talk-big", "talk-o", "happy", "surprised"].map(frame => ({
     source: `characters/midi-v2/front-${frame}.png`,
     output: `characters/midi-v2/front-${frame}.webp`,
     height: 320,
@@ -168,11 +188,6 @@ const ASSETS = [
     output: "intro/gem-board.webp",
     alphaQuality: 100,
   }),
-  fullScreenAsset({
-    source: "intro/village-intro-background-v2.png",
-    output: "intro/village-intro-background-v2.webp",
-    quality: 94,
-  }),
   // Textbook-style title, generated from page 1 lettering; source is pre-cropped
   // to the visible glow (raw generation kept as intro-title-ai-world-raw-v1.png).
   {
@@ -183,6 +198,20 @@ const ASSETS = [
     quality: 94,
     alphaQuality: 100,
   },
+  {
+    source: "intro/story-village-snapshot-v3.png",
+    output: "intro/story-village-v5.webp",
+    width: 1440,
+    fit: "inside",
+    quality: 92,
+  },
+  // Generated door frame for the intro story (ring with three gems, transparent inside).
+  {
+    source: "intro/story-portal-frame-v1.png",
+    output: "intro/story-portal-frame-v1.webp",
+    quality: 94,
+    alphaQuality: 100,
+  },
   // Generated entry-button plate (no text); source pre-cropped and cleaned,
   // raw generation kept as intro-entry-button-raw-v3.png.
   {
@@ -190,16 +219,6 @@ const ASSETS = [
     output: "intro/intro-entry-button-v3.webp",
     width: 640,
     fit: "inside",
-    quality: 94,
-    alphaQuality: 100,
-  },
-  {
-    source: "intro/village-intro-entry-button-v1.png",
-    output: "intro/village-intro-entry-button-v1.webp",
-    trim: true,
-    width: 800,
-    height: 224,
-    fit: "fill",
     quality: 94,
     alphaQuality: 100,
   },
@@ -216,6 +235,16 @@ const ASSETS = [
     width: 1200,
     height: 194,
     fit: "fill",
+    quality: 92,
+    alphaQuality: 100,
+  },
+  // Tutorial arrow (coach pointer): a glossy yellow arrow pointing right;
+  // rotated in code to point at things.
+  {
+    source: "ui/coach-arrow-v1.png",
+    output: "ui/coach-arrow-v1.webp",
+    width: 320,
+    fit: "inside",
     quality: 92,
     alphaQuality: 100,
   },
@@ -255,10 +284,13 @@ const ASSETS = [
     quality: 94,
     alphaQuality: 100,
   }, { width: 340, height: 72 }),
+  // v8: garden village (village_garden_raw_v2.png: the garden with a band of
+  // sky, hills and forest added above it, upscaled to 2x). Walkable area:
+  // assets-source/world/build_garden_walkable_mask_v8.py.
   fullScreenAsset({
-    source: "world/ai-village-main-background-v4.png",
-    output: "world/village-ground.webp",
-    lossless: true,
+    source: "world/village-ground-v8.png",
+    output: "world/village-ground-v8.webp",
+    quality: 90,
   }),
   highDpiPanelAsset({
     source: "world/village-ai-shop-v3.png",
@@ -281,42 +313,16 @@ const ASSETS = [
     lossless: true,
     alphaQuality: 100,
   }, { width: 251 }),
-  highDpiPanelAsset({
-    source: "world/village-ai-world-gate-v3.png",
-    output: "world/village-ai-world-gate.webp",
-    trim: true,
-    lossless: true,
-    alphaQuality: 100,
-  }, { width: 324 }),
   {
-    source: "world/village-ai-world-portal-frames-v3.png",
-    output: "world/village-ai-world-portal-frames-v3.webp",
-    width: 2048,
-    height: 1952,
-    fit: "fill",
+    // v4: green tablet (raw: village-tablet-gate-raw-v3.png) used as drawn;
+    // only the magenta screen is cut out, keeping the camera dot.
+    source: "world/village-tablet-gate-v4.png",
+    output: "world/village-tablet-gate-v4.webp",
+    width: 640,
+    fit: "inside",
     quality: 94,
     alphaQuality: 100,
   },
-  {
-    source: "world/village-ai-world-portal-v2.png",
-    output: "world/village-ai-world-portal-v1.webp",
-    trim: true,
-    width: 512,
-    height: 512,
-    fit: "cover",
-    lossless: true,
-    alphaQuality: 100,
-  },
-  highDpiPanelAsset({
-    source: "world/village-ai-world-portal-night-v2.png",
-    output: "world/village-ai-world-portal-night-v2.webp",
-    quality: 94,
-  }, { width: 420, height: 420 }),
-  highDpiPanelAsset({
-    source: "world/village-ai-world-portal-night-v3.png",
-    output: "world/village-ai-world-portal-night-v3.webp",
-    quality: 94,
-  }, { width: 420, height: 420 }),
   highDpiPanelAsset({
     source: "world/village-ai-world-portal-night-v4.png",
     output: "world/village-ai-world-portal-night-v4.webp",
@@ -329,13 +335,6 @@ const ASSETS = [
     lossless: true,
     alphaQuality: 100,
   }, { width: 211 }),
-  highDpiPanelAsset({
-    source: "world/village-fountain-water-overlay-v1.png",
-    output: "world/village-fountain-water-overlay-v1.webp",
-    trim: true,
-    lossless: true,
-    alphaQuality: 100,
-  }, { width: 119 }),
   {
     source: "world/village-fountain-water-frames-v1.png",
     output: "world/village-fountain-water-frames-v1.webp",
@@ -369,20 +368,6 @@ const ASSETS = [
     lossless: true,
     alphaQuality: 100,
   }, { width: 860 }),
-  highDpiPanelAsset({
-    source: "shop/workshop-action-button-v2.png",
-    output: "shop/workshop-action-button-v2.webp",
-    trim: true,
-    lossless: true,
-    alphaQuality: 100,
-  }, { width: 128 }),
-  highDpiPanelAsset({
-    source: "shop/workshop-action-button-v3.png",
-    output: "shop/workshop-action-button-v3.webp",
-    trim: true,
-    lossless: true,
-    alphaQuality: 100,
-  }, { width: 128 }),
   highDpiPanelAsset({
     source: "shop/workshop-action-button-v4.png",
     output: "shop/workshop-action-button-v4.webp",
@@ -635,25 +620,6 @@ const ASSETS = [
     lossless: true,
     alphaQuality: 100,
   }, { width: 190 }),
-  {
-    source: "characters/midi_fly.png",
-    width: 512,
-    height: 238,
-    quality: 90,
-    alphaQuality: 100,
-  },
-  fullScreenAsset({
-    source: "ethics-review/inspection-booth-simple-v1.png",
-    quality: 96,
-  }),
-  highDpiPanelAsset({
-    source: "ethics-review/inspection-window-girl-simple-v1.png",
-    quality: 96,
-  }, { width: 304, height: 240 }),
-  highDpiPanelAsset({
-    source: "ethics-review/inspection-window-boy-simple-v1.png",
-    quality: 96,
-  }, { width: 304, height: 240 }),
   fullScreenAsset({
     source: "ethics-review/inspection-booth-v2.png",
     quality: 96,
@@ -662,53 +628,10 @@ const ASSETS = [
     source: "ethics-review/inspection-form-v2.png",
     trim: true, quality: 96, alphaQuality: 100,
   }, { width: 510, height: 266 }),
-  highDpiPanelAsset({
-    source: "ethics-review/inspection-approve-stamp-v2.png",
-    trim: true, quality: 96, alphaQuality: 100,
-  }, { width: 154, height: 192 }),
-  highDpiPanelAsset({
-    source: "ethics-review/inspection-return-stamp-v2.png",
-    trim: true, quality: 96, alphaQuality: 100,
-  }, { width: 154, height: 192 }),
-  highDpiPanelAsset({
-    source: "ethics-review/inspection-window-girl-v1.png",
-    quality: 96,
-  }, { width: 327, height: 229 }),
-  highDpiPanelAsset({
-    source: "ethics-review/inspection-window-boy-v1.png",
-    quality: 96,
-  }, { width: 327, height: 229 }),
-  highDpiPanelAsset({
-    source: "ethics-review/inspection-visitor-girl-v3.png",
-    trim: true, quality: 96, alphaQuality: 100,
-  }, { width: 180, height: 288 }),
-  highDpiPanelAsset({
-    source: "ethics-review/inspection-visitor-boy-v3.png",
-    trim: true, quality: 96, alphaQuality: 100,
-  }, { width: 180, height: 288 }),
   fullScreenAsset({
     source: "ethics-review/office-v2.png",
     lossless: true,
   }),
-  fullScreenAsset({
-    source: "ethics-review/delivery-room-final-v1.png",
-    quality: 94,
-  }),
-  highDpiPanelAsset({
-    source: "ethics-review/delivery-card-panel-v1.png",
-    trim: true,
-    alphaQuality: 100,
-  }, { width: 840, height: 280 }),
-  highDpiPanelAsset({
-    source: "ethics-review/briefing-sheet-v2.png",
-    alphaQuality: 100,
-    fit: "fill",
-  }, { width: 1050, height: 590 }),
-  highDpiPanelAsset({
-    source: "ethics-review/case-file-v2.png",
-    alphaQuality: 100,
-    fit: "fill",
-  }, { width: 820, height: 462 }),
 ];
 
 const customerFiles = await readdir(
@@ -796,6 +719,13 @@ const selectedAssets = onlyAsset
 
 if (selectedAssets.length === 0) {
   throw new Error(`No game asset matched --asset=${onlyAsset}`);
+}
+
+// `--list` prints every registered source (one per line) without writing
+// anything; assets-source files not in this list are not part of the game.
+if (process.argv.includes("--list")) {
+  for (const asset of selectedAssets) console.log(asset.source);
+  process.exit(0);
 }
 
 const results = [];

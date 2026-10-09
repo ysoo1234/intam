@@ -20,7 +20,17 @@ import {
   mergeWorldProgressSnapshots,
   saveStoredWorldProgress,
 } from "../../../core/navigation/worldProgressStorage";
+import { markTutorialSeen, shouldPlayTutorial } from "../../../core/navigation/tutorialProgressStorage";
 import type { PlayerFacing } from "../../../core/player/playerFacing";
+import {
+  applyPlayerTexture,
+  choosePlayerFacing,
+  getPlayerTexture,
+  preloadPlayerTextures,
+  settlePlayerTurn,
+  startPlayerBlink,
+} from "../../../core/player/playerSprite";
+import { preloadCoachAssets } from "../../../core/visual/coachGuide";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import { generatePlayerTexture } from "../../../core/visual/fallbackTextures";
@@ -40,7 +50,7 @@ import {
   VILLAGE_MOVEMENT_CONFIG,
   type WorldPosition,
 } from "../model/villageMovement";
-import { createVillageCollision } from "./villageCollision";
+import { createVillageCollision } from "../model/villageCollision";
 import {
   createVillageScenery,
   getVillagePlayerDepth,
@@ -102,19 +112,31 @@ function getWorldPortalEntryLabel(portal: WorldPortal) {
   return WORLD_PORTAL_ENTRY_LABELS[portal.id] ?? `${portal.label} 입장하기`;
 }
 
+function getLockedExitLabel(portal: WorldPortal, progress: WorldProgressSnapshot) {
+  const required =
+    portal.availability.kind === "world-star-total"
+      ? portal.availability.requiredStars
+      : 0;
+  const collected = Math.min(getWorldTotalStars(progress), required);
+  return `별 ${collected} / ${required}\n별 ${required - collected}개를 더 모으면 열려요`;
+}
+
+// Midi stands 113 px tall in the village.
+const PLAYER_DISPLAY_HEIGHT = 113;
+
 export class WorldScene extends Phaser.Scene {
   private player?: Phaser.GameObjects.Container;
   private playerSprite?: Phaser.GameObjects.Image;
   private playerShadow?: Phaser.GameObjects.Ellipse;
   private sceneryLayers: VillageSceneryLayer[] = [];
   private playerFacing: PlayerFacing = WORLD_MAP.defaultSpawn.facing;
+  private playerMoving = false;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys?: ControlKeys;
   private nearestBuilding?: WorldPortal;
   private prompt?: Phaser.GameObjects.Container;
   private promptText?: Phaser.GameObjects.Text;
   private tutorial?: VillageTutorial;
-  private promptShown = false;
   private touchDirection = new Phaser.Math.Vector2();
   private touchMovement?: WorldTouchDirection;
   private interactionFeedbackText?: string;
@@ -139,12 +161,8 @@ export class WorldScene extends Phaser.Scene {
         GAME_ASSETS.ui.villageEntryButton,
       );
     }
-    if (!this.textures.exists("player-front")) {
-      this.load.image("player-front", GAME_ASSETS.characters.player.front);
-      this.load.image("player-back", GAME_ASSETS.characters.player.back);
-      this.load.image("player-left", GAME_ASSETS.characters.player.left);
-      this.load.image("player-right", GAME_ASSETS.characters.player.right);
-    }
+    preloadPlayerTextures(this);
+    preloadCoachAssets(this);
   }
 
   create(data?: unknown) {
@@ -182,6 +200,7 @@ export class WorldScene extends Phaser.Scene {
       ? WORLD_MAP.defaultSpawn
       : requestedSpawn;
     this.playerFacing = spawn.facing;
+    this.playerMoving = false;
     this.lastSafePosition = spawn.position;
     resetVillageMovementMemory(this.movementMemory);
 
@@ -193,23 +212,42 @@ export class WorldScene extends Phaser.Scene {
       this.progress,
     );
 
-    this.add
-      .text(38, 22, "배움마을", {
+    // The place name shows briefly over the sky on entry, then fades so it
+    // never covers the buildings while playing.
+    const placeName = this.add
+      .text(WORLD_MAP.size.width / 2, 34, "배움마을", {
         ...getTextStyle("title", { color: TEXT_COLORS.onDark }),
         stroke: COLOR_HEX.ink,
         strokeThickness: 6,
       })
+      .setOrigin(0.5, 0)
       .setDepth(VILLAGE_UI_DEPTH + 1);
+    this.tweens.add({
+      targets: placeName,
+      alpha: 0,
+      delay: 1_800,
+      duration: 600,
+      ease: "Sine.easeIn",
+      onComplete: () => placeName.destroy(),
+    });
 
     this.playerShadow = this.add.ellipse(0, 38, 72, 19, COLORS.ink, 0.22);
-    const initialTextureKey = `player-${spawn.facing}`;
+    const initialTextureKey = getPlayerTexture(spawn.facing);
     const textureKey = this.textures.exists(initialTextureKey)
       ? initialTextureKey
       : "player-fallback";
-    this.playerSprite = this.add
-      .image(0, 0, textureKey)
-      .setDisplaySize(88, 113)
-      .setOrigin(0.5, 0.84);
+    this.playerSprite = this.add.image(0, 0, textureKey);
+    if (textureKey === initialTextureKey) {
+      applyPlayerTexture(this.playerSprite, textureKey, PLAYER_DISPLAY_HEIGHT);
+    } else {
+      this.playerSprite.setDisplaySize(88, PLAYER_DISPLAY_HEIGHT).setOrigin(0.5, 0.84);
+    }
+    startPlayerBlink(
+      this,
+      this.playerSprite,
+      () => !this.playerMoving && this.playerFacing === "front",
+      PLAYER_DISPLAY_HEIGHT,
+    );
     this.player = this.add.container(
       spawn.position.x,
       spawn.position.y,
@@ -227,11 +265,11 @@ export class WorldScene extends Phaser.Scene {
     this.keys = makeControlKeys(this);
     this.createInteractionPrompt();
     this.hasMoved = false;
-    this.promptShown = false;
     this.tutorial = createVillageTutorial(this, {
       mapDefinition: WORLD_MAP,
+      sceneryLayers: this.sceneryLayers,
       progress: this.progress,
-      firstVisit: !returnRequest && getWorldTotalStars(this.progress) === 0,
+      firstVisit: shouldPlayTutorial("village"),
       returnedResult: returnRequest?.result,
     });
     this.createTouchControls();
@@ -310,22 +348,29 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private setPlayerFacing(direction: Phaser.Math.Vector2) {
-    let nextFacing: PlayerFacing;
-    if (Math.abs(direction.x) > Math.abs(direction.y)) {
-      nextFacing = direction.x < 0 ? "left" : "right";
-    } else {
-      nextFacing = direction.y < 0 ? "back" : "front";
-    }
-
-    if (nextFacing === this.playerFacing) return;
+    const nextFacing = choosePlayerFacing(direction, this.playerFacing);
+    if (nextFacing === this.playerFacing && this.playerMoving) return;
+    const turned = nextFacing !== this.playerFacing;
     this.playerFacing = nextFacing;
-    const textureKey = `player-${nextFacing}`;
-    if (this.textures.exists(textureKey)) {
-      this.playerSprite
-        ?.setTexture(textureKey)
-        .setDisplaySize(88, 113)
-        .setFlipX(false);
-    }
+    this.playerMoving = true;
+    this.refreshPlayerTexture();
+    if (turned && this.playerSprite) settlePlayerTurn(this.playerSprite);
+  }
+
+  /** Standing still: left/right go back from the leaning walk to the side pose. */
+  private stopPlayer() {
+    if (!this.playerMoving) return;
+    this.playerMoving = false;
+    this.refreshPlayerTexture();
+  }
+
+  private refreshPlayerTexture() {
+    if (!this.playerSprite) return;
+    applyPlayerTexture(
+      this.playerSprite,
+      getPlayerTexture(this.playerFacing, this.playerMoving),
+      PLAYER_DISPLAY_HEIGHT,
+    );
   }
 
   private animatePlayer(isMoving: boolean) {
@@ -373,6 +418,8 @@ export class WorldScene extends Phaser.Scene {
       return;
     }
 
+    markTutorialSeen("village");
+    this.tutorial?.notifyEntered();
     this.cameras.main.fadeOut(230, 255, 245, 220);
     const destination = resolveFeatureSceneKey(
       this.nearestBuilding.destination.featureId,
@@ -475,6 +522,7 @@ export class WorldScene extends Phaser.Scene {
       }
     } else {
       resetVillageMovementMemory(this.movementMemory);
+      this.stopPlayer();
       this.animatePlayer(false);
       this.player.rotation *= 0.8;
     }
@@ -504,19 +552,18 @@ export class WorldScene extends Phaser.Scene {
         this.nearestBuilding.destination.kind ===
           "world-completion-placeholder" &&
         !this.isPortalAvailable(this.nearestBuilding);
-      if (!isLockedExit && !this.promptShown) {
-        this.promptShown = true;
-        this.tutorial?.notifyPromptShown();
-      }
+      // The graduation gate shows how many stars it needs while it is locked.
       this.prompt
-        .setVisible(!isLockedExit || hasInteractionFeedback)
+        .setVisible(true)
         .setPosition(
           this.player.x - WORLD_ENTRY_PROMPT_LAYOUT.centerX,
           this.player.y +
             WORLD_ENTRY_PROMPT_LAYOUT.centerOffsetY -
             WORLD_ENTRY_PROMPT_LAYOUT.centerY,
         );
-      const defaultPrompt = getWorldPortalEntryLabel(this.nearestBuilding);
+      const defaultPrompt = isLockedExit
+        ? getLockedExitLabel(this.nearestBuilding, this.progress)
+        : getWorldPortalEntryLabel(this.nearestBuilding);
       this.promptText.setText(
         hasInteractionFeedback
           ? (this.interactionFeedbackText ?? defaultPrompt)
@@ -525,6 +572,10 @@ export class WorldScene extends Phaser.Scene {
     } else {
       this.prompt?.setVisible(false);
     }
+    this.tutorial?.update(
+      { x: this.player.x, y: this.player.y },
+      this.prompt?.visible ? this.nearestBuilding?.id : undefined,
+    );
 
     const keyboardAction =
       (this.keys && Phaser.Input.Keyboard.JustDown(this.keys.action)) ||

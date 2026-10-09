@@ -1,13 +1,16 @@
 import Phaser from "phaser";
 import { ETHICS_DEPTH, ETHICS_TEXTURES, ethicsTextStyle } from "./ethicsReviewOffice";
-import { ETHICS_STAMP_MOTION } from "./ethicsReviewEffects";
+import { ETHICS_STAMP_IMPACT_MS, ETHICS_STAMP_MOTION } from "./ethicsReviewEffects";
 import { ETHICS_LAYOUT } from "./layout";
 
-type Facing = "front" | "left" | "right";
+type Facing = "front" | "left" | "right" | "happy" | "worried";
 const FACING_TEXTURES: Record<Facing, string> = {
   front: ETHICS_TEXTURES.midiFront,
   left: ETHICS_TEXTURES.midiLeft,
   right: ETHICS_TEXTURES.midiRight,
+  // Reaction faces after a stamp: glad on a right verdict, troubled on a wrong one.
+  happy: ETHICS_TEXTURES.midiHappy,
+  worried: ETHICS_TEXTURES.midiWorried,
 };
 
 export type EthicsReviewPlayer = ReturnType<typeof createEthicsReviewPlayer>;
@@ -16,7 +19,7 @@ export type EthicsReviewPlayer = ReturnType<typeof createEthicsReviewPlayer>;
 export function createEthicsReviewPlayer(scene: Phaser.Scene) {
   const spot = ETHICS_LAYOUT.midi;
   const shadow = scene.add.ellipse(0, 4, 118, 18, 0x315567, 0.14);
-  const sprite = scene.add.image(0, 0, FACING_TEXTURES.front).setOrigin(0.5, 0.97);
+  const sprite = scene.add.image(0, 0, FACING_TEXTURES.front).setOrigin(0.5, 0.985);
   const baseScale = spot.height / sprite.height;
   sprite.setScale(baseScale);
   const container = scene.add.container(spot.x, spot.feetY, [shadow, sprite]).setDepth(ETHICS_DEPTH.midi);
@@ -81,6 +84,10 @@ export function createEthicsReviewPlayer(scene: Phaser.Scene) {
     react: (correct: boolean) => {
       clearMotion();
       reacting = true;
+      // The face changes as the stamp lands and stays until the next visitor.
+      faceTimer = scene.time.delayedCall(ETHICS_STAMP_IMPACT_MS, () => {
+        face(correct ? "happy" : "worried");
+      });
       const { liftMs, travelMs, dropMs } = ETHICS_STAMP_MOTION;
       scene.tweens.chain({
         targets: sprite,

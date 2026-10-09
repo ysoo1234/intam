@@ -367,23 +367,6 @@ export function createWorkshopCustomer(
   };
 }
 
-export function syncWorkshopCustomerShadow(
-  customerShadow: Phaser.GameObjects.Ellipse | undefined,
-  customerArt: Phaser.GameObjects.Image | undefined,
-) {
-  if (!customerShadow || !customerArt) return;
-  customerShadow
-    .setDisplaySize(
-      Phaser.Math.Clamp(customerArt.displayWidth * 0.48, 82, 112),
-      16,
-    )
-    .setPosition(
-      customerArt.x,
-      customerArt.y + customerArt.displayHeight / 2 - 24,
-    )
-    .setVisible(customerArt.visible);
-}
-
 function getDialogueBubbleSegments(
   panel: Phaser.GameObjects.Image,
 ): DialogueBubbleSegments | undefined {
@@ -552,7 +535,8 @@ export function createWorkshopPlayer(scene: Phaser.Scene): WorkshopPlayerView {
   const playerShadow = scene.add.ellipse(0, 57, 80, 23, COLORS.ink, 0.17);
   const playerSprite = scene.add
     .image(0, 0, "player-front")
-    .setDisplaySize(110, 125);
+    // One uniform scale for every facing (frames are 2x, 226 px tall).
+    .setScale(125 / 226);
   const player = scene.add
     .container(845, 500, [playerShadow, playerSprite])
     .setDepth(30);

@@ -1,20 +1,29 @@
 import Phaser from "phaser";
 import {
-  getWorldExitState,
-  getWorldTotalStars,
-  WORLD_EXIT_REQUIRED_STARS,
+  WORLD_ACTIVITY_IDS,
   type WorldActivityId,
   type WorldActivityResult,
   type WorldProgressSnapshot,
 } from "../../../core/navigation";
+import {
+  createCoachPointer, createCoachSpotlight, showCoachPraise,
+  type CoachPointer, type CoachSpotlight,
+} from "../../../core/visual/coachGuide";
 import { COLORS, FONT_FAMILY, getTextStyle, UI_RADII } from "../../../core/visual/theme";
 import { addUiSurface } from "../../../core/visual/uiPrimitives";
 import type { MapDefinition, Point } from "../model/mapDefinition";
-import { VILLAGE_UI_DEPTH } from "./villageScenery";
+import { VILLAGE_UI_DEPTH, type VillageSceneryLayer } from "./villageScenery";
 
 const TUTORIAL_DEPTH = VILLAGE_UI_DEPTH + 20;
+const POINTER_DEPTH = VILLAGE_UI_DEPTH + 5;
+/** Above the village and Midi, below every tip, arrow and button. */
+const SPOTLIGHT_DEPTH = VILLAGE_UI_DEPTH - 10;
 const TIP_POSITION = { x: 640, y: 650 } as const;
-const STAR_COUNTER_POSITION = { x: 1_124, y: 48 } as const;
+/** Tips sit at the top so they never cover Midi or a door. */
+const TOP_TIP_POSITION = { x: 640, y: 72 } as const;
+/** "좋아요!" pops up right under the tip. */
+const PRAISE_POSITION = { x: 640, y: 160 } as const;
+const RETURN_TOAST_MS = 3_500;
 
 const ACTIVITY_NAMES: Record<WorldActivityId, string> = {
   "ai-workshop": "AI 제작소",
@@ -22,14 +31,28 @@ const ACTIVITY_NAMES: Record<WorldActivityId, string> = {
   "ethics-review": "윤리 심사소",
 };
 
-type BuildingLabel = Readonly<{
-  featureId: WorldActivityId;
-  container: Phaser.GameObjects.Container;
-  arrow: Phaser.GameObjects.Graphics;
-}>;
+/**
+ * Where the arrow stands in front of each building's door, as an offset from
+ * the building image's centre in its displayed size (fractions).
+ */
+const DOOR_POINTS: Record<WorldActivityId, Point> = {
+  "ai-workshop": { x: 0.38, y: 0.23 },
+  "data-flight": { x: 0.3, y: 0.42 },
+  "ethics-review": { x: -0.04, y: 0.45 },
+};
 
-function createTipBar(scene: Phaser.Scene, text: string, tag = "TIP") {
-  const width = Math.max(520, text.length * 21 + 170);
+function createTipBar(
+  scene: Phaser.Scene,
+  text: string,
+  tag = "TIP",
+  position: Point = TIP_POSITION,
+) {
+  const body = scene.add
+    .text(45, 0, text, getTextStyle("heading", { fontSize: "21px" }))
+    .setOrigin(0.5)
+    .setResolution(3);
+  const width = Math.max(520, body.width + 170);
+  body.setX(45);
   const g = addUiSurface(
     scene,
     { x: -width / 2, y: -35, width, height: 70 },
@@ -42,52 +65,32 @@ function createTipBar(scene: Phaser.Scene, text: string, tag = "TIP") {
     .text(-width / 2 + 62, -1, tag, getTextStyle("support", { fontSize: "17px" }))
     .setOrigin(0.5)
     .setResolution(3);
-  const body = scene.add
-    .text(45, 0, text, getTextStyle("heading", { fontSize: "21px" }))
-    .setOrigin(0.5)
-    .setResolution(3);
   return scene.add
-    .container(TIP_POSITION.x, TIP_POSITION.y, [g, tagText, body])
+    .container(position.x, position.y, [g, tagText, body])
     .setDepth(TUTORIAL_DEPTH)
     .setAlpha(0)
     .setScale(0.94);
 }
 
-function createBuildingLabel(
-  scene: Phaser.Scene,
-  featureId: WorldActivityId,
-  anchor: Point,
-  stars: number,
-): BuildingLabel {
-  const name = ACTIVITY_NAMES[featureId];
+/** A name tag above the building to visit. */
+function createNameTag(scene: Phaser.Scene, text: string) {
   const label = scene.add
-    .text(0, 0, `${name}   ★ ${stars}/3`, {
-      fontFamily: FONT_FAMILY, fontSize: "18px", fontStyle: "bold", color: "#315567",
-    })
+    .text(0, 0, text, { color: "#ffffff", fontFamily: FONT_FAMILY, fontSize: "21px", fontStyle: "bold" })
     .setOrigin(0.5)
     .setResolution(3);
-  const width = label.width + 36;
-  const height = 42;
-  const plate = scene.add.graphics();
-  plate.fillStyle(COLORS.ink, 0.16).fillRoundedRect(-width / 2 + 2, -height / 2 + 4, width, height, 16);
-  plate.fillStyle(0xfffaf0, 1).fillRoundedRect(-width / 2, -height / 2, width, height, 16);
-  plate.lineStyle(2.5, 0x6fb0b2, 1).strokeRoundedRect(-width / 2, -height / 2, width, height, 16);
-  // Pointer under the chip, toward the building.
-  const arrow = scene.add.graphics();
-  arrow.fillStyle(0xfffaf0, 1).fillTriangle(-10, height / 2 - 1, 10, height / 2 - 1, 0, height / 2 + 14);
-  arrow.lineStyle(2.5, 0x6fb0b2, 1).lineBetween(-10, height / 2 - 1, 0, height / 2 + 14);
-  arrow.lineBetween(0, height / 2 + 14, 10, height / 2 - 1);
-  const container = scene.add
-    .container(anchor.x, anchor.y - 58, [plate, arrow, label])
-    .setDepth(TUTORIAL_DEPTH)
-    .setAlpha(0);
-  return { featureId, container, arrow };
+  const width = label.width + 40;
+  const g = scene.add.graphics();
+  g.fillStyle(COLORS.ink, 0.25).fillRoundedRect(-width / 2 + 2, -20, width, 44, 22);
+  g.fillStyle(0xd9544a, 1).fillRoundedRect(-width / 2, -23, width, 44, 22);
+  g.lineStyle(3, 0xffffff, 1).strokeRoundedRect(-width / 2, -23, width, 44, 22);
+  return scene.add.container(0, 0, [g, label]).setDepth(POINTER_DEPTH).setAlpha(0);
 }
 
 export type VillageTutorialOptions = Readonly<{
   mapDefinition: MapDefinition;
+  sceneryLayers: readonly VillageSceneryLayer[];
   progress: WorldProgressSnapshot;
-  /** True on the very first entry from the intro; false when returning from an activity. */
+  /** True until the player has entered a building once (saved in the browser). */
   firstVisit: boolean;
   /** Stars just brought back from an activity, if any. */
   returnedResult?: WorldActivityResult;
@@ -96,67 +99,71 @@ export type VillageTutorialOptions = Readonly<{
 export type VillageTutorial = ReturnType<typeof createVillageTutorial>;
 
 /**
- * Light-touch guidance for the village: a persistent star counter, a two-step
- * first-visit walkthrough (move, then find a building), floating building
- * labels, and a short toast when stars come back from an activity.
+ * Village guidance. First visit: "move Midi" tip, a "좋아요!" bubble once she
+ * moves, then the AI 제작소 lights up with an arrow until Midi reaches its
+ * door, where the tip explains how to enter. Later visits light up the next
+ * building that has no stars yet. Also shows the star toast after a return.
  */
 export function createVillageTutorial(scene: Phaser.Scene, options: VillageTutorialOptions) {
   const { mapDefinition, progress } = options;
-  const markers = mapDefinition.scenery.flatMap((scenery) =>
-    scenery.progressMarker?.kind === "activity-stars" ? [scenery.progressMarker] : [],
-  );
-  const prefersReducedMotion =
-    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  // --- Star counter (always visible) ---------------------------------------
-  const totalStars = getWorldTotalStars(progress);
-  const exitState = getWorldExitState(progress);
-  const counterWidth = 262;
-  const counterHeight = 64;
-  const counterPlate = scene.add.graphics();
-  counterPlate.fillStyle(COLORS.ink, 0.2).fillRoundedRect(-counterWidth / 2 + 2, -counterHeight / 2 + 4, counterWidth, counterHeight, 18);
-  counterPlate.fillStyle(0xfffaf0, 0.96).fillRoundedRect(-counterWidth / 2, -counterHeight / 2, counterWidth, counterHeight, 18);
-  counterPlate.lineStyle(2.5, 0xd9c7a2, 1).strokeRoundedRect(-counterWidth / 2, -counterHeight / 2, counterWidth, counterHeight, 18);
-  const counterStar = scene.add
-    .text(-counterWidth / 2 + 30, -1, "★", { fontFamily: FONT_FAMILY, fontSize: "30px", fontStyle: "bold", color: "#E9A735" })
-    .setOrigin(0.5)
-    .setResolution(3);
-  const counterValue = scene.add
-    .text(-counterWidth / 2 + 56, -12, `별 ${totalStars} / ${WORLD_EXIT_REQUIRED_STARS}`, {
-      fontFamily: FONT_FAMILY, fontSize: "21px", fontStyle: "bold", color: "#315567",
-    })
-    .setOrigin(0, 0.5)
-    .setResolution(3);
-  const counterNote = scene.add
-    .text(-counterWidth / 2 + 56, 13, exitState.kind === "locked" ? `${exitState.missingStars}개 더 모으면 졸업길이 열려요` : "별빛 졸업길이 열렸어요!", {
-      fontFamily: FONT_FAMILY, fontSize: "13px", fontStyle: "bold", color: exitState.kind === "locked" ? "#5e7884" : "#2f7f7b",
-    })
-    .setOrigin(0, 0.5)
-    .setResolution(3);
-  const counter = scene.add
-    .container(STAR_COUNTER_POSITION.x, STAR_COUNTER_POSITION.y, [counterPlate, counterStar, counterValue, counterNote])
-    .setDepth(TUTORIAL_DEPTH);
+  const reducedMotion =
+    typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
   // --- Return toast ---------------------------------------------------------
-  if (options.returnedResult && options.returnedResult.stars > 0) {
+  const hasReturnToast = Boolean(options.returnedResult && options.returnedResult.stars > 0);
+  if (options.returnedResult && hasReturnToast) {
     const { featureId, stars } = options.returnedResult;
     const toast = createTipBar(scene, `${ACTIVITY_NAMES[featureId]}에서 별 ${"★".repeat(stars)} 획득!  저장되었어요.`, "별");
     scene.tweens.add({ targets: toast, alpha: 1, scale: 1, duration: 260, ease: "Back.easeOut" });
-    scene.tweens.add({ targets: toast, alpha: 0, y: TIP_POSITION.y + 24, delay: 3_200, duration: 300, ease: "Sine.easeIn",
+    scene.tweens.add({ targets: toast, alpha: 0, y: TIP_POSITION.y + 24, delay: RETURN_TOAST_MS - 300, duration: 300, ease: "Sine.easeIn",
       onComplete: () => toast.destroy(true) });
-    scene.tweens.killTweensOf(counterStar);
-    scene.tweens.add({ targets: counterStar, scale: 1.5, duration: 160, yoyo: true, repeat: 2, ease: "Sine.easeOut" });
   }
 
-  // --- First-visit walkthrough ------------------------------------------------
-  let step: "move" | "find" | "done" = options.firstVisit ? "move" : "done";
-  let tip: Phaser.GameObjects.Container | undefined;
-  let labels: BuildingLabel[] = [];
-  let autoHideTimer: Phaser.Time.TimerEvent | undefined;
+  // --- Which building to light up --------------------------------------------
+  const targetId: WorldActivityId | undefined = options.firstVisit
+    ? "ai-workshop"
+    : WORLD_ACTIVITY_IDS.find((id) => progress[id] === 0);
+  const targetLayer = options.sceneryLayers.find(
+    ({ definition }) =>
+      definition.progressMarker?.kind === "activity-stars" &&
+      definition.progressMarker.featureId === targetId,
+  );
+  const targetPortal = mapDefinition.portals.find(
+    (portal) => portal.destination.kind === "feature" && portal.destination.featureId === targetId,
+  );
+  // The short name ("AI 제작소"), not the portal's full label.
+  const targetName = targetId ? ACTIVITY_NAMES[targetId] : "";
 
-  const showTip = (text: string, tag = "TIP") => {
+  let step: "move" | "praise" | "go" | "enter" | "done" = options.firstVisit ? "move" : "done";
+  // First visit only: the screen darkens around whatever Midi should do next.
+  const spotlight: CoachSpotlight | undefined = options.firstVisit
+    ? createCoachSpotlight(scene, { depth: SPOTLIGHT_DEPTH, alpha: 0.55 })
+    : undefined;
+  const spawn = mapDefinition.defaultSpawn.position;
+  // While walking to the building, Midi keeps her own pool of light; it is
+  // repainted only after she has moved a little, not every frame.
+  let litPlayer: Point | undefined;
+  const lightTargetAndPlayer = (playerPosition: Point) => {
+    if (!targetLayer || !spotlight) return;
+    const { definition } = targetLayer;
+    litPlayer = { ...playerPosition };
+    spotlight.focusAreas([
+      {
+        x: definition.position.x, y: definition.position.y + 10,
+        width: definition.displaySize.width + 70, height: definition.displaySize.height + 60, shape: "rect",
+      },
+      { x: playerPosition.x, y: playerPosition.y - 30, width: 260, height: 220 },
+    ]);
+  };
+  let tip: Phaser.GameObjects.Container | undefined;
+  let arrivedPraised = false;
+  let glow: Phaser.GameObjects.Image | undefined;
+  let pointer: CoachPointer | undefined;
+  let nameTag: Phaser.GameObjects.Container | undefined;
+
+  const showTip = (text: string, tag = "TIP", position: Point = TIP_POSITION) => {
     hideTip(true);
-    tip = createTipBar(scene, text, tag);
+    tip = createTipBar(scene, text, tag, position);
     scene.tweens.add({ targets: tip, alpha: 1, scale: 1, duration: 260, ease: "Back.easeOut" });
   };
   function hideTip(immediate = false) {
@@ -165,64 +172,129 @@ export function createVillageTutorial(scene: Phaser.Scene, options: VillageTutor
     if (!current) return;
     scene.tweens.killTweensOf(current);
     if (immediate) { current.destroy(true); return; }
-    scene.tweens.add({ targets: current, alpha: 0, y: TIP_POSITION.y + 24, duration: 300, ease: "Sine.easeIn",
+    scene.tweens.add({ targets: current, alpha: 0, y: current.y + 24, duration: 300, ease: "Sine.easeIn",
       onComplete: () => current.destroy(true) });
   }
-  const showLabels = () => {
-    labels = markers.map((marker, index) => {
-      const item = createBuildingLabel(scene, marker.featureId, marker.position, progress[marker.featureId]);
-      scene.tweens.add({ targets: item.container, alpha: 1, y: item.container.y - 6, delay: index * 120, duration: 260, ease: "Cubic.easeOut" });
-      if (!prefersReducedMotion) {
-        scene.tweens.add({ targets: item.container, y: item.container.y - 14, delay: index * 120 + 260, duration: 900,
-          yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-      }
-      return item;
+
+  const showHighlight = () => {
+    if (!targetLayer || !targetId || glow) return;
+    const { definition, image } = targetLayer;
+    // A warm, gentle shimmer over the building: enough to catch the eye
+    // without washing the picture out.
+    glow = scene.add
+      .image(definition.position.x, definition.position.y, definition.assetKey)
+      .setDisplaySize(definition.displaySize.width, definition.displaySize.height)
+      .setFlipX(definition.flipX === true)
+      .setTint(0xffe9a0)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(image.depth + 0.005)
+      .setAlpha(0);
+    scene.tweens.add({
+      targets: glow, alpha: { from: 0.05, to: reducedMotion ? 0.14 : 0.22 },
+      duration: 900, yoyo: !reducedMotion, repeat: reducedMotion ? 0 : -1, ease: "Sine.easeInOut",
     });
+    const door = DOOR_POINTS[targetId];
+    const doorX = definition.position.x + door.x * definition.displaySize.width;
+    const doorY = definition.position.y + door.y * definition.displaySize.height;
+    pointer = createCoachPointer(scene, doorX, doorY, { depth: POINTER_DEPTH, ringWidth: 120, ringHeight: 40, size: 110 });
+    nameTag = createNameTag(scene, targetName);
+    // Above the roof and its stars, so the door stays clear for the arrow.
+    nameTag.setPosition(
+      definition.position.x,
+      definition.position.y - definition.displaySize.height / 2 - 6,
+    );
+    scene.tweens.add({ targets: nameTag, alpha: 1, duration: 260 });
   };
-  const hideLabels = () => {
-    const current = labels;
-    labels = [];
-    for (const item of current) {
-      scene.tweens.killTweensOf(item.container);
-      scene.tweens.add({ targets: item.container, alpha: 0, duration: 260, ease: "Sine.easeIn",
-        onComplete: () => item.container.destroy(true) });
+  const hideHighlight = () => {
+    pointer?.destroy();
+    pointer = undefined;
+    for (const target of [glow, nameTag]) {
+      if (!target) continue;
+      scene.tweens.killTweensOf(target);
+      scene.tweens.add({ targets: target, alpha: 0, duration: 260, onComplete: () => target.destroy() });
     }
+    glow = undefined;
+    nameTag = undefined;
+  };
+  const showGoTip = () => {
+    if (step === "done" || !targetId) return;
+    step = "go";
+    litPlayer = undefined;
+    showTip(`다음은 ${targetName}로 이동해 봅시다.`, "다음", TOP_TIP_POSITION);
   };
 
-  if (step === "move") showTip("방향키 또는 화면을 터치해서 미디를 움직여 보세요!");
+  if (step === "move") {
+    // Light Midi where she starts, so the eye goes to her.
+    spotlight?.focus(spawn.x, spawn.y - 30, 150, 130);
+    showTip("방향키 또는 화면을 터치해서 미디를 움직여 보세요!", "TIP", TOP_TIP_POSITION);
+  } else if (targetId) {
+    // Returning: light up the next building once the star toast has gone.
+    scene.time.delayedCall(hasReturnToast ? RETURN_TOAST_MS : 600, () => {
+      step = "go";
+      showHighlight();
+      showGoTip();
+    });
+  }
 
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-    autoHideTimer?.remove(false);
+    step = "done";
+    spotlight?.destroy();
     hideTip(true);
-    for (const item of labels) item.container.destroy(true);
-    labels = [];
+    pointer?.destroy();
+    glow?.destroy();
+    nameTag?.destroy(true);
   });
 
   return {
-    counter,
     /** Call once the player has moved for the first time. */
     notifyMoved: () => {
       if (step !== "move") return;
-      step = "find";
-      scene.time.delayedCall(700, () => {
-        if (step !== "find") return;
-        showTip("건물 앞으로 가면 입장 버튼이 나와요. 별을 모아 졸업길을 열어요!");
-        showLabels();
-        autoHideTimer = scene.time.delayedCall(12_000, () => { if (step === "find") finish(); });
+      step = "praise";
+      spotlight?.hide();
+      showCoachPraise(scene, "좋아요!", PRAISE_POSITION.x, PRAISE_POSITION.y, {
+        depth: TUTORIAL_DEPTH + 1,
+        onDone: () => {
+          if (step !== "praise") return;
+          showHighlight();
+          showGoTip();
+        },
       });
     },
-    /** Call when the entry prompt first appears next to a building. */
-    notifyPromptShown: () => {
-      if (step === "find") finish();
+    /**
+     * Call every frame with Midi's position and the portal whose entry prompt
+     * is showing (undefined when none).
+     */
+    update: (playerPosition: Point, promptPortalId: string | undefined) => {
+      if (step === "go" && spotlight) {
+        const moved = litPlayer
+          ? Math.hypot(playerPosition.x - litPlayer.x, playerPosition.y - litPlayer.y)
+          : Number.POSITIVE_INFINITY;
+        if (moved > 28) lightTargetAndPlayer(playerPosition);
+      }
+      if (glow && targetLayer) glow.setDepth(targetLayer.image.depth + 0.005);
+      if (!targetPortal) return;
+      const atTarget = promptPortalId === targetPortal.id;
+      if (step === "go" && atTarget) {
+        step = "enter";
+        pointer?.container.setVisible(false);
+        // Midi, the door and the entry button above her.
+        spotlight?.focusRect(playerPosition.x, playerPosition.y - 60, 400, 260);
+        showTip("Space 키를 누르거나 '입장하기' 버튼을 눌러 들어가요!", "입장", TOP_TIP_POSITION);
+        if (!arrivedPraised) {
+          arrivedPraised = true;
+          showCoachPraise(scene, "좋아요!", PRAISE_POSITION.x, PRAISE_POSITION.y, { depth: TUTORIAL_DEPTH + 1 });
+        }
+      } else if (step === "enter" && !atTarget) {
+        pointer?.container.setVisible(true);
+        showGoTip();
+      }
     },
-    finish,
+    /** Call when Midi walks into a building. */
+    notifyEntered: () => {
+      step = "done";
+      spotlight?.destroy();
+      hideTip();
+      hideHighlight();
+    },
   };
-
-  function finish() {
-    if (step === "done") return;
-    step = "done";
-    autoHideTimer?.remove(false);
-    hideTip();
-    hideLabels();
-  }
 }

@@ -21,21 +21,32 @@ export const VILLAGE_MAP_LAYOUT_SIZE = {
 } as const;
 
 export const VILLAGE_BUILDING_GRID = {
-  "ai-shop": { x: 137, y: 140, width: 208, height: 341 },
-  "airport": { x: 742, y: 238, width: 210, height: 350 },
-  "ethics-office": { x: 75, y: 490, width: 207, height: 368 },
-  "ai-world-gate": { x: 455, y: -78, width: 253, height: 428 },
-  "fountain": { x: 398, y: 425, width: 167, height: 314 },
+  "ai-shop": { x: 72, y: 513, width: 259, height: 437 },
+  "airport": { x: 85, y: 28, width: 220, height: 393 },
+  "ethics-office": { x: 690, y: 538, width: 230, height: 412 },
+  "ai-world-gate": { x: 654, y: 11, width: 253, height: 429 },
+  "fountain": { x: 401, y: 230, width: 200, height: 380 },
 } as const;
+
+/**
+ * 좌우로 뒤집어 그릴 건물 id를 넣으세요. 입구, 충돌, 가림 영역도 함께
+ * 뒤집힙니다. 왼쪽 파란집(airport)과 오른쪽 노란집(ethics-office)은 문이
+ * 광장 가운데를 보도록 뒤집어 둡니다.
+ */
+export const VILLAGE_MIRRORED_BUILDINGS: ReadonlySet<string> = new Set<string>(["airport", "ethics-office"]);
+
+export function isVillageBuildingMirrored(id: string) {
+  return VILLAGE_MIRRORED_BUILDINGS.has(id);
+}
 
 /**
  * 건물 위 별 위치표입니다. 화면 전체를 0~1000으로 보고 x, y만 수정하세요.
  * x가 커지면 오른쪽, y가 커지면 아래쪽으로 이동합니다.
  */
 export const VILLAGE_STAR_GRID = {
-  "ai-shop": { x: 295, y: 170 },
-  airport: { x: 807, y: 300 },
-  "ethics-office": { x: 210, y: 540 },
+  "ai-shop": { x: 190, y: 545 },
+  airport: { x: 185, y: 45 },
+  "ethics-office": { x: 790, y: 560 },
 } as const;
 
 export type VillageBuildingId = keyof typeof VILLAGE_BUILDING_GRID;
@@ -113,8 +124,9 @@ export function offsetVillagePoint(
 ): Point {
   const { baseline, frame, scaleX, scaleY } =
     getVillageBuildingTransform(id);
+  const direction = isVillageBuildingMirrored(id) ? -1 : 1;
   return {
-    x: frame.x + (point.x - baseline.x) * scaleX,
+    x: frame.x + (point.x - baseline.x) * scaleX * direction,
     y: frame.y + (point.y - baseline.y) * scaleY,
   };
 }
@@ -155,8 +167,8 @@ export function offsetVillageBounds(
     y: bounds.maxY,
   });
   return {
-    minX: minimum.x,
-    maxX: maximum.x,
+    minX: Math.min(minimum.x, maximum.x),
+    maxX: Math.max(minimum.x, maximum.x),
     minY: minimum.y,
     maxY: maximum.y,
   };

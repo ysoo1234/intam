@@ -46,14 +46,15 @@ import { DATA_FLIGHT_START, showAirportLevelUp, showAirportNotice } from "./airp
 import { updateAirportObstacleMotion } from "./airportObjectMotion";
 import { preloadAirportAssets, releaseAirportTextures } from "./airportTextures";
 import { createAirportDataObject, createAirportEdgeObstacles, createAirportMovingObstacle } from "./airportObjects";
-import { advanceAirportBackgroundTile, createAirportBackground, createAirportPlayer } from "./airportView";
+import { advanceAirportBackgroundTile, createAirportBackground, createAirportPlayer, type AirportPlayerView } from "./airportView";
 import type { FlightObject } from "./flightObject";
 export class AirportScene extends Phaser.Scene {
   private sky?: Phaser.GameObjects.TileSprite;
   private city?: Phaser.GameObjects.TileSprite;
   private ground?: Phaser.GameObjects.TileSprite;
   private player?: Phaser.GameObjects.Container;
-  private playerArt?: Phaser.GameObjects.Image;
+  private reactPlayer?: AirportPlayerView["react"];
+  private setPlayerFever?: AirportPlayerView["setFever"];
   private playerAura?: Phaser.GameObjects.Ellipse;
   private objects: FlightObject[] = [];
   private elapsedMs = 0;
@@ -100,7 +101,7 @@ export class AirportScene extends Phaser.Scene {
     this.resetState();
     ({ sky: this.sky, city: this.city, ground: this.ground } =
       createAirportBackground(this));
-    ({ player: this.player, playerArt: this.playerArt, playerAura: this.playerAura } =
+    ({ player: this.player, playerAura: this.playerAura, react: this.reactPlayer, setFever: this.setPlayerFever } =
       createAirportPlayer(this));
     this.hud = new AirportHud(this, () => this.returnToWorld());
     this.controls = createAirportControls(
@@ -335,6 +336,7 @@ export class AirportScene extends Phaser.Scene {
     }
 
     if (!correct) {
+      this.reactPlayer?.("ouch");
       this.hearts = decrementHeart(this.hearts);
       this.invulnerableUntilMs =
         this.elapsedMs + DATA_FLIGHT_CONFIG.invulnerabilityMs;
@@ -390,6 +392,7 @@ export class AirportScene extends Phaser.Scene {
   private updateFlightObjects(deltaMs: number) {
     if (!this.player) return;
     const fever = isFeverActive(this.elapsedMs, this.feverUntilMs);
+    this.setPlayerFever?.(fever);
     const deltaSeconds = deltaMs / 1000;
     const playerX = this.player.x + 20;
     const playerY = this.player.y;
@@ -507,6 +510,7 @@ export class AirportScene extends Phaser.Scene {
   }
 
   private hitObstacle(object: FlightObject) {
+    this.reactPlayer?.("ouch");
     this.hearts = decrementHeart(this.hearts);
     this.invulnerableUntilMs =
       this.elapsedMs + DATA_FLIGHT_CONFIG.invulnerabilityMs;
@@ -521,20 +525,6 @@ export class AirportScene extends Phaser.Scene {
     object.container.destroy(true);
     this.renderHud();
 
-    if (this.playerArt) {
-      this.tweens.add({
-        targets: this.playerArt,
-        tint: 0xff786c,
-        alpha: 0.35,
-        duration: 110,
-        yoyo: true,
-        repeat: 4,
-        onComplete: () => {
-          this.playerArt?.clearTint();
-          this.playerArt?.setAlpha(1);
-        },
-      });
-    }
     if (this.hearts <= 0) this.finishGame(false);
   }
 
