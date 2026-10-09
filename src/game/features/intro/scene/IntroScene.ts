@@ -17,7 +17,7 @@ import { FONT_FAMILY, UI_MOTION } from "../../../core/visual/theme";
 // Sized like textbook page 1: title about four-fifths the width of the board frame.
 const INTRO_TITLE = { x: 640, y: 82, width: 450 } as const;
 const INTRO_BOARD = { x: 640, y: 362, width: 600, height: 450 } as const;
-// Hit area of the button plate artwork (intro-entry-button-v2, 640x133 at 2x).
+// Hit area of the button plate artwork (intro-entry-button-v3, 640x134 at 2x).
 const INTRO_BUTTON = { x: 640, y: 654, width: 300, height: 62 } as const;
 const INTRO_MASCOT = { x: 124, y: 640, width: 118, height: 152 } as const;
 const INTRO_DEPTH = {
@@ -247,7 +247,7 @@ export class IntroScene extends Phaser.Scene {
     const plate = this.add.image(0, 0, "intro-enter-button");
     plate.setScale(width / plate.width);
     const label = this.add
-      .text(-14, -3, "배움마을 입장하기", {
+      .text(-14, -1, "배움마을 입장하기", {
         color: "#ffffff",
         fontFamily: DISPLAY_FONT_FAMILY,
         fontSize: "24px",
@@ -258,8 +258,9 @@ export class IntroScene extends Phaser.Scene {
       .setResolution(3);
     const arrowX = label.x + label.width / 2 + 16;
     const arrow = this.add.graphics();
-    arrow.fillStyle(0x2b3f86, 1).fillTriangle(arrowX - 6, -10, arrowX - 6, 8, arrowX + 8, -1);
-    arrow.fillStyle(0xffffff, 1).fillTriangle(arrowX - 6, -12, arrowX - 6, 6, arrowX + 8, -3);
+    // Text and arrow share one optical centre, on the centre of the plate's top face.
+    arrow.fillStyle(0x2b3f86, 1).fillTriangle(arrowX - 6, -9, arrowX - 6, 9, arrowX + 8, 0);
+    arrow.fillStyle(0xffffff, 1).fillTriangle(arrowX - 6, -11, arrowX - 6, 7, arrowX + 8, -2);
     const pulse = this.add.container(0, 0, [plate, label, arrow]);
     if (!this.prefersReducedMotion) {
       this.tweens.add({

@@ -174,10 +174,10 @@ const ASSETS = [
     alphaQuality: 100,
   },
   // Generated entry-button plate (no text); source pre-cropped and cleaned,
-  // raw generation kept as intro-entry-button-raw-v2.png.
+  // raw generation kept as intro-entry-button-raw-v3.png.
   {
-    source: "intro/intro-entry-button-v2.png",
-    output: "intro/intro-entry-button-v2.webp",
+    source: "intro/intro-entry-button-v3.png",
+    output: "intro/intro-entry-button-v3.webp",
     width: 640,
     fit: "inside",
     quality: 94,

@@ -18,7 +18,7 @@ export const GAME_ASSETS = {
     backdrop: "/assets/intro/village-intro-background-v2.webp",
     entryButton: "/assets/intro/village-intro-entry-button-v1.webp",
     title: "/assets/intro/intro-title-ai-world-v1.webp",
-    enterButton: "/assets/intro/intro-entry-button-v2.webp",
+    enterButton: "/assets/intro/intro-entry-button-v3.webp",
   },
   world: {
     ground: "/assets/world/village-ground.webp",
