@@ -29,7 +29,7 @@ export const GAME_ASSETS = {
     airport: "/assets/world/village-airport.webp",
     ethicsOffice: "/assets/world/village-ethics-office.webp",
     // Starlight gate: an open tablet whose screen shows the portal.
-    aiWorldGate: "/assets/world/village-tablet-gate-v4.webp",
+    aiWorldGate: "/assets/world/village-tablet-gate-v5.webp",
     fountain: "/assets/world/village-fountain.webp",
   },
   characters: {

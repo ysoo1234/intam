@@ -33,7 +33,7 @@ export const VILLAGE_BUILDING_GRID = {
   "ai-shop": { x: 88, y: 550, width: 233, height: 393 },
   "airport": { x: 105, y: 63, width: 198, height: 353 },
   "ethics-office": { x: 705, y: 548, width: 201, height: 381 },
-  "ai-world-gate": { x: 660, y: 51, width: 228, height: 386 },
+  "ai-world-gate": { x: 665, y: 60, width: 225, height: 381 },
   "fountain": { x: 410, y: 275, width: 180, height: 342 },
 } as const;
 

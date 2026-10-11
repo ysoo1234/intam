@@ -55,7 +55,7 @@ const BUILDINGS = {
     back: { kind: "ellipse", centerX: 0.5, centerY: 0.79, radiusX: 0.5, radiusY: 0.21 },
   },
   "ai-world-gate": {
-    file: "public/assets/world/village-tablet-gate-v4.webp",
+    file: "public/assets/world/village-tablet-gate-v5.webp",
     // The last column holds only the clasp sticking out of the right edge.
     frontTo: 0.98,
     back: { kind: "slab", depth: 0.08 },

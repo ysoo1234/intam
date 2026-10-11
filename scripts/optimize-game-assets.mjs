@@ -306,10 +306,10 @@ const ASSETS = [
     alphaQuality: 100,
   }, { width: 251 }),
   {
-    // v4: green tablet (raw: village-tablet-gate-raw-v3.png) used as drawn;
-    // only the magenta screen is cut out, keeping the camera dot.
-    source: "world/village-tablet-gate-v4.png",
-    output: "world/village-tablet-gate-v4.webp",
+    // v5: redrawn tablet (cover and screen on one plane, thin lines, navy camera),
+    // sharpened; the white screen is cut out, keeping the camera dot.
+    source: "world/village-tablet-gate-v5.png",
+    output: "world/village-tablet-gate-v5.webp",
     width: 640,
     fit: "inside",
     quality: 94,

@@ -107,7 +107,7 @@ const RUNTIME_SPECS = new Map([
   ["world/village-ai-shop.webp", { format: "webp", width: 584, height: 555 }],
   ["world/village-airport.webp", { format: "webp", width: 538, height: 504 }],
   ["world/village-ethics-office.webp", { format: "webp", width: 502, height: 542 }],
-  ["world/village-tablet-gate-v4.webp", { format: "webp", width: 640, height: 608, hasAlpha: true }],
+  ["world/village-tablet-gate-v5.webp", { format: "webp", width: 640, height: 608, hasAlpha: true }],
   ["world/village-fountain.webp", { format: "webp", width: 422, height: 445 }],
   ["characters/midi-v2/front-idle.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
   ["characters/midi-v2/front-blink.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
