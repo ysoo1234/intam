@@ -5,6 +5,8 @@ import { createWorkshopSparkBurst } from "./workshopEffects";
 import {
   createWorkshopStarCatchView,
   drawWorkshopStarZone,
+  formatWorkshopStarCatchStatus,
+  getWorkshopProductRevealHit,
   randomizeWorkshopStarZone,
   WORKSHOP_STAR_CATCH_HALF_WIDTH, WORKSHOP_STAR_CATCH_TRACK_Y, WORKSHOP_STAR_CATCH_TUNING,
 } from "./workshopStarCatchView";
@@ -17,6 +19,7 @@ export class WorkshopStarCatch {
   private container?: Phaser.GameObjects.Container;
   private marker?: Phaser.GameObjects.Graphics;
   private statusText?: Phaser.GameObjects.Text;
+  private revealProduct?: () => void;
   private zoneCenter = 0;
   private zoneWidth = 120;
   private x = -WORKSHOP_STAR_CATCH_HALF_WIDTH;
@@ -39,7 +42,7 @@ export class WorkshopStarCatch {
     this.locked = false;
   }
 
-  start(order: WorkshopOrder, customerNumber: number) {
+  start(order: WorkshopOrder, customerNumber: number, onStop: () => void) {
     this.order = order;
     this.customerNumber = customerNumber;
     this.resetCounts();
@@ -49,10 +52,11 @@ export class WorkshopStarCatch {
     this.container?.destroy(true);
     this.zoneWidth = getStarCatchDifficulty(customerNumber).zoneWidth;
     this.zoneCenter = randomizeWorkshopStarZone();
-    const view = createWorkshopStarCatchView(this.scene, order, this.x, this.zoneCenter, this.zoneWidth);
+    const view = createWorkshopStarCatchView(this.scene, order, this.x, this.zoneCenter, this.zoneWidth, onStop);
     this.container = view.container;
     this.marker = view.marker;
     this.statusText = view.statusText;
+    this.revealProduct = view.revealProduct;
   }
 
   destroy() {
@@ -84,7 +88,7 @@ export class WorkshopStarCatch {
     const success = Math.abs(this.x - this.zoneCenter) <= this.zoneWidth / 2;
     if (success) {
       this.hits += 1;
-      this.statusText?.setText(`성공 횟수 ${this.hits} / ${order.requiredStarHits}`);
+      this.statusText?.setText(formatWorkshopStarCatchStatus(this.hits, order.requiredStarHits));
       this.setPrompt(`좋아요! 성공 ${this.hits} / ${order.requiredStarHits}`);
       scene.cameras.main.flash(120, 255, 232, 120);
       createWorkshopSparkBurst(
@@ -94,13 +98,23 @@ export class WorkshopStarCatch {
         COLORS.yellow,
       );
       scene.tweens.add({ targets: this.marker, scaleX: 1.7, scaleY: 1.12, duration: 180, yoyo: true });
+      // Two thirds done: the blueprint becomes the real product.
+      if (this.hits === getWorkshopProductRevealHit(order.requiredStarHits)) {
+        this.revealProduct?.();
+        createWorkshopSparkBurst(
+          scene,
+          WORKSHOP_STAR_CATCH_TUNING.centerX + WORKSHOP_STAR_CATCH_TUNING.productX,
+          WORKSHOP_STAR_CATCH_TUNING.centerY + WORKSHOP_STAR_CATCH_TUNING.productY,
+          COLORS.yellow,
+        );
+      }
       if (this.hits >= order.requiredStarHits) {
         scene.time.delayedCall(420, onComplete);
         return;
       }
     } else {
       this.misses += 1;
-      this.statusText?.setText(`성공 횟수 ${this.hits} / ${order.requiredStarHits}`);
+      this.statusText?.setText(formatWorkshopStarCatchStatus(this.hits, order.requiredStarHits));
       this.setPrompt("괜찮아요! 성공 횟수는 그대로예요. 다시 도전!");
       scene.cameras.main.shake(90, 0.003);
       scene.tweens.add({

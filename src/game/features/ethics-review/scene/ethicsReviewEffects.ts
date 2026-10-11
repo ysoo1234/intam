@@ -1,11 +1,13 @@
 import Phaser from "phaser";
 import type { EthicsReviewDecision } from "../model";
 import { ETHICS_DEPTH, ethicsTextStyle } from "./ethicsReviewOffice";
-import { getEthicsStampLabel, type EthicsReviewStations, type EthicsReviewFormView } from "./ethicsReviewView";
+import { ETHICS_FORM_INK, getEthicsStampLabel, type EthicsReviewStations, type EthicsReviewFormView } from "./ethicsReviewView";
 import { ETHICS_LAYOUT } from "./layout";
 
 // Midi's anticipation and the stamp sound share this impact timing.
-export const ETHICS_STAMP_MOTION = { liftMs: 110, travelMs: 200, dropMs: 75 } as const;
+export const ETHICS_STAMP_MOTION = { liftMs: 110, travelMs: 200, dropMs: 85 } as const;
+/** How high the stamp hangs over the form before it comes down. */
+const STAMP_HOVER = 64;
 export const ETHICS_STAMP_IMPACT_MS =
   ETHICS_STAMP_MOTION.liftMs + ETHICS_STAMP_MOTION.travelMs + ETHICS_STAMP_MOTION.dropMs;
 
@@ -39,32 +41,43 @@ export function playEthicsVerdictStamp(
   flight.setScale(startScale);
   const flightShadow = scene.add.ellipse(point.x, point.y - 2, 120, 16, 0x34555a, 0.2).setDepth(ETHICS_DEPTH.effects);
 
-  // Ink mark: a rounded stamp frame with the verdict, slightly rotated like a real stamp.
+  // Ink mark: a round seal over the form's printed circle, slightly rotated like a real stamp.
   const ink = scene.add.graphics();
-  ink.lineStyle(3.5, color, 0.9).strokeRoundedRect(-92, -24, 184, 48, 8);
-  ink.lineStyle(1.2, color, 0.45).strokeRoundedRect(-86, -18, 172, 36, 4);
-  const markLabel = scene.add.text(0, 0, decision.correct ? `✓  ${getEthicsStampLabel(decision.selected)}` : "다시 생각!",
-    ethicsTextStyle(25, colorHex)).setOrigin(0.5).setResolution(3);
+  // The seal lands exactly on the form's printed circle (same centre and radius).
+  const sealR = ETHICS_FORM_INK.radius;
+  ink.fillStyle(color, 0.1).fillCircle(0, 0, sealR);
+  ink.lineStyle(3, color, 0.92).strokeCircle(0, 0, sealR);
+  ink.lineStyle(1.1, color, 0.5).strokeCircle(0, 0, sealR - 5);
+  const markLabel = scene.add.text(0, 0, decision.correct ? getEthicsStampLabel(decision.selected) : "다시\n생각!",
+    { ...ethicsTextStyle(decision.correct ? 17 : 11.5, colorHex), lineSpacing: -3, align: "center" }).setOrigin(0.5).setResolution(3);
   const mark = scene.add.container(0, 0, [ink, markLabel]).setAngle(-6).setAlpha(0).setScale(1.25);
   form.inkLayer.add(mark);
 
   const stationY = station.image.y;
   const { liftMs, travelMs, dropMs } = ETHICS_STAMP_MOTION;
-  animate({ targets: station.image, alpha: 0.3, duration: liftMs, ease: "Sine.easeOut" });
+  animate({ targets: station.image, alpha: 0.55, duration: liftMs, ease: "Sine.easeOut" });
   animate({ targets: flight, y: point.y - 34, angle: decision.selected === "approve" ? -8 : 8,
     scale: startScale * 0.96, duration: liftMs, ease: "Cubic.easeOut" });
   animate({ targets: flightShadow, scaleX: 0.7, alpha: 0.1, duration: liftMs });
   animate({
-    targets: flight, x: inkX, y: inkY - 22, scale: contactScale, angle: 0,
+    targets: flight, x: inkX, y: inkY - STAMP_HOVER, scale: contactScale * 1.06, angle: 0,
     delay: liftMs, duration: travelMs, ease: "Cubic.easeOut",
   });
   animate({ targets: flightShadow, x: inkX, y: inkY + 4, scaleX: 0.55, alpha: 0.14, delay: liftMs, duration: travelMs, ease: "Cubic.easeOut" });
   animate({
-    targets: flight, y: inkY + 2, delay: liftMs + travelMs, duration: dropMs, ease: "Cubic.easeIn",
+    targets: flight, y: inkY + 2, scale: contactScale, delay: liftMs + travelMs, duration: dropMs, ease: "Cubic.easeIn",
     onComplete: () => {
       if (!alive) return;
       onImpact();
-      animate({ targets: flight, y: inkY - 70, alpha: 0, scale: contactScale * 0.9, duration: 220, delay: 60, ease: "Cubic.easeOut" });
+      // "쿵": the stamp squashes, the desk gives a small jolt, and a ring of air puffs out.
+      animate({ targets: flight, scaleY: contactScale * 0.86, scaleX: contactScale * 1.08, duration: 50, yoyo: true, ease: "Sine.easeOut" });
+      scene.cameras.main.shake(110, 0.0028);
+      const ring = scene.add.graphics();
+      ring.lineStyle(3, 0xffffff, 0.85).strokeEllipse(0, 0, 120, 40);
+      ring.setPosition(inkX, inkY + 6).setScale(0.6);
+      root.add(ring);
+      animate({ targets: ring, scale: 1.5, alpha: 0, duration: 340, ease: "Cubic.easeOut" });
+      animate({ targets: flight, y: inkY - 70, alpha: 0, scale: contactScale * 0.9, duration: 220, delay: 110, ease: "Cubic.easeOut" });
       animate({ targets: flightShadow, alpha: 0, duration: 120 });
       animate({ targets: mark, scale: 1, alpha: 1, duration: 120, ease: "Back.easeOut" });
       animate({ targets: form.container, scaleX: 1.008, scaleY: 0.982, duration: 70, yoyo: true, ease: "Sine.easeOut" });
@@ -87,11 +100,12 @@ export function playEthicsVerdictStamp(
             angle: side * 80, duration: 420, delay: i % 3 * 30, ease: "Cubic.easeOut" });
         }
         if (decision.points > 0) {
-          const points = scene.add.text(inkX + 158, inkY - 8, `+${decision.points}`, ethicsTextStyle(30, "#2c8a7c"))
+          // Rises above the form's top edge, clear of the sentence.
+          const points = scene.add.text(inkX - 10, inkY - 96, `+${decision.points}`, ethicsTextStyle(30, "#2c8a7c"))
             .setOrigin(0.5).setResolution(3).setAlpha(0).setStroke("#ffffff", 5).setScale(0.7);
           root.add(points);
-          animate({ targets: points, y: inkY - 48, alpha: 1, scale: 1, duration: 260, ease: "Back.easeOut" });
-          animate({ targets: points, y: inkY - 76, alpha: 0, delay: 620, duration: 240, ease: "Sine.easeIn" });
+          animate({ targets: points, y: inkY - 126, alpha: 1, scale: 1, duration: 260, ease: "Back.easeOut" });
+          animate({ targets: points, y: inkY - 150, alpha: 0, delay: 620, duration: 240, ease: "Sine.easeIn" });
         }
         if (options.celebrate && options.combo) {
           // Celebrate beside Midi, on the quiet wall between the desk and the lamp.

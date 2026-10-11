@@ -22,14 +22,17 @@ export function runEthicsDeliveryTests(load) {
     assert.ok(item.prompt.split("\n").every(line => line.length <= 21), item.id + " is too long for the form.");
     assert.ok(item.explanation.length <= 45, item.id + " needs brief feedback.");
   }
-  for (const category of ["permission", "privacy", "checking", "honesty", "respect"]) {
+  for (const category of ["age", "label", "privacy", "kind", "logout"]) {
     const subset = cases.filter(item => item.category === category);
     assert.equal(subset.length, 8);
     assert.equal(subset.filter(item => item.verdict === "approve").length, 4);
   }
   assert.ok(visitors.length >= 2, "Students take turns at the window.");
   assert.equal(new Set(visitors.map(item => item.id)).size, visitors.length);
-  for (const group of Object.values(lines)) {
+  // A wrong stamp gets no reply from the student: Midi explains instead.
+  assert.equal(lines.approveWrong.length, 0);
+  assert.equal(lines.rejectWrong.length, 0);
+  for (const group of [lines.approveRight, lines.rejectRight]) {
     assert.ok(group.length > 0);
     assert.ok(group.every(line => line.length <= 12), "Visitor lines must fit the small bubble.");
   }
@@ -78,7 +81,18 @@ export function runEthicsDeliveryTests(load) {
   assert.equal(current.phase, "choosing");
   assert.equal(tick(current, 150_000), current, "Practice is untimed.");
   assert.equal(next(current), current);
-  assert.deepEqual(visitor(current), visitors[0]);
+  assert.deepEqual(visitor(current), visitors[current.visitorOrder[0]], "Practice meets the first student in this shift's order.");
+  assert.deepEqual([...current.visitorOrder].sort((a, b) => a - b), visitors.map((_, index) => index),
+    "Every student is in the visiting order exactly once.");
+  {
+    const order = rules.createEthicsVisitorOrder(visitors.length, seeded(7));
+    const seen = new Set();
+    for (let caseIndex = 0; caseIndex < visitors.length - 1; caseIndex++) {
+      seen.add(rules.getEthicsVisitorForCase(visitors, caseIndex, false, order).id);
+    }
+    seen.add(rules.getEthicsVisitorForCase(visitors, 0, true, order).id);
+    assert.equal(seen.size, visitors.length, "No student comes back before everyone has visited.");
+  }
   current = act(current, "reject");
   assert.equal(current.decision.correct, false);
   assert.equal(current.decision.points, 0);
@@ -165,6 +179,42 @@ export function runEthicsDeliveryTests(load) {
   assert.equal(restarted.score, 0);
   assert.equal(restarted.processedCount, 0);
   assert.equal(restarted.remainingMs, config.durationMs);
+  // Stages: harder forms (with attachments) come in as correct stamps add up.
+  const { ETHICS_STAGE2_CASES: stage2, ETHICS_STAGE3_CASES: stage3 } = load(root + "/content/attachedCases.ts");
+  assert.equal(rules.getEthicsReviewStage(0), 1);
+  assert.equal(rules.getEthicsReviewStage(3), 1);
+  assert.equal(rules.getEthicsReviewStage(4), 2);
+  assert.equal(rules.getEthicsReviewStage(9), 3);
+  assert.equal(rules.getEthicsReviewPoints(true, 0, 2), 150);
+  assert.equal(rules.getEthicsReviewPoints(true, 0, 3), 200);
+  for (const [cases, count] of [[stage2, 1], [stage3, 2]]) {
+    assert.ok(cases.length >= 6);
+    assert.equal(new Set(cases.map(item => item.id)).size, cases.length);
+    assert.ok(cases.some(item => item.verdict === "approve") && cases.some(item => item.verdict === "reject"));
+    for (const item of cases) {
+      assert.equal(item.attachments.length, count, item.id + " has the wrong number of attachments.");
+      assert.equal(item.verdict, item.attachments.every(paper => paper.ok) ? "approve" : "reject",
+        item.id + ": approve only when every attachment backs the form.");
+      assert.equal(item.prompt.split("\n").length, 2, item.id + " needs two short lines.");
+      assert.ok(item.explanation.length <= 45, item.id + " needs brief feedback.");
+      for (const paper of item.attachments) {
+        assert.ok(paper.text.split("\n").length <= 2 && paper.text.split("\n").every(line => line.length <= 16),
+          item.id + " attachment text must fit a small card.");
+      }
+    }
+  }
+  {
+    let staged = next(act(create(deck, true, undefined, { 2: stage2, 3: stage3 }), practice.verdict));
+    const stagesSeen = [];
+    for (let i = 0; i < 12; i++) {
+      stagesSeen.push(staged.stage);
+      const item = card(staged);
+      assert.equal(Boolean(item.attachments?.length), staged.stage > 1, "Only stages 2–3 carry attachments.");
+      staged = tick(act(staged, item.verdict), config.feedbackDurationMs);
+    }
+    assert.deepEqual(stagesSeen, [1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3], "Stages rise after 4 and 9 right stamps.");
+  }
+
   const empty = create([]);
   assert.equal(empty.phase, "result");
   assert.equal(next(act(empty, "approve")).phase, "result");

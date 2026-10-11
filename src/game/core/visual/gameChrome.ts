@@ -8,6 +8,8 @@ export const GAME_CHROME_TEXTURES = {
 } as const;
 
 const DEFAULT_CHROME_DEPTH = 90;
+/** Above the start screen (depth 1 000), so 마을로 돌아가기 works there too. */
+export const VILLAGE_RETURN_BUTTON_DEPTH = 1_010;
 const DEFAULT_STATUS_HUD = {
   x: 1_018,
   y: 46,
@@ -70,7 +72,7 @@ export function createVillageReturnButton(
   const y = options.y ?? DEFAULT_RETURN_BUTTON.y;
   const width = options.width ?? DEFAULT_RETURN_BUTTON.width;
   const height = options.height ?? DEFAULT_RETURN_BUTTON.height;
-  const depth = options.depth ?? DEFAULT_CHROME_DEPTH;
+  const depth = options.depth ?? VILLAGE_RETURN_BUTTON_DEPTH;
   const background = scene.add
     .image(0, 0, GAME_CHROME_TEXTURES.villageReturnButton)
     .setDisplaySize(width, height);

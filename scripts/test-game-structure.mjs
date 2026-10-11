@@ -11,6 +11,14 @@ const introScene = await readFile(
   "src/game/features/intro/scene/IntroScene.ts",
   "utf8",
 );
+const endingScene = await readFile(
+  "src/game/features/ending/scene/EndingScene.ts",
+  "utf8",
+);
+const endingCamera = await readFile(
+  "src/game/features/ending/scene/endingCamera.ts",
+  "utf8",
+);
 const worldScene = await readFile(
   "src/game/features/world/scene/WorldScene.ts",
   "utf8",
@@ -43,6 +51,10 @@ const villageLayoutGrid = await readFile(
   "src/game/features/world/model/villageLayoutGrid.ts",
   "utf8",
 );
+const collisionMaskScript = await readFile(
+  "scripts/generate-village-collision-mask.mjs",
+  "utf8",
+);
 const villageMovement = await readFile(
   "src/game/features/world/model/villageMovement.ts",
   "utf8",
@@ -68,6 +80,7 @@ const ethicsPlayer = await readFile(
   "utf8",
 );
 const gameAssets = await readFile("src/game/assets.ts", "utf8");
+const workshopEffects = await readFile("src/game/features/ai-workshop/scene/workshopEffects.ts", "utf8");
 const ethicsVisitor = await readFile(
   "src/game/features/ethics-review/scene/ethicsReviewVisitor.ts",
   "utf8",
@@ -86,6 +99,14 @@ const ethicsEffects = await readFile(
 );
 const ethicsOverlays = await readFile(
   "src/game/features/ethics-review/scene/ethicsReviewOverlays.ts",
+  "utf8",
+);
+const ethicsTutorial = await readFile(
+  "src/game/features/ethics-review/scene/ethicsReviewTutorial.ts",
+  "utf8",
+);
+const ethicsDeliveryState = await readFile(
+  "src/game/features/ethics-review/model/deliveryState.ts",
   "utf8",
 );
 const airportScene = await readFile(
@@ -128,6 +149,22 @@ const airportFeverFormation = await readFile(
   "src/game/features/data-flight/scene/airportFeverFormation.ts",
   "utf8",
 );
+const airportQuestionView = await readFile(
+  "src/game/features/data-flight/scene/airportQuestionView.ts",
+  "utf8",
+);
+const airportTutorial = await readFile(
+  "src/game/features/data-flight/scene/airportTutorial.ts",
+  "utf8",
+);
+const airportOverlays = await readFile(
+  "src/game/features/data-flight/scene/airportOverlays.ts",
+  "utf8",
+);
+const tutorialProgress = await readFile(
+  "src/game/core/navigation/tutorialProgressStorage.ts",
+  "utf8",
+);
 const workshopScene = await readFile(
   "src/game/features/ai-workshop/scene/AiWorkshopScene.ts",
   "utf8",
@@ -167,7 +204,6 @@ const workshopCustomerVisual = await readFile(
 const workshopRandomFiles = await Promise.all(
   [
     "workshopProducts.ts",
-    "workshopCraftingView.ts",
     "workshopStarCatchView.ts",
     "workshopEffects.ts",
   ].map((file) =>
@@ -199,7 +235,7 @@ assert.match(sceneRegistry, /code: "duplicate-scene-key"/);
 const declaredSceneKeyValues = [
   ...sceneKeys.matchAll(/^\s+\w+: "([^"]+)",$/gmu),
 ].map((match) => match[1]);
-assert.equal(declaredSceneKeyValues.length, 5);
+assert.equal(declaredSceneKeyValues.length, 6);
 assert.equal(
   new Set(declaredSceneKeyValues).size,
   declaredSceneKeyValues.length,
@@ -208,7 +244,7 @@ assert.equal(
 const registeredSceneIds = [
   ...sceneRegistry.matchAll(/^\s+id: "([^"]+)",$/gmu),
 ].map((match) => match[1]);
-assert.equal(registeredSceneIds.length, 5);
+assert.equal(registeredSceneIds.length, 6);
 assert.equal(
   new Set(registeredSceneIds).size,
   registeredSceneIds.length,
@@ -217,7 +253,7 @@ assert.equal(
 const registeredSceneKeyNames = [
   ...sceneRegistry.matchAll(/^\s+sceneKey: SCENE_KEYS\.(\w+),$/gmu),
 ].map((match) => match[1]);
-assert.equal(registeredSceneKeyNames.length, 5);
+assert.equal(registeredSceneKeyNames.length, 6);
 assert.equal(
   new Set(registeredSceneKeyNames).size,
   registeredSceneKeyNames.length,
@@ -225,6 +261,22 @@ assert.equal(
 );
 assert.match(introScene, /super\(SCENE_KEYS\.intro\)/);
 assert.match(worldScene, /super\(SCENE_KEYS\.world\)/);
+assert.match(endingScene, /super\(SCENE_KEYS\.ending\)/);
+assert.match(
+  worldScene,
+  /this\.scene\.start\(SCENE_KEYS\.ending, createEndingStart\(/,
+  "The open starlight gate starts the ending with the earned stars.",
+);
+assert.match(
+  endingCamera,
+  /getTracks\(\)\.forEach\(\(track\) => track\.stop\(\)\)/,
+  "The certificate camera must switch off when it is not needed.",
+);
+assert.doesNotMatch(
+  endingCamera,
+  /fetch\(|XMLHttpRequest|localStorage|indexedDB/,
+  "Certificate photos stay on the device: no upload or storage.",
+);
 assert.match(ethicsScene, /super\(SCENE_KEYS\.ethicsReview\)/);
 assert.equal(
   sceneRegistry.match(/new EthicsReviewScene\(renderScale\)/g)?.length,
@@ -238,17 +290,17 @@ assert.match(
 );
 assert.match(
   villageMap,
-  /id: "fountain",[\s\S]*?center: offsetVillagePoint\("fountain", \{ x: 634, y: 308 \}\),[\s\S]*?offsetVillageSize\("fountain", \{[\s\S]*?width: 149, height: 128,[\s\S]*?boundary: "inclusive"/,
+  /villageBuildingShape\("fountain"/,
   "The fountain collision must follow its editable grid placement.",
 );
-assert.match(villageMap, /id: "ethics-office-footprint"/);
 assert.doesNotMatch(villageMap, /northwest-garden|northeast-garden|southwest-garden/);
 assert.doesNotMatch(villageMap, /maskWalkableOverrides/);
 assert.match(
   villageMap,
-  /id: "ethics-office-building",[\s\S]*?offsetVillagePoints\("ethics-office", \[[\s\S]*?\{ x: 295, y: 346 \}/,
-  "The Ethics Review collision must block the ground behind its dome.",
+  /villageBuildingShape\("ethics-office"\)/,
+  "The Ethics Review collision must block the ground it stands on.",
 );
+assert.match(villageMap, /curvedMovementGuides: \[\]/, "No stale slide guides: the mask and building outlines are the whole collision.");
 assert.match(villageLayoutGrid, /VILLAGE_LAYOUT_GRID_MAX = 1_000/);
 assert.match(villageLayoutGrid, /VILLAGE_STAR_GRID/);
 assert.match(villageMap, /position: getVillageStarPosition\("ai-shop"\)/);
@@ -269,12 +321,14 @@ for (const buildingId of [
 }
 assert.match(villageMap, /position: getVillageBuildingPosition\("ai-shop"\)/);
 assert.match(villageMap, /displaySize: getVillageBuildingSize\("airport"\)/);
-assert.match(villageMap, /occlusionArea: offsetVillageBounds\("ethics-office"/);
-assert.match(
-  villageMap,
-  /occlusionArea: offsetVillageBounds\("ethics-office", \{[\s\S]*?minX: 125, maxX: 410, minY: 252, maxY: 372/,
-  "The Ethics Review office must occlude only the strip above its dome.",
-);
+assert.match(villageMap, /groundLine: 0\.99/, "Scenery carries the ground line its depth sorting uses.");
+for (const buildingId of ["ai-shop", "airport", "ai-world-gate"]) {
+  assert.match(villageMap, new RegExp(`villageBuildingShape\\(${JSON.stringify(buildingId)}`), `${buildingId} blocks the ground it stands on.`);
+}
+assert.match(villageLayoutGrid, /VILLAGE_BUILDING_SHAPES\[id\]/, "Building outlines come from the measured pictures.");
+assert.match(villageMap, /maxHiddenBehindBuilding: 0\.\d+/, "How far Midi may go behind a building stays one tunable number.");
+assert.match(villageMovement, /function findSlide\(/, "Blocked steps slide around mask corners instead of wedging.");
+assert.match(collisionMaskScript, /removeSmallIslands\(/, "Bushes and flower beds in the mask are walkable.");
 for (const sceneryKey of [
   "village-ai-shop",
   "village-airport",
@@ -286,18 +340,19 @@ for (const sceneryKey of [
 }
 assert.match(worldScene, /createVillageScenery\(this, WORLD_MAP\)/);
 assert.match(worldScene, /getVillagePlayerDepth\(this\.player\.y\)/);
-assert.match(villageScenery, /isPointWithinSceneryOcclusionArea/);
+assert.match(worldScene, /isPlayerBehindBuilding\(WORLD_MAP\.collision, portal\.frontOf/, "Entry buttons never show from behind their building.");
+assert.equal(villageMap.match(/frontOf: "/g)?.length, 4, "Every village entrance names its building.");
+assert.match(villageScenery, /isPlayerBehindBuilding/, "Depth sorting compares Midi's feet with each building's ground outline.");
 assert.match(villageScenery, /updateVillageSceneryDepths/);
 assert.match(villageScenery, /AI_WORLD_PORTAL_TEXTURE/);
 assert.match(villageScenery, /createAiWorldPortal/);
 assert.match(villageScenery, /depthBackdrops/);
-assert.match(villageScenery, /GAME_ASSETS\.world\.aiWorldPortalNight/);
+assert.match(villageScenery, /GAME_ASSETS\.ending\.library/, "The gate shows the ending's library, as through water.");
 assert.doesNotMatch(villageScenery, /AI_WORLD_PORTAL_ANIMATION/);
 assert.doesNotMatch(villageScenery, /AI_WORLD_PORTAL_FRAME_COUNT/);
 assert.match(villageScenery, /const AI_WORLD_PORTAL_SCREEN = \[/);
 assert.match(villageScenery, /screen\.corners\.map/);
-assert.match(villageScenery, /duration: 42_000/);
-assert.match(villageScenery, /stars\.fillStyle\(0xffffff/);
+assert.match(villageScenery, /SWIRL\.twist/, "The library behind the gate turns in a slow, blurred whirlpool.");
 assert.match(villageScenery, /renderer\.type === Phaser\.CANVAS/);
 assert.match(villageScenery, /openingMask\.createGeometryMask\(\)/);
 assert.match(villageScenery, /target\.setMask/);
@@ -320,12 +375,13 @@ const villageTutorial = await readFile(
 );
 assert.match(
   villageTutorial,
-  /방향키 또는 화면을 터치해서 미디를 움직여 보세요!/,
-  "World onboarding must explain keyboard and touch movement without arrow clutter.",
+  /방향키를 누르거나 화면을 터치해서\\n미디를 움직일 수 있어요\./,
+  "World onboarding must explain keyboard and touch movement toward the first building.",
 );
-assert.match(villageTutorial, /"좋아요!"/, "Moving Midi for the first time must be praised over her head.");
+assert.match(villageTutorial, /여기가 배움마을이야![\s\S]*먼저 \$\{toTarget\} 가 볼까\?/, "Midi welcomes the player, then says where to go first.");
+assert.match(villageTutorial, /createVillageMidiBubble\(scene,/, "Midi says the tutorial lines in her own speech bubble.");
 assert.match(villageTutorial, /firstVisit\s*\?\s*"ai-workshop"/, "The first visit must light up the AI workshop first.");
-assert.match(villageTutorial, /Space 키를 누르거나 '입장하기' 버튼을 눌러 들어가요!/, "Near the building the tip must explain how to enter.");
+assert.match(villageTutorial, /입장하기 버튼을 터치하거나,\\nSpace 키를 눌러 건물에 들어갈 수 있어요\./, "At a door a card must explain how to enter.");
 assert.match(worldScene, /markTutorialSeen\("village"\)/, "Entering a building must finish the village tutorial.");
 const workshopTutorial = await readFile(
   "src/game/features/ai-workshop/scene/workshopTutorial.ts",
@@ -353,10 +409,9 @@ assert.match(worldTouchDirection, /Scenes\.Events\.SHUTDOWN/);
 assert.match(worldTouchDirection, /getPointerWorldPoint\(scene, pointer/);
 assert.match(worldTouchDirection, /hasTarget/);
 assert.match(worldTouchDirection, /cancel/);
-assert.match(worldTouchDirection, /nonImprovingFrames >= 14/);
-assert.match(worldScene, /shop: "AI 제작소 입장하기"/);
-assert.match(worldScene, /library: "데이터 비행장 입장하기"/);
-assert.match(worldScene, /workshop: "윤리 심사소 입장하기"/);
+assert.match(worldTouchDirection, /nonImprovingFrames >= 40/, "Skirting a bush takes a moment; a tap must not give up at once.");
+assert.match(worldScene, /WORLD_ENTRY_LABEL = "입장하기"/, "Every building's button just says 입장하기.");
+assert.match(worldScene, /createVillageNameTags\(this,/, "Each building shows its name tag when Midi reaches its door.");
 assert.match(worldScene, /"village-entry-button"/);
 assert.doesNotMatch(worldScene, /enterButton\?\.setVisible/);
 assert.doesNotMatch(worldScene, /label: "톡!"/);
@@ -375,8 +430,8 @@ assert.doesNotMatch(villageCollision, /Phaser|TextureManager|getPixel|getFrame/)
 assert.doesNotMatch(worldScene, /WORLD_COLLISION\.isBlocked\(this\.textures/);
 assert.match(
   villageMap,
-  /id: "shop",[\s\S]*?position: offsetVillagePoint\("ai-shop", \{ x: 318, y: 236 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 205, height: 115/,
-  "The AI shop must activate throughout its marked approach ellipse.",
+  /id: "shop",[\s\S]*?position: offsetVillagePoint\("ai-shop", \{ x: 366, y: 289 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 116, height: 63[\s\S]*?frontOf: "ai-shop"/,
+  "The AI shop must activate in the front yard around its door steps.",
 );
 assert.match(
   villageMap,
@@ -391,7 +446,7 @@ assert.match(
 );
 assert.match(
   villageMap,
-  /id: "library",[\s\S]*?position: offsetVillagePoint\("airport", \{ x: 950, y: 227 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 208, height: 110/,
+  /id: "library",[\s\S]*?position: offsetVillagePoint\("airport", \{ x: 895, y: 271 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 159, height: 74[\s\S]*?frontOf: "airport"/,
   "The data airport must activate throughout its marked approach ellipse.",
 );
 assert.doesNotMatch(
@@ -414,22 +469,16 @@ for (const resultView of [workshopResult, airportResult, ethicsOverlays]) {
   );
 }
 assert.match(gameResultOverlay, /GAME_ASSETS\.ui\.gameResultPanel/);
-assert.match(gameResultOverlay, /GAME_ASSETS\.ui\.gameResultRetryButton/);
-assert.match(gameResultOverlay, /GAME_ASSETS\.ui\.gameResultReturnButton/);
-assert.match(gameResultOverlay, /"마을로 돌아가기"/);
+assert.doesNotMatch(gameResultOverlay, /gameResultRetryButton|gameResultReturnButton/, "The result buttons are drawn in code.");
+assert.match(gameResultOverlay, /"마을로 돌아가기", "quiet"/, "Going back is the quiet button on the left.");
+assert.match(gameResultOverlay, /config\.retryLabel, "bold"/, "Replay is the one bold button.");
 assert.doesNotMatch(gameResultOverlay, /"🏆"/);
-assert.match(gameResultOverlay, /titleY: -169/);
-assert.match(gameResultOverlay, /starsY: -97/);
-assert.match(gameResultOverlay, /summaryY: -22/);
-assert.match(gameResultOverlay, /retryButtonY: 72/);
-assert.match(gameResultOverlay, /returnButtonY: 152/);
-assert.match(gameResultOverlay, /\.text\(0, 3, label,/);
-assert.match(gameResultOverlay, /summary: "#2a6570"/);
-assert.match(gameResultOverlay, /button: "#102d37"/);
-assert.match(gameResultOverlay, /RESULT_FONT_FAMILY =[\s\S]*?"Malgun Gothic"/);
-assert.match(gameResultOverlay, /\.setResolution\(4\)/);
-assert.match(gameResultOverlay, /fontSize: "23px"/);
-assert.match(workshopControls, /\.setDepth\(90\)/);
+assert.match(gameResultOverlay, /titleY: -172/);
+assert.match(gameResultOverlay, /buttonsY: 152/);
+assert.match(gameResultOverlay, /RESULT_FONT_FAMILY = FONT_FAMILY/, "The result card uses the same face as the start screen.");
+assert.match(gameResultOverlay, /villageActivityStarFilled/, "The result card shows the village's star art.");
+assert.doesNotMatch(workshopControls, /workshop-action-button/, "The workshop has no action button: things are tapped directly.");
+assert.match(workshopControls, /walkTo/, "A tap on a product, the workbench or the customer walks Midi there and acts.");
 assert.match(
   ethicsScene,
   /create\(\) \{\s*this\.resetSceneState\(\);/,
@@ -443,10 +492,21 @@ assert.match(ethicsOverlays, /createGameResultOverlay/);
 assert.match(ethicsOffice, /GAME_ASSETS\.ethicsReview/);
 assert.match(ethicsOffice, /source\.booth/, "The office must load the inspection booth artwork.");
 assert.match(ethicsOffice, /source\.visitors/, "Visitors come from the shared assets manifest.");
-assert.match(gameAssets, /customers\/v3-game\/\$\{id\}-worried\.webp/, "Ethics visitors reuse the workshop customer cast.");
-assert.match(ethicsOffice, /createEthicsRulebook/);
-assert.match(ethicsVisitor, /external\.addMask\(/, "Visitors must be clipped to the window opening (WebGL mask filter).");
-assert.match(ethicsVisitor, /createGeometryMask/, "Canvas fallback keeps the geometry mask.");
+assert.match(gameAssets, /ethics-review\/students\/\$\{id\}-worried\.webp/, "Ethics visitors are the 24 review students.");
+assert.match(gameAssets, /ethics-booth-front-v8\.webp/, "The booth frame and counter are drawn in front of the student.");
+assert.match(gameAssets, /inspection-form-v4\.webp/, "Forms use the art with the printed stamp circle.");
+assert.match(workshopScene, /playWorkshopProductReveal\(this, order\.products\[0\]/, "A finished product is shown off before Midi carries it.");
+assert.doesNotMatch(ethicsOffice, /createEthicsRulebook/, "The rule panel is gone: the office shows only the form and the two stamps.");
+assert.doesNotMatch(ethicsView, /applicant|topicLabel/, "The form carries only the case sentence.");
+assert.match(ethicsScene, /shouldPlayTutorial\("ethics-review"\)/);
+assert.match(ethicsScene, /markTutorialSeen\("ethics-review"\)/);
+assert.match(ethicsScene, /help: \{ question: "튜토리얼을 다시 볼까요\?" \}/);
+assert.match(ethicsScene, /wasCorrect && this\.replayingPractice\) \{\s*this\.scene\.restart\(\)/, "A practice watched again from ? ends back on the start screen.");
+assert.match(ethicsScene, /createEthicsReviewTutorial\(this, this\.stations\)/);
+assert.doesNotMatch(ethicsScene, /steps:/, "The start card is plain; the practice case teaches the stamps.");
+assert.match(ethicsTutorial, /createCoachPointer\(scene, station\.button\.x/);
+assert.match(ethicsDeliveryState, /practice = true/);
+assert.doesNotMatch(ethicsVisitor, /addMask\(/, "The booth front layer hides the student below the window; no mask needed.");
 assert.match(ethicsVisitor, /Scenes\.Events\.SHUTDOWN/);
 assert.match(ethicsView, /playEthicsFormArrival/);
 assert.match(ethicsView, /playEthicsFormDeparture/);
@@ -563,12 +623,40 @@ assert.match(airportObjects, /airport-corrupted-data-cloud-top/);
 assert.match(airportObjects, /airport-corrupted-data-vortex-bottom/);
 assert.match(airportObjects, /collisionRadiusY: 118/);
 assert.match(airportScene, /Phaser\.Math\.Between\(\s*DATA_FLIGHT_CONFIG\.dataSpawnInterval\.minMs/);
-assert.match(airportScene, /\.text\(0, -172, "데이터 퀴즈"/);
-assert.match(airportScene, /fontSize: "24px"/);
-assert.match(airportScene, /fillRoundedRect\(-236, 153, 472, 20, 10\)/);
-assert.doesNotMatch(airportScene, /DATA QUIZ/);
-assert.doesNotMatch(airportScene, /revealGlow|revealMotes/);
-assert.match(airportScene, /targets: readingFill/);
+assert.match(airportQuestionView, /\.text\(0, -128, "데이터 퀴즈"/);
+assert.match(airportQuestionView, /createAirportCardPanel\(scene, 820, 380\)/, "The quiz uses the start card's cream panel.");
+assert.match(airportQuestionView, /createAirportCapsulePanel\(scene, 820, 64\)/, "The question banner uses the status-bar capsule.");
+assert.doesNotMatch(airportQuestionView, /곧 데이터 4개가/, "The tutorial now teaches what happens next.");
+assert.doesNotMatch(airportQuestionView, /DATA QUIZ/);
+assert.doesNotMatch(airportQuestionView, /revealGlow|revealMotes/);
+assert.match(airportQuestionView, /targets: readingFill/);
+assert.match(airportScene, /createAirportQuestionOverlay\(this, question, readingMs\)/);
+assert.match(airportScene, /createAirportMissionBanner\(this, active\.question\.prompt\)/);
+// First-play lesson: the start card is plain, the ? button replays, the clock waits.
+assert.match(airportOverlays, /placeName: "데이터 비행장"/);
+assert.doesNotMatch(airportOverlays, /steps:/, "The start card no longer carries tutorial cards.");
+assert.match(airportScene, /help: \{ question: "튜토리얼을 다시 볼까요\?" \}/);
+assert.match(airportScene, /if \(replaying\) \{ this\.scene\.restart\(\); return; \}/, "A tutorial watched again from ? ends back on the start screen.");
+assert.match(workshopScene, /if \(replaying\) \{\s*this\.scene\.restart\(\)/, "A tutorial watched again from ? ends back on the start screen.");
+assert.match(airportScene, /shouldPlayTutorial\("data-flight"\)/);
+assert.match(airportScene, /markTutorialSeen\("data-flight"\)/);
+assert.match(airportScene, /isGameStartOverlayOpen\(this\) \|\| isCoachCardOpen\(this\)/);
+assert.match(airportScene, /this\.tutorial\?\.notify\("collected"\)/);
+assert.match(airportScene, /this\.tutorial\?\.notify\("obstacle-passed"\)/);
+assert.match(airportScene, /this\.tutorial\.notify\("obstacle-hit"\)/);
+assert.match(airportTutorial, /createCoachCard\(scene,/);
+assert.match(airportTutorial, /showCoachPraise\(scene,/);
+assert.match(airportTutorial, /"question-missed"/);
+assert.match(airportTutorial, /OBSTACLE_TARGET = 3/, "The lesson waits until three untrustworthy pieces have gone by.");
+assert.match(airportTutorial, /obstaclesPassed \+ obstaclesInFlight >= OBSTACLE_TARGET/, "No fourth obstacle once three are on their way.");
+assert.match(airportTutorial, /resendChoices\(QUIZ_QUESTION\)/, "A wrong or missed answer sends the four answers again.");
+assert.match(airportTutorial, /keepObjects: true/, "The answer card pauses the answers where they are.");
+assert.doesNotMatch(airportTutorial, /가끔/, "The quiz is the heart of the flight, not an occasional extra.");
+assert.match(workshopResult, /recordBestScore\("ai-workshop"/, "The workshop result shows the best score so far.");
+assert.doesNotMatch(workshopCustomerVisual, /setFlipX\(hasTexture\)/, "Customer art already faces Midi; it is not mirrored.");
+assert.match(workshopCustomerVisual, /WORKSHOP_CUSTOMER_DISPLAY_SCALE = 1\.2;/);
+assert.doesNotMatch(villageTutorial, /저장되었어요/, "No star toast on return: the stars light up over the building.");
+assert.match(tutorialProgress, /"village" \| "ai-workshop" \| "data-flight"/);
 assert.match(airportObjects, /horizontalBobSpeed: bobSpeed \* 0\.55/);
 assert.match(airportScene, /updateAirportObstacleMotion\(object, this\.elapsedMs\)/);
 assert.match(airportObjectMotion, /nextHorizontalOffset - \(object\.horizontalBobOffset \?\? 0\)/);
@@ -637,47 +725,31 @@ assert.equal(
 assert.match(workshopScene, /super\(SCENE_KEYS\.aiWorkshop\)/);
 assert.match(workshopScene, /showWorkshopItemPanel\(this, this\.itemPanel/);
 assert.match(workshopView, /customerShadow/);
-assert.match(workshopView, /workshop-dialogue-bubble/);
+assert.match(workshopView, /drawWorkshopDialogueBubble/, "The speech bubble is drawn in code with a thin outline and a curved tail.");
 assert.match(workshopView, /\.image\(/);
 assert.doesNotMatch(workshopView, /\.nineslice\(/);
 assert.doesNotMatch(workshopView, /setTintMode\(Phaser\.TintModes\.FILL\)/);
-assert.match(
-  workshopCustomerVisual,
-  /WORKSHOP_CUSTOMER_TARGET_VISIBLE_HEIGHT = 523/,
-);
-assert.match(
-  workshopCustomerVisual,
-  /WORKSHOP_CUSTOMER_TARGET_OPAQUE_AREA = 70_000/,
-);
-assert.match(
-  workshopCustomerVisual,
-  /Math\.sqrt\(\s*heightScale \* Math\.max\(heightScale, perceivedAreaScale\)/,
-);
+assert.match(workshopCustomerVisual, /CUSTOMER_ART_METRICS/, "Customer art is pre-sized and centred on the feet; only head top and stance width are recorded.");
+assert.match(workshopEffects, /WORKSHOP_COIN_TEXTURE = "workshop-coin"/, "Coins use the AI coin artwork.");
+assert.match(gameAssets, /workshop-coin-v1\.webp/);
+assert.match(workshopView, /headGap: 16/, "The speech bubble keeps clear of the customer's head.");
 assert.match(workshopCustomerVisual, /CUSTOMER_SOURCE_FOOT_Y = 642/);
 assert.match(workshopCustomerVisual, /applyWorkshopCustomerVisualTransform/);
 assert.match(workshopCustomerVisual, /applyWorkshopCustomerRequestVisual/);
 assert.match(workshopScene, /applyWorkshopCustomerRequestVisual/);
 assert.match(
-  workshopRandomFiles[3],
+  workshopRandomFiles[2],
   /applyWorkshopCustomerVisualTransform/,
 );
 assert.match(workshopView, /workshop-customer-nameplate/);
 assert.match(workshopView, /syncWorkshopDialoguePanel/);
-assert.match(workshopView, /DIALOGUE_BUBBLE\.top/);
-assert.match(workshopView, /DIALOGUE_BUBBLE\.middle/);
-assert.match(workshopView, /DIALOGUE_BUBBLE\.bottomSlice/);
-assert.match(workshopView, /middleCount = lineCount - 2/);
 assert.match(workshopView, /minWidth: 292/);
 assert.match(workshopView, /width: 360/);
-assert.match(workshopView, /verticalScale: 380 \/ 420/);
-assert.match(workshopView, /dialogue-bottom-tail/);
+assert.match(workshopView, /outline: \{ width: 2\.5/);
+assert.match(workshopView, /QuadraticBezier/);
 assert.match(workshopView, /longestLineWidth/);
-assert.match(workshopView, /layoutDialogueBottomSlice/);
 assert.match(workshopView, /left: 22/);
 assert.match(workshopView, /right: 22/);
-assert.match(workshopView, /top: 20/);
-assert.match(workshopView, /bottom: 20/);
-assert.match(workshopView, /intrinsicTextTop: 12/);
 assert.match(workshopView, /plateY: 160/);
 assert.match(workshopView, /textY: 164/);
 assert.match(workshopDialogue, /balanceWorkshopDialogueLines/);
@@ -709,19 +781,17 @@ assert.doesNotMatch(workshopRandomFiles[0], /maxLines: 2/);
 assert.match(workshopRandomFiles[0], /createWorkshopCarriedIcon/);
 assert.doesNotMatch(workshopRandomFiles[0], /workshop-carried-product-card/);
 assert.doesNotMatch(workshopRandomFiles[0], /repeat: -1/);
-assert.match(workshopRandomFiles[2], /"상품 제작 중"/);
-assert.match(workshopRandomFiles[2], /workshop-crafting-panel/);
-assert.match(workshopRandomFiles[2], /WORKSHOP_STAR_CATCH_TUNING/);
-assert.match(workshopRandomFiles[2], /성공 횟수 0/);
-assert.doesNotMatch(workshopRandomFiles[2], /STAR CATCH/);
+assert.match(workshopRandomFiles[1], /상품 제작 중  ·  성공/, "The crafting title row carries the success count.");
+assert.match(workshopRandomFiles[1], /workshop-crafting-panel/);
+assert.match(workshopRandomFiles[1], /WORKSHOP_STAR_CATCH_TUNING/);
+assert.match(workshopRandomFiles[1], /"멈춤!"/, "A big 멈춤 button sits on the crafting panel.");
+assert.match(workshopRandomFiles[1], /shade[\s\S]*?\.setInteractive\(\)/, "A tap anywhere on the crafting screen stops the star.");
+assert.doesNotMatch(workshopRandomFiles[1], /STAR CATCH/);
 assert.doesNotMatch(workshopControls, /createFloatingJoystick/);
 assert.match(workshopControls, /scene\.input\.on\("pointerdown"/);
 assert.match(workshopControls, /scene\.input\.on\("pointermove"/);
 assert.match(workshopControls, /scene\.input\.on\("pointerupoutside"/);
 assert.match(workshopControls, /Scenes\.Events\.SHUTDOWN/);
-assert.match(workshopControls, /image\(0, 0, "workshop-action-button"\)/);
-assert.match(workshopControls, /event\.stopPropagation\(\)/);
-assert.match(workshopControls, /UI_MOTION\.pressedScale/);
 assert.match(workshopControls, /getPointerWorldPoint\(scene, pointer/);
 assert.match(workshopControls, /updateTouchDirection/);
 assert.doesNotMatch(workshopControls, /pointer\.x > 1_090/);
@@ -741,9 +811,9 @@ assert.doesNotMatch(
   /const canMove[XY]/,
   "Workshop slope movement must not reintroduce zero-distance axis stalls.",
 );
-assert.match(workshopStatus, /actionButton\?\.setVisible\(false\)/);
+assert.match(workshopStatus, /isWorkshopPlayerAtWorkbench/);
 assert.match(workshopStatus, /findNearestWorkshopProductOrigin/);
-assert.match(workshopStatus, /"돌려놓기"/);
+assert.match(workshopStatus, /WORKSHOP_TAP_SPOTS/);
 assert.match(
   workshopStatus,
   /container\.x,\s*container\.y,\s*\) < 240/s,
@@ -761,7 +831,7 @@ const countWorkshop = (pattern) =>
 assert.equal(countWorkshop(/Phaser\.Utils\.Array\.Shuffle\(/g), 5);
 assert.equal(countWorkshop(/Phaser\.Utils\.Array\.GetRandom\(/g), 1);
 assert.equal(countWorkshop(/Phaser\.Math\.FloatBetween\(/g), 1);
-assert.equal(countWorkshop(/Phaser\.Math\.Between\(/g), 29);
+assert.equal(countWorkshop(/Phaser\.Math\.Between\(/g), 30);
 
 const orderedWorkshopSceneMarkers = [
   "Phaser.Utils.Array.Shuffle([\n      ...WORKSHOP_REQUESTS",
@@ -779,11 +849,12 @@ for (const marker of orderedWorkshopSceneMarkers) {
 console.log("AI Workshop structure checks passed.");
 
 const registeredSceneMarkers = [
-  "new IntroScene(onReady, renderScale)",
+  "new IntroScene(onReady, renderScale, WORLD_VILLAGE_PREVIEW)",
   "new WorldScene(renderScale)",
   "new AiWorkshopScene(renderScale)",
   "new AirportScene(renderScale)",
   "new EthicsReviewScene(renderScale)",
+  "new EndingScene(renderScale, WORLD_VILLAGE_PREVIEW)",
 ];
 previousIndex = -1;
 for (const marker of registeredSceneMarkers) {

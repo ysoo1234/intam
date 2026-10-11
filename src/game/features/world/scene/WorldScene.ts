@@ -9,6 +9,7 @@ import {
   getWorldExitState,
   getWorldTotalStars,
   mergeWorldActivityResult,
+  WORLD_EXIT_REQUIRED_STARS,
   readWorldProgressSnapshot,
   readWorldReturnRequest,
   resolveFeatureSceneKey,
@@ -30,9 +31,15 @@ import {
   settlePlayerTurn,
   startPlayerBlink,
 } from "../../../core/player/playerSprite";
+import { preloadMidiFaces } from "../../../core/player/midiFrames";
 import { preloadCoachAssets } from "../../../core/visual/coachGuide";
+import { drawOutlinedPill } from "../../../core/visual/outlinedButton";
+import { askYesNo } from "../../../core/visual/gameStartOverlay";
+import { resetAllGameProgress } from "../../../core/navigation/resetProgress";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
+import { createEndingStart } from "../../../core/scenes/endingStart";
+import { isVillageDoorArrival } from "../../../core/scenes/villagePreview";
 import { generatePlayerTexture } from "../../../core/visual/fallbackTextures";
 import {
   COLOR_HEX,
@@ -40,7 +47,7 @@ import {
   getTextStyle,
   TEXT_COLORS,
 } from "../../../core/visual/theme";
-import { mapRegistry } from "../model/mapRegistry";
+import { getWorldMapDefinition } from "../model/mapRegistry";
 import { isPointWithinPortalInteractionArea } from "../model/mapDefinition";
 import {
   clampVillageFrameDelta,
@@ -50,7 +57,10 @@ import {
   VILLAGE_MOVEMENT_CONFIG,
   type WorldPosition,
 } from "../model/villageMovement";
-import { createVillageCollision } from "../model/villageCollision";
+import {
+  createVillageCollision,
+  isPlayerBehindBuilding,
+} from "../model/villageCollision";
 import {
   createVillageScenery,
   getVillagePlayerDepth,
@@ -63,20 +73,13 @@ import {
   createVillageProgressPresentation,
   preloadVillageProgressPresentationAssets,
 } from "./villageProgressPresentation";
-import { createVillageEndingOverlay } from "./villageEndingOverlay";
+import { createVillageNameTags } from "./villageNameTags";
+import { VILLAGE_PLAYER_DISPLAY_HEIGHT } from "./villagePreview";
 import { createVillageTutorial, type VillageTutorial } from "./villageTutorial";
 import {
   createWorldTouchDirection,
   type WorldTouchDirection,
 } from "./worldTouchDirection";
-
-function getWorldMapDefinition() {
-  const definition = mapRegistry.get("world");
-  if (!definition) {
-    throw new Error('World map definition "world" is not registered.');
-  }
-  return definition;
-}
 
 const WORLD_MAP = getWorldMapDefinition();
 const WORLD_COLLISION = createVillageCollision(WORLD_MAP);
@@ -92,37 +95,20 @@ const WORLD_CURVED_MOVEMENT_GUIDES = [
 ];
 type WorldPortal = (typeof WORLD_MAP.portals)[number];
 
-const WORLD_PORTAL_ENTRY_LABELS: Partial<Record<WorldPortal["id"], string>> = {
-  shop: "AI 제작소 입장하기",
-  library: "데이터 비행장 입장하기",
-  workshop: "윤리 심사소 입장하기",
-};
+// The building's name now shows above its roof, so the button just says "입장하기".
+const WORLD_ENTRY_LABEL = "입장하기";
 
 const WORLD_ENTRY_PROMPT_LAYOUT = {
-  width: 220,
-  height: 56,
-  centerX: 110,
-  centerY: 28,
-  textWidth: 190,
-  fontSize: "14px",
+  /** Plain "입장하기" button (button artwork is 720 x 184). */
+  compact: { width: 150, height: 38, fontSize: "16px" },
+  /** Two-line notes (locked gate, "별이 부족합니다…") need the wider plate. */
+  wide: { width: 220, height: 56, fontSize: "14px" },
+  textInset: 30,
   centerOffsetY: -144,
 } as const;
 
-function getWorldPortalEntryLabel(portal: WorldPortal) {
-  return WORLD_PORTAL_ENTRY_LABELS[portal.id] ?? `${portal.label} 입장하기`;
-}
-
-function getLockedExitLabel(portal: WorldPortal, progress: WorldProgressSnapshot) {
-  const required =
-    portal.availability.kind === "world-star-total"
-      ? portal.availability.requiredStars
-      : 0;
-  const collected = Math.min(getWorldTotalStars(progress), required);
-  return `별 ${collected} / ${required}\n별 ${required - collected}개를 더 모으면 열려요`;
-}
-
-// Midi stands 113 px tall in the village.
-const PLAYER_DISPLAY_HEIGHT = 113;
+// Midi stands 113 px tall in the village (shared with the intro's door preview).
+const PLAYER_DISPLAY_HEIGHT = VILLAGE_PLAYER_DISPLAY_HEIGHT;
 
 export class WorldScene extends Phaser.Scene {
   private player?: Phaser.GameObjects.Container;
@@ -136,9 +122,14 @@ export class WorldScene extends Phaser.Scene {
   private nearestBuilding?: WorldPortal;
   private prompt?: Phaser.GameObjects.Container;
   private promptText?: Phaser.GameObjects.Text;
+  private promptButton?: Phaser.GameObjects.Image;
+  private promptSize?: "compact" | "wide";
+  private nameTags?: ReturnType<typeof createVillageNameTags>;
   private tutorial?: VillageTutorial;
   private touchDirection = new Phaser.Math.Vector2();
   private touchMovement?: WorldTouchDirection;
+  /** True while the "start over" question is open; Midi stays still. */
+  private resetAsking = false;
   private interactionFeedbackText?: string;
   private interactionFeedbackUntil = 0;
   private actionQueued = false;
@@ -146,7 +137,8 @@ export class WorldScene extends Phaser.Scene {
   private progress: WorldProgressSnapshot = readWorldProgressSnapshot(null);
   private lastSafePosition: WorldPosition = WORLD_MAP.defaultSpawn.position;
   private movementMemory = createVillageMovementMemory();
-  private endingOverlay?: Phaser.GameObjects.Container;
+  /** True once the open gate was entered and the ending is starting. */
+  private endingStarted = false;
 
   constructor(private readonly renderScale: number) {
     super(SCENE_KEYS.world);
@@ -162,11 +154,14 @@ export class WorldScene extends Phaser.Scene {
       );
     }
     preloadPlayerTextures(this);
+    // Textbook face frames, so Midi's mouth and eyes move while she talks.
+    preloadMidiFaces(this);
     preloadCoachAssets(this);
   }
 
   create(data?: unknown) {
     configureSceneCamera(this, this.renderScale);
+    this.endingStarted = false;
     generatePlayerTexture(this);
     const returnRequest = readWorldReturnRequest(data);
     // Live registry and the saved browser copy both count; the best stars win.
@@ -213,23 +208,26 @@ export class WorldScene extends Phaser.Scene {
     );
 
     // The place name shows briefly over the sky on entry, then fades so it
-    // never covers the buildings while playing.
-    const placeName = this.add
-      .text(WORLD_MAP.size.width / 2, 34, "배움마을", {
-        ...getTextStyle("title", { color: TEXT_COLORS.onDark }),
-        stroke: COLOR_HEX.ink,
-        strokeThickness: 6,
-      })
-      .setOrigin(0.5, 0)
-      .setDepth(VILLAGE_UI_DEPTH + 1);
-    this.tweens.add({
-      targets: placeName,
-      alpha: 0,
-      delay: 1_800,
-      duration: 600,
-      ease: "Sine.easeIn",
-      onComplete: () => placeName.destroy(),
-    });
+    // never covers the buildings while playing. (The first-visit tour shows
+    // its own "배움마을" title instead.)
+    if (!shouldPlayTutorial("village")) {
+      const placeName = this.add
+        .text(WORLD_MAP.size.width / 2, 34, "배움마을", {
+          ...getTextStyle("title", { color: TEXT_COLORS.onDark }),
+          stroke: COLOR_HEX.ink,
+          strokeThickness: 6,
+        })
+        .setOrigin(0.5, 0)
+        .setDepth(VILLAGE_UI_DEPTH + 1);
+      this.tweens.add({
+        targets: placeName,
+        alpha: 0,
+        delay: 1_800,
+        duration: 600,
+        ease: "Sine.easeIn",
+        onComplete: () => placeName.destroy(),
+      });
+    }
 
     this.playerShadow = this.add.ellipse(0, 38, 72, 19, COLORS.ink, 0.22);
     const initialTextureKey = getPlayerTexture(spawn.facing);
@@ -259,11 +257,18 @@ export class WorldScene extends Phaser.Scene {
     updateVillageSceneryDepths(
       this.sceneryLayers,
       spawn.position,
+      WORLD_MAP.collision,
     );
 
     this.cursors = this.input.keyboard?.createCursorKeys();
     this.keys = makeControlKeys(this);
     this.createInteractionPrompt();
+    this.nameTags = createVillageNameTags(this, WORLD_MAP, this.sceneryLayers, {
+      stars: getWorldTotalStars(this.progress),
+      required: WORLD_EXIT_REQUIRED_STARS,
+    });
+    this.createResetButton();
+    this.createFillStarsButton();
     this.hasMoved = false;
     this.tutorial = createVillageTutorial(this, {
       mapDefinition: WORLD_MAP,
@@ -271,41 +276,145 @@ export class WorldScene extends Phaser.Scene {
       progress: this.progress,
       firstVisit: shouldPlayTutorial("village"),
       returnedResult: returnRequest?.result,
+      playerSprite: this.playerSprite,
+      playerDisplayHeight: PLAYER_DISPLAY_HEIGHT,
     });
     this.createTouchControls();
 
-    this.cameras.main.fadeIn(350, 255, 245, 220);
+    // Straight out of the intro's door the village is already on screen exactly as
+    // drawn there, so it must not fade in again.
+    if (!isVillageDoorArrival(data)) this.cameras.main.fadeIn(350, 255, 245, 220);
+  }
+
+  /**
+   * A small "처음부터" button in the top-right corner: after a yes, every
+   * saved star and seen tutorial is wiped and the game reloads on the first
+   * screen, like a first visit (for classroom demos and replaying tutorials).
+   */
+  private createResetButton() {
+    const width = 124;
+    const height = 42;
+    const surface = drawOutlinedPill(this.add.graphics(), width, height, "cream");
+    const label = this.add
+      // ↻(시계 방향)이 되감기처럼 읽히고, ↺는 앞으로 가는 화살표처럼 보인다.
+      .text(0, -1, "↻ 처음부터", getTextStyle("support", { color: "#315567", fontSize: "16px" }))
+      .setOrigin(0.5)
+      .setResolution(3);
+    const button = this.add
+      .container(WORLD_MAP.size.width - width / 2 - 14, height / 2 + 12, [surface, label])
+      .setSize(width, height)
+      .setDepth(VILLAGE_UI_DEPTH + 30)
+      .setAlpha(0.85)
+      .setInteractive({ useHandCursor: true });
+    const stop = (
+      _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
+    ) => event.stopPropagation();
+    button.on("pointerover", () => button.setAlpha(1));
+    button.on("pointerout", () => button.setAlpha(0.85));
+    button.on("pointerdown", stop);
+    button.on("pointerup", (
+      _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
+    ) => {
+      event.stopPropagation();
+      if (this.resetAsking || this.endingStarted) return;
+      this.resetAsking = true;
+      this.touchMovement?.cancel();
+      this.stopPlayer();
+      void askYesNo(
+        this,
+        "처음부터 다시 시작할까요?\n모은 별과 튜토리얼 기록이 모두 지워져요.",
+        VILLAGE_UI_DEPTH + 60,
+      ).then((yes) => {
+        if (yes) {
+          resetAllGameProgress();
+          return;
+        }
+        this.resetAsking = false;
+      });
+    });
+  }
+
+  /**
+   * "★ 별 채우기" beside 처음부터 (for testing the ending and classroom demos):
+   * every building gets all three stars, saved, and the village redraws.
+   */
+  /**
+   * Test buttons under 처음부터: fill every star, or just seven (2·2·3),
+   * for trying the ending's two cases without playing the minigames.
+   */
+  private createFillStarsButton() {
+    const presets = [
+      {
+        label: "★ 별 채우기",
+        question: "별을 모두 채울까요?",
+        progress: { "ai-workshop": 3, "data-flight": 3, "ethics-review": 3 },
+      },
+      {
+        label: "☆ 별 덜 채우기",
+        question: "별을 7개만 채울까요?",
+        progress: { "ai-workshop": 2, "data-flight": 2, "ethics-review": 3 },
+      },
+    ] as const satisfies readonly { label: string; question: string; progress: WorldProgressSnapshot }[];
+    const width = 136;
+    const height = 42;
+    presets.forEach((preset, index) => {
+      const surface = drawOutlinedPill(this.add.graphics(), width, height, "cream");
+      const label = this.add
+        .text(0, -1, preset.label, getTextStyle("support", { color: "#315567", fontSize: "16px" }))
+        .setOrigin(0.5)
+        .setResolution(3);
+      // Stacked under 처음부터 (left of it would cover the gate's name tag).
+      const button = this.add
+        .container(
+          WORLD_MAP.size.width - 14 - width / 2,
+          height / 2 + 12 + (height + 8) * (index + 1),
+          [surface, label],
+        )
+        .setSize(width, height)
+        .setDepth(VILLAGE_UI_DEPTH + 30)
+        .setAlpha(0.85)
+        .setInteractive({ useHandCursor: true });
+      button.on("pointerover", () => button.setAlpha(1));
+      button.on("pointerout", () => button.setAlpha(0.85));
+      button.on("pointerdown", (
+        _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
+      ) => event.stopPropagation());
+      button.on("pointerup", (
+        _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
+      ) => {
+        event.stopPropagation();
+        if (this.resetAsking || this.endingStarted) return;
+        this.resetAsking = true;
+        this.touchMovement?.cancel();
+        this.stopPlayer();
+        void askYesNo(this, preset.question, VILLAGE_UI_DEPTH + 60).then((yes) => {
+          this.resetAsking = false;
+          if (!yes) return;
+          this.progress = preset.progress;
+          this.registry.set(WORLD_PROGRESS_REGISTRY_KEY, this.progress);
+          saveStoredWorldProgress(this.progress);
+          // The village tour is not replayed after the redraw.
+          markTutorialSeen("village");
+          this.scene.restart();
+        });
+      });
+    });
   }
 
   private createInteractionPrompt() {
     const button = this.add
-      .image(
-        WORLD_ENTRY_PROMPT_LAYOUT.centerX,
-        WORLD_ENTRY_PROMPT_LAYOUT.centerY,
-        "village-entry-button",
-      )
-      .setDisplaySize(
-        WORLD_ENTRY_PROMPT_LAYOUT.width,
-        WORLD_ENTRY_PROMPT_LAYOUT.height,
-      )
+      .image(0, 0, "village-entry-button")
       .setInteractive({ useHandCursor: true });
+    this.promptButton = button;
+    // Phaser reuses the scene object on restart, so the remembered size must reset.
+    this.promptSize = undefined;
     this.promptText = this.add
-      .text(
-        WORLD_ENTRY_PROMPT_LAYOUT.centerX,
-        WORLD_ENTRY_PROMPT_LAYOUT.centerY,
-        "",
-        {
-          ...getTextStyle("heading", {
-            fontSize: WORLD_ENTRY_PROMPT_LAYOUT.fontSize,
-          }),
-          align: "center",
-          wordWrap: {
-            width: WORLD_ENTRY_PROMPT_LAYOUT.textWidth,
-            useAdvancedWrap: true,
-          },
-        },
-      )
+      .text(0, 0, "", {
+        ...getTextStyle("heading", { fontSize: WORLD_ENTRY_PROMPT_LAYOUT.compact.fontSize }),
+        align: "center",
+      })
       .setOrigin(0.5);
+    this.setPromptSize("compact");
     this.prompt = this.add
       .container(0, 0, [button, this.promptText])
       .setDepth(VILLAGE_UI_DEPTH + 10)
@@ -390,11 +499,12 @@ export class WorldScene extends Phaser.Scene {
 
     if (!this.isPortalAvailable(this.nearestBuilding)) {
       const exitState = getWorldExitState(this.progress);
-      this.showInteractionFeedback(
-        exitState.kind === "locked"
-          ? `별이 부족합니다. ${exitState.missingStars}개를 더 모아 보세요.`
-          : "아직 준비 중이에요.",
-      );
+      if (exitState.kind === "locked") {
+        // Midi says it herself instead of the button changing.
+        this.tutorial?.sayGateLocked(this.nearestBuilding.id);
+        return;
+      }
+      this.showInteractionFeedback("아직 준비 중이에요.");
       this.cameras.main.shake(110, 0.003);
       return;
     }
@@ -410,11 +520,12 @@ export class WorldScene extends Phaser.Scene {
         detail,
       );
       this.touchMovement?.cancel();
-      this.endingOverlay?.destroy(true);
-      this.endingOverlay = createVillageEndingOverlay(this, () => {
-        this.endingOverlay?.destroy(true);
-        this.endingOverlay = undefined;
-      });
+      this.stopPlayer();
+      this.endingStarted = true;
+      markTutorialSeen("village");
+      // The ending starts on this same picture of the village, so no fade.
+      const midi = this.player ? { x: this.player.x, y: this.player.y } : WORLD_MAP.defaultSpawn.position;
+      this.scene.start(SCENE_KEYS.ending, createEndingStart({ progress: this.progress, midi }));
       return;
     }
 
@@ -436,6 +547,17 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** Short plate for "입장하기", the wider one for two-line notes. */
+  private setPromptSize(size: "compact" | "wide") {
+    if (size === this.promptSize) return;
+    this.promptSize = size;
+    const layout = WORLD_ENTRY_PROMPT_LAYOUT[size];
+    this.promptButton?.setDisplaySize(layout.width, layout.height);
+    this.promptText
+      ?.setFontSize(layout.fontSize)
+      .setWordWrapWidth(layout.width - WORLD_ENTRY_PROMPT_LAYOUT.textInset, true);
+  }
+
   private showInteractionFeedback(message: string) {
     this.interactionFeedbackText = message;
     this.interactionFeedbackUntil = this.time.now + 1_600;
@@ -444,7 +566,19 @@ export class WorldScene extends Phaser.Scene {
 
   update(_time: number, delta: number) {
     if (!this.player) return;
-    if (this.endingOverlay) return;
+    if (this.endingStarted || this.resetAsking) return;
+    if (this.tutorial?.isBlocking()) {
+      // A tutorial card (or Midi's "tap to go on" line) is up: Midi waits.
+      this.touchMovement?.cancel();
+      this.actionQueued = false;
+      this.stopPlayer();
+      this.animatePlayer(false);
+      this.tutorial.update(
+        { x: this.player.x, y: this.player.y },
+        this.prompt?.visible ? this.nearestBuilding?.id : undefined,
+      );
+      return;
+    }
 
     const keyboardMoving = Boolean(
       this.cursors?.left.isDown ||
@@ -531,7 +665,7 @@ export class WorldScene extends Phaser.Scene {
     updateVillageSceneryDepths(this.sceneryLayers, {
       x: this.player.x,
       y: this.player.y,
-    });
+    }, WORLD_MAP.collision);
 
     this.nearestBuilding = WORLD_MAP.portals.find((portal) => {
       switch (portal.interactionComparison) {
@@ -539,42 +673,45 @@ export class WorldScene extends Phaser.Scene {
           return isPointWithinPortalInteractionArea(portal, {
             x: this.player!.x,
             y: this.player!.y,
-          });
+          }) && (
+            !portal.frontOf ||
+            isPlayerBehindBuilding(WORLD_MAP.collision, portal.frontOf, {
+              x: this.player!.x,
+              y: this.player!.y,
+            }) !== true
+          );
       }
     });
 
-    if (this.nearestBuilding && this.prompt && this.promptText) {
+    // While Midi says the gate is still locked, its entry button stays hidden
+    // (it comes back after she leaves and returns to the door).
+    const gateLineUp = Boolean(this.tutorial?.isGateLineUp(this.nearestBuilding?.id));
+    if (this.nearestBuilding && this.prompt && this.promptText && !gateLineUp) {
       const hasInteractionFeedback = Boolean(
         this.interactionFeedbackText &&
           this.time.now < this.interactionFeedbackUntil,
       );
-      const isLockedExit =
-        this.nearestBuilding.destination.kind ===
-          "world-completion-placeholder" &&
-        !this.isPortalAvailable(this.nearestBuilding);
-      // The graduation gate shows how many stars it needs while it is locked.
       this.prompt
         .setVisible(true)
-        .setPosition(
-          this.player.x - WORLD_ENTRY_PROMPT_LAYOUT.centerX,
-          this.player.y +
-            WORLD_ENTRY_PROMPT_LAYOUT.centerOffsetY -
-            WORLD_ENTRY_PROMPT_LAYOUT.centerY,
-        );
-      const defaultPrompt = isLockedExit
-        ? getLockedExitLabel(this.nearestBuilding, this.progress)
-        : getWorldPortalEntryLabel(this.nearestBuilding);
-      this.promptText.setText(
-        hasInteractionFeedback
-          ? (this.interactionFeedbackText ?? defaultPrompt)
-          : defaultPrompt,
-      );
+        .setPosition(this.player.x, this.player.y + WORLD_ENTRY_PROMPT_LAYOUT.centerOffsetY);
+      // The gate's star count shows on the gate itself, so its button says 입장하기 too.
+      const defaultPrompt = WORLD_ENTRY_LABEL;
+      const shownPrompt = hasInteractionFeedback
+        ? (this.interactionFeedbackText ?? defaultPrompt)
+        : defaultPrompt;
+      this.setPromptSize(shownPrompt === WORLD_ENTRY_LABEL ? "compact" : "wide");
+      this.promptText.setText(shownPrompt);
     } else {
       this.prompt?.setVisible(false);
     }
+    const promptPortalId = this.prompt?.visible ? this.nearestBuilding?.id : undefined;
+    // The gate's name and star count stay up while Midi says it is locked.
+    this.nameTags?.update(gateLineUp ? this.nearestBuilding?.id : promptPortalId);
     this.tutorial?.update(
       { x: this.player.x, y: this.player.y },
-      this.prompt?.visible ? this.nearestBuilding?.id : undefined,
+      promptPortalId,
+      this.nearestBuilding?.id,
+      this.playerMoving,
     );
 
     const keyboardAction =

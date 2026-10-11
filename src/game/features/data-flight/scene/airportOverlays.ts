@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import type { GameStartOverlayConfig } from "../../../core/visual/gameStartOverlay";
 import { COLORS, FONT_FAMILY } from "../../../core/visual/theme";
+import { createAirportCardPanel } from "./airportPanels";
 
 export function showAirportNotice(
   scene: Phaser.Scene,
@@ -9,31 +10,30 @@ export function showAirportNotice(
   color: number,
 ) {
   const notice = scene.add.container(640, 330).setDepth(95).setScale(0);
-  const panel = scene.add.graphics();
-  panel.fillStyle(COLORS.paper, 0.98);
-  panel.lineStyle(8, COLORS.ink, 1);
-  panel.fillRoundedRect(-355, -96, 710, 192, 46);
-  panel.strokeRoundedRect(-355, -96, 710, 192, 46);
+  // The start-card style again: cream card, colored title, one line of explanation.
+  const panel = createAirportCardPanel(scene, 700, 250);
   const titleText = scene.add
     .text(0, -40, title, {
       color: Phaser.Display.Color.IntegerToColor(color).rgba,
       fontFamily: FONT_FAMILY,
-      fontSize: "34px",
+      fontSize: "36px",
       fontStyle: "bold",
-      stroke: "#173f43",
-      strokeThickness: 3,
+      stroke: "#ffffff",
+      strokeThickness: 6,
     })
-    .setOrigin(0.5);
+    .setOrigin(0.5)
+    .setResolution(3);
   const detailText = scene.add
-    .text(0, 34, detail, {
-      color: "#173f43",
+    .text(0, 38, detail, {
+      color: "#315567",
       fontFamily: FONT_FAMILY,
       fontSize: "21px",
       fontStyle: "bold",
       align: "center",
-      wordWrap: { width: 620 },
+      wordWrap: { width: 580 },
     })
-    .setOrigin(0.5);
+    .setOrigin(0.5)
+    .setResolution(3);
   notice.add([panel, titleText, detailText]);
   scene.tweens.add({
     targets: notice,
@@ -86,14 +86,9 @@ export function showAirportLevelUp(scene: Phaser.Scene, level: number) {
   });
 }
 
-/** Start-overlay copy and tutorial cards for the airport. */
+/** Start-overlay copy for the airport; the first flight teaches the rest. */
 export const DATA_FLIGHT_START = {
-  placeName: "데이터 비행 공항",
-  playDescription: "미디와 함께 하늘을 날며 좋은 데이터를 모아요.",
-  steps: [
-    { icon: "airport-midi", iconSize: 90, title: "위아래로 날아요", text: "미디를 움직여\n하늘을 날아요." },
-    { icon: "airport-data-doc", title: "데이터를 모아요", text: "깨끗한 데이터는 모으고\n망가진 데이터는 피해요." },
-    { icon: "airport-public-data-science-technology", title: "질문에 답해요", text: "질문이 나오면 목적에\n맞는 데이터를 골라요." },
-  ],
-  controlsHint: "↑ ↓ 키  ·  W S  ·  화면 터치",
+  placeName: "데이터 비행장",
+  playDescription: "미디와 함께 하늘을 날며\n좋은 데이터를 모아요.",
+  keyboardHint: "방향키로도 움직일 수 있어요",
 } as const satisfies GameStartOverlayConfig;

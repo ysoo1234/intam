@@ -36,6 +36,13 @@ export function createWorldTouchDirection(
   let stalledFrames = 0;
   let bestDistance = Number.POSITIVE_INFINITY;
   let nonImprovingFrames = 0;
+  // While the finger is held down the target is live (a drag), so Midi
+  // follows it like a leash: she starts once the finger is a little away
+  // and stops once it is close, with a gap between the two so she never
+  // flickers between running and standing when the finger rides on her.
+  const dragStopRadius = arrivalRadius + 10;
+  const dragStartRadius = dragStopRadius + 14;
+  let dragMoving = false;
 
   const rememberTarget = (pointer: Phaser.Input.Pointer) => {
     const point = getPointerWorldPoint(scene, pointer, pointerWorldPoint);
@@ -61,6 +68,16 @@ export function createWorldTouchDirection(
   const release = (pointer: Phaser.Input.Pointer) => {
     if (pointer.id !== pointerId) return;
     pointerId = -1;
+    // A finger lifted close to Midi was a drag that ended, not a far tap.
+    const origin = options.getOrigin();
+    if (origin && Phaser.Math.Distance.Between(origin.x, origin.y, target.x, target.y) <= dragStopRadius) {
+      hasTarget = false;
+    }
+    dragMoving = false;
+    hasPreviousOrigin = false;
+    bestDistance = Number.POSITIVE_INFINITY;
+    nonImprovingFrames = 0;
+    stalledFrames = 0;
   };
 
   const update = () => {
@@ -78,6 +95,16 @@ export function createWorldTouchDirection(
     const dx = target.x - origin.x;
     const dy = target.y - origin.y;
     const distance = Math.hypot(dx, dy);
+    if (pointerId !== -1) {
+      if (dragMoving ? distance <= dragStopRadius : distance < dragStartRadius) {
+        dragMoving = false;
+        direction.set(0, 0);
+        return;
+      }
+      dragMoving = true;
+      direction.set(dx / distance, dy / distance);
+      return;
+    }
     if (distance <= arrivalRadius) {
       hasTarget = false;
       hasPreviousOrigin = false;
@@ -90,7 +117,7 @@ export function createWorldTouchDirection(
       nonImprovingFrames = 0;
     } else {
       nonImprovingFrames += 1;
-      if (nonImprovingFrames >= 14) {
+      if (nonImprovingFrames >= 40) {
         hasTarget = false;
         hasPreviousOrigin = false;
         direction.set(0, 0);
@@ -119,6 +146,7 @@ export function createWorldTouchDirection(
 
   const cancel = () => {
     pointerId = -1;
+    dragMoving = false;
     hasTarget = false;
     hasPreviousOrigin = false;
     stalledFrames = 0;

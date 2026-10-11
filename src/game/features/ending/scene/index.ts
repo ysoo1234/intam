@@ -1,0 +1,1 @@
+export { EndingScene } from "./EndingScene";

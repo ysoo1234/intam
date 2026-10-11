@@ -1,4 +1,13 @@
-import type { AxisAlignedBounds, Point, Size } from "./mapDefinition";
+import type {
+  AxisAlignedBounds,
+  BuildingShapeDefinition,
+  Point,
+  Size,
+} from "./mapDefinition";
+import {
+  VILLAGE_BUILDING_SHAPE_COLUMNS,
+  VILLAGE_BUILDING_SHAPES,
+} from "./villageBuildingShapes";
 
 /**
  * 배움마을 건물 배치표입니다. 이 표의 x, y, width, height만 수정하세요.
@@ -21,11 +30,11 @@ export const VILLAGE_MAP_LAYOUT_SIZE = {
 } as const;
 
 export const VILLAGE_BUILDING_GRID = {
-  "ai-shop": { x: 72, y: 513, width: 259, height: 437 },
-  "airport": { x: 85, y: 28, width: 220, height: 393 },
-  "ethics-office": { x: 690, y: 538, width: 230, height: 412 },
-  "ai-world-gate": { x: 654, y: 11, width: 253, height: 429 },
-  "fountain": { x: 401, y: 230, width: 200, height: 380 },
+  "ai-shop": { x: 88, y: 550, width: 233, height: 393 },
+  "airport": { x: 105, y: 63, width: 198, height: 353 },
+  "ethics-office": { x: 705, y: 548, width: 201, height: 381 },
+  "ai-world-gate": { x: 660, y: 51, width: 228, height: 386 },
+  "fountain": { x: 410, y: 275, width: 180, height: 342 },
 } as const;
 
 /**
@@ -44,9 +53,9 @@ export function isVillageBuildingMirrored(id: string) {
  * x가 커지면 오른쪽, y가 커지면 아래쪽으로 이동합니다.
  */
 export const VILLAGE_STAR_GRID = {
-  "ai-shop": { x: 190, y: 545 },
-  airport: { x: 185, y: 45 },
-  "ethics-office": { x: 790, y: 560 },
+  "ai-shop": { x: 266, y: 585 },
+  airport: { x: 243, y: 125 },
+  "ethics-office": { x: 776, y: 589 },
 } as const;
 
 export type VillageBuildingId = keyof typeof VILLAGE_BUILDING_GRID;
@@ -171,5 +180,39 @@ export function offsetVillageBounds(
     maxX: Math.max(minimum.x, maximum.x),
     minY: minimum.y,
     maxY: maximum.y,
+  };
+}
+
+/**
+ * A building's ground outline and painted columns (measured from its picture
+ * by scripts/generate-village-building-shapes.mjs) placed where the layout
+ * grid puts the building, mirrored with it.
+ */
+export function villageBuildingShape(
+  id: VillageBuildingId,
+  options: Readonly<{ maxHiddenBehind?: number }> = {},
+): BuildingShapeDefinition {
+  const shape = VILLAGE_BUILDING_SHAPES[id];
+  const frame = getVillageBuildingFrame(id);
+  const mirrored = isVillageBuildingMirrored(id);
+  const left = frame.x - frame.width / 2;
+  const top = frame.y - frame.height / 2;
+  const toY = (fraction: number) =>
+    fraction < 0 ? null : top + fraction * frame.height;
+  const columns = (values: readonly number[]) => {
+    const placed = values.map(toY);
+    return mirrored ? placed.reverse() : placed;
+  };
+  return {
+    id,
+    footprint: shape.footprint.map(([fx, fy]) => ({
+      x: left + (mirrored ? 1 - fx : fx) * frame.width,
+      y: top + fy * frame.height,
+    })),
+    columnLeft: left,
+    columnWidth: frame.width / VILLAGE_BUILDING_SHAPE_COLUMNS,
+    columnTop: columns(shape.top),
+    columnBottom: columns(shape.bottom),
+    ...options,
   };
 }

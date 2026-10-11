@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { GAME_ASSETS } from "../../../assets";
 import { getPointerWorldPoint } from "../../../core/input/pointerCoordinates";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
+import { createVillageDoorArrival, type VillagePreview } from "../../../core/scenes/villagePreview";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import { DISPLAY_FONT_FAMILY } from "../../../core/visual/fonts";
 import { FONT_FAMILY, UI_MOTION } from "../../../core/visual/theme";
@@ -29,10 +30,10 @@ const INTRO_BOARD = { x: 640, y: 362, width: 600, height: 450 } as const;
 // Hit area of the button plate artwork (intro-entry-button-v3, 640x134 at 2x).
 const INTRO_BUTTON = { x: 640, y: 654, width: 300, height: 62 } as const;
 // Textbook Midi front frames are 259 x 320; the body ends 6 px (of 415) above the frame bottom.
-const INTRO_MASCOT = { x: 124, y: 640, width: 124, height: 153, originY: 0.985 } as const;
-const INTRO_MIDI_LINES = ["마법판에 보석을 모두 모았어!"] as const;
+const INTRO_MASCOT = { x: 124, y: 665, width: 124, height: 153, originY: 0.985 } as const;
+const INTRO_MIDI_LINES = ["보석을 모두 모았어.", "마법판을 확인해 보자!"] as const;
 // The greeting bubble types a little quicker than the default pace.
-const INTRO_BUBBLE_PACE = { letterMs: 58, spaceMs: 50, lineBreakMs: 280, mouthMs: 100 } as const;
+const INTRO_BUBBLE_PACE = { letterMs: 30, spaceMs: 24, lineBreakMs: 150, mouthMs: 90 } as const;
 const INTRO_BUBBLE_DELAY_MS = 1_000;
 const INTRO_DEPTH = {
   wash: 1, rays: 2, sparkles: 3, boardShadow: 4, board: 5,
@@ -48,6 +49,7 @@ const INTRO_COLORS = {
 
 export class IntroScene extends Phaser.Scene {
   private board?: Phaser.GameObjects.Image;
+  private boardShadow?: Phaser.GameObjects.Ellipse;
   private mascot?: Phaser.GameObjects.Container;
   private titleGroup?: Phaser.GameObjects.Container;
   private rays?: Phaser.GameObjects.Container;
@@ -62,6 +64,8 @@ export class IntroScene extends Phaser.Scene {
   constructor(
     private readonly onReady: () => void,
     private readonly renderScale: number,
+    /** Paints the real village for the story's door (given by the scene registry). */
+    private readonly villagePreview?: VillagePreview,
   ) {
     super(SCENE_KEYS.intro);
   }
@@ -75,6 +79,8 @@ export class IntroScene extends Phaser.Scene {
     this.load.image(INTRO_STORY_TEXTURES.frame, GAME_ASSETS.intro.storyFrame);
     // Village sprites are fetched now so the village opens without a wait.
     preloadPlayerTextures(this);
+    // The village art too: the story's door shows the real village, drawn live.
+    this.villagePreview?.preload(this);
   }
 
   create() {
@@ -191,7 +197,7 @@ export class IntroScene extends Phaser.Scene {
 
   /** The textbook gem board, unchanged, completed with all nine gems. */
   private createBoard() {
-    this.add
+    this.boardShadow = this.add
       .ellipse(INTRO_BOARD.x + 4, INTRO_BOARD.y + INTRO_BOARD.height / 2 + 4, INTRO_BOARD.width * 0.86, 30, 0x2b3f86, 0.22)
       .setDepth(INTRO_DEPTH.boardShadow);
     this.board = this.add
@@ -245,7 +251,7 @@ export class IntroScene extends Phaser.Scene {
     bubble.lineStyle(2, 0xc9c2ec, 1).lineBetween(tailX, half - 2, tailX + 2, half + 14);
     bubble.lineBetween(tailX + 2, half + 14, tailX + 18, half - 2);
     // Bubble starts just right of Midi's head so it never covers Midi.
-    const bubbleGroup = this.add.container(bubbleWidth / 2 - 40, -INTRO_MASCOT.height - half - 8, [bubble, ...lines]);
+    const bubbleGroup = this.add.container(bubbleWidth / 2 - 35, -INTRO_MASCOT.height - half - 12, [bubble, ...lines]);
     // Midi and the bubble bob together, so the bubble never drifts away from Midi.
     const body = this.add.container(0, 0, [sprite, bubbleGroup]);
     this.mascot = this.add
@@ -446,7 +452,7 @@ export class IntroScene extends Phaser.Scene {
     if (shouldPlayIntroStory() && this.mascot && this.midiSprite && this.talker) {
       this.midiSprite.disableInteractive();
       this.talker.stop();
-      for (const extra of [this.titleGroup, this.midiBubble]) {
+      for (const extra of [this.titleGroup, this.midiBubble, this.boardShadow]) {
         if (!extra) continue;
         this.tweens.killTweensOf(extra);
         this.tweens.add({ targets: extra, alpha: 0, duration: 220, ease: "Sine.easeIn" });
@@ -457,7 +463,11 @@ export class IntroScene extends Phaser.Scene {
         mascot: this.mascot,
         talker: this.talker,
         reducedMotion: this.prefersReducedMotion,
-        onFinish: () => this.scene.start(SCENE_KEYS.world),
+        mascotFrameHeight: INTRO_MASCOT.height,
+        villagePreview: this.villagePreview,
+        renderScale: this.renderScale,
+        // The door zoom ends on the village exactly as it starts, so no fade-in there.
+        onFinish: () => this.scene.start(SCENE_KEYS.world, createVillageDoorArrival()),
       });
       return;
     }

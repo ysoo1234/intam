@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import type { WorkshopOrder, WorkshopPhase } from "../model";
 import { AI_WORKSHOP_LAYOUT } from "./layout";
 import type {
   WorkshopProductChoice,
@@ -36,71 +35,45 @@ export function findNearestWorkshopProductOrigin(
     );
 }
 
-export function updateWorkshopInteractionPrompt(options: {
-  player: Phaser.GameObjects.Container | undefined;
-  actionButton: Phaser.GameObjects.Container | undefined;
-  actionText: Phaser.GameObjects.Text | undefined;
-  phase: WorkshopPhase;
-  finished: boolean;
-  currentOrder: WorkshopOrder | undefined;
-  carriedProductCount: number;
-  hangingProducts: WorkshopProductChoice[];
-  carriedOrigins: readonly WorkshopProductOrigin[];
-}) {
-  const { actionButton } = options;
-  actionButton?.setVisible(false);
-  if (!options.player || options.finished) return;
-  if (options.phase === "crafting") {
-    actionButton?.setVisible(true);
-    options.actionText?.setText("멈춤!");
-    return;
-  }
-  if (options.phase === "choosing") {
-    if (
-      findNearestWorkshopProductOrigin(options.player, options.carriedOrigins)
-    ) {
-      actionButton?.setVisible(true);
-      options.actionText?.setText("돌려놓기");
-      return;
-    }
-    if (findNearestWorkshopProduct(options.player, options.hangingProducts)) {
-      actionButton?.setVisible(true);
-      options.actionText?.setText(
-        options.currentOrder &&
-          options.carriedProductCount >= options.currentOrder.products.length
-          ? "바꾸기"
-          : "집기",
-      );
-      return;
-    }
-    const atWorkbench =
-      Phaser.Math.Distance.Between(
-        options.player.x,
-        options.player.y,
-        AI_WORKSHOP_LAYOUT.workbench.x,
-        AI_WORKSHOP_LAYOUT.workbench.interactionY,
-      ) < 150;
-    if (atWorkbench && options.carriedProductCount > 0) {
-      actionButton?.setVisible(true);
-      options.actionText?.setText("놓기");
-    }
-    return;
-  }
-  if (options.phase === "delivery") {
-    const customerInteraction = AI_WORKSHOP_LAYOUT.customerInteraction;
-    const nearCustomer =
-      Phaser.Math.Distance.Between(
-        options.player.x,
-        options.player.y,
-        customerInteraction.x,
-        customerInteraction.y,
-      ) < customerInteraction.radius;
-    if (nearCustomer) {
-      actionButton?.setVisible(true);
-      options.actionText?.setText("전달");
-    }
-  }
+/** Midi stands close enough to the workbench to use it. */
+export function isWorkshopPlayerAtWorkbench(player: Phaser.GameObjects.Container | undefined) {
+  if (!player) return false;
+  return Phaser.Math.Distance.Between(
+    player.x, player.y, AI_WORKSHOP_LAYOUT.workbench.x, AI_WORKSHOP_LAYOUT.workbench.interactionY,
+  ) < 150;
 }
+
+/** Midi stands close enough to the customer to hand something over. */
+export function isWorkshopPlayerAtCustomer(player: Phaser.GameObjects.Container | undefined) {
+  if (!player) return false;
+  const spot = AI_WORKSHOP_LAYOUT.customerInteraction;
+  return Phaser.Math.Distance.Between(player.x, player.y, spot.x, spot.y) < spot.radius;
+}
+
+/**
+ * Where taps land and where Midi walks for them (1280 x 720 coordinates).
+ * Stand points are projected onto the walkable floor by the controls.
+ */
+export const WORKSHOP_TAP_SPOTS = {
+  /** Tap area of a shelf product (around its picture and name), centred a little below the picture. */
+  productHit: { width: 118, height: 150 },
+  /** The product's tap area is shifted down this much, since its name hangs under the picture. */
+  productHitOffsetY: 24,
+  /** Tap area of a product Midi carries. */
+  carriedHit: 110,
+  /** Midi stands at the top of the floor, under the shelf, to reach a product. */
+  shelfStandY: AI_WORKSHOP_LAYOUT.playerBounds.top,
+  /** The tappable workbench: its top, where the products go. */
+  workbench: { x: AI_WORKSHOP_LAYOUT.workbench.x, y: AI_WORKSHOP_LAYOUT.workbench.interactionY + 30, width: 760, height: 150 },
+  workbenchStand: { x: AI_WORKSHOP_LAYOUT.workbench.x - 60, y: AI_WORKSHOP_LAYOUT.workbench.interactionY - 30 },
+  /** Beside the customer, on the floor. */
+  customerStand: { x: AI_WORKSHOP_LAYOUT.customerStage.x + 150, y: AI_WORKSHOP_LAYOUT.customerInteraction.y + 20 },
+  /**
+   * How close to the stand point Midi gets after a tap before she acts
+   * (the keyboard's reach from wherever she stands is looser).
+   */
+  tapReach: { product: 14, workbench: 40, customer: 40 },
+} as const;
 
 export function renderWorkshopHud(options: {
   coinText: Phaser.GameObjects.Text | undefined;

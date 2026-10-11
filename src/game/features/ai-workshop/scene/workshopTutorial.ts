@@ -3,9 +3,9 @@ import {
   createCoachCard, createCoachPointer, createCoachSpotlight,
   type CoachCard, type CoachPointer, type CoachSpotlight,
 } from "../../../core/visual/coachGuide";
-import { FONT_FAMILY } from "../../../core/visual/theme";
 import { AI_WORKSHOP_CONFIG, type WorkshopOrder } from "../model";
 import { AI_WORKSHOP_LAYOUT } from "./layout";
+import { WORKSHOP_STAR_CATCH_TUNING } from "./workshopStarCatchView";
 import type { WorkshopProductChoice } from "./workshopProducts";
 
 /**
@@ -26,13 +26,15 @@ export type WorkshopTutorialEvent =
   /** The customer has left happy. */
   | "served";
 
-export type WorkshopTutorialTarget = "product" | "workbench" | "customer";
+export type WorkshopTutorialTarget = "product" | "workbench" | "customer" | "stop";
 
 /** What the tutorial reads from the scene to know where to point. */
 export type WorkshopTutorialState = Readonly<{
   order: WorkshopOrder | undefined;
   carried: readonly Readonly<{ id: string }>[];
   hanging: readonly WorkshopProductChoice[];
+  /** The crafting panel is open (the 멈춤 arrow goes when it closes). */
+  crafting?: boolean;
 }>;
 
 function getTargetPosition(target: WorkshopTutorialTarget, state: WorkshopTutorialState) {
@@ -45,21 +47,29 @@ function getTargetPosition(target: WorkshopTutorialTarget, state: WorkshopTutori
         if (index >= 0) needed.splice(index, 1);
       });
       const choice = state.hanging.find(({ product }) => needed.some((entry) => entry.id === product.id));
-      return choice ? { x: choice.container.x, y: choice.container.y + 84 } : undefined;
+      return choice ? { x: choice.container.x, y: choice.container.y + 104 } : undefined;
     }
     case "workbench":
-      return { x: AI_WORKSHOP_LAYOUT.workbench.x, y: AI_WORKSHOP_LAYOUT.workbench.interactionY + 40 };
+      // The middle of the blue work plate on the bench.
+      return { x: AI_WORKSHOP_LAYOUT.workbench.x - 20, y: AI_WORKSHOP_LAYOUT.workbench.interactionY + 3 };
+    case "stop":
+      // The 멈춤 button on the crafting panel's bottom plate.
+      return {
+        x: WORKSHOP_STAR_CATCH_TUNING.centerX + WORKSHOP_STAR_CATCH_TUNING.stopX,
+        // A little gap under the button's bottom edge.
+        y: WORKSHOP_STAR_CATCH_TUNING.centerY + WORKSHOP_STAR_CATCH_TUNING.stopY
+          + WORKSHOP_STAR_CATCH_TUNING.stopHeight / 2 + 22,
+      };
     case "customer":
-      // The floor spot beside the customer where Midi hands it over.
-      return { x: AI_WORKSHOP_LAYOUT.customerStage.x + 190, y: AI_WORKSHOP_LAYOUT.playerBounds.bottom };
+      // At the customer's chest, pointing in from the right (the speech bubble is over the head).
+      return { x: AI_WORKSHOP_LAYOUT.customerStage.x + 72, y: AI_WORKSHOP_LAYOUT.customerStage.y - 60 };
   }
 }
 
 const TOTAL_STEPS = 5;
 const CARD_DEPTH = 1_100;
-const HINT_DEPTH = 1_040;
+const POINTER_DEPTH = 1_040;
 const SPOTLIGHT_DEPTH = 1_020;
-const HINT_X = 500;
 /** Where the spotlight falls for each card (1280 x 720 coordinates). */
 const SPOTS = {
   customer: { x: 190, y: 400, width: 380, height: 560 },
@@ -86,7 +96,7 @@ export function createWorkshopTutorial(
   let card: CoachCard | undefined;
   let pointer: CoachPointer | undefined;
   let target: WorkshopTutorialTarget | undefined;
-  let hint: Phaser.GameObjects.Container | undefined;
+  let shelfJustOpened = false;
   let introduced = false;
   let done = false;
 
@@ -100,7 +110,6 @@ export function createWorkshopTutorial(
   ) => {
     card?.dismiss();
     setTarget(undefined);
-    setHint(undefined);
     card = createCoachCard(scene, {
       ...position,
       title,
@@ -132,37 +141,18 @@ export function createWorkshopTutorial(
       return;
     }
     pointer = createCoachPointer(scene, position.x, position.y, {
-      depth: HINT_DEPTH,
+      depth: POINTER_DEPTH,
       // Products hang high on the shelf: point up at them from Midi's floor.
-      from: next === "product" ? "below" : "above",
-      ring: next !== "product",
-      ringWidth: next === "workbench" ? 220 : 150,
-      ringHeight: next === "workbench" ? 60 : 50,
+      // The customer is pointed at from the right, under the speech bubble.
+      from: next === "product" || next === "stop" ? "below" : next === "customer" ? "right" : "above",
+      // The arrow alone: the thing itself is what to tap, so no floor ring.
+      ring: false,
     });
-  }
-
-  /** A small reminder of the current task at the top of the screen. */
-  function setHint(text: string | undefined) {
-    hint?.destroy(true);
-    hint = undefined;
-    if (!text) return;
-    const label = scene.add
-      .text(0, 0, text, { color: "#ffffff", fontFamily: FONT_FAMILY, fontSize: "21px", fontStyle: "bold" })
-      .setOrigin(0.5)
-      .setResolution(3);
-    const width = label.width + 56;
-    const back = scene.add.graphics();
-    back.fillStyle(0x163f4a, 0.3).fillRoundedRect(-width / 2 + 2, -22, width, 48, 24);
-    back.fillStyle(0x2a8b7e, 1).fillRoundedRect(-width / 2, -25, width, 48, 24);
-    // Between the home button and the status bar.
-    hint = scene.add.container(HINT_X, 42, [back, label]).setDepth(HINT_DEPTH).setAlpha(0);
-    scene.tweens.add({ targets: hint, alpha: 1, y: 48, duration: 220, ease: "Cubic.easeOut" });
   }
 
   const startPicking = () => {
     spotlight.hide();
     setTarget("product");
-    setHint("손님에게 맞는 상품을 집어요");
   };
   const light = (spot: keyof typeof SPOTS) => {
     const { x, y, width, height } = SPOTS[spot];
@@ -172,7 +162,6 @@ export function createWorkshopTutorial(
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     done = true;
     pointer?.destroy();
-    hint?.destroy(true);
   });
   // The pointer at the shelf comes from below: Midi stands under the shelf.
 
@@ -185,34 +174,36 @@ export function createWorkshopTutorial(
           introduced = true;
           light("customer");
           showCard(0, "손님의 이야기를 들어요",
-            "말풍선을 읽고 손님에게 어떤 도움이\n필요한지 알아봐요.",
+            "손님에게 어떤 도움이 필요한지 파악해요.",
             () => {
-              // The shelf opens only now, after the first card.
+              // The shelf opens only now, after the first card. Opening it reports
+              // "choosing" at once; that first report must not end the shelf's
+              // spotlight (it is not a wrong product coming back).
               light("shelf");
+              shelfJustOpened = true;
               openShelf();
+              shelfJustOpened = false;
               showCard(1, "알맞은 상품을 집어요",
-                "선반에 AI 상품이 나왔어요. 손님에게 맞는\n상품 앞으로 가서 Space 키나 집기 버튼을 눌러요.",
+                "선반에 AI 상품을 만들 수 있는 설계도가 나왔어요.\n손님에게 필요한 상품을 터치해요.",
                 startPicking,
                 { x: 640, y: 470 });
             },
             { x: 700, y: 380 });
           return;
         case "choosing":
-          if (!introduced) return;
+          if (!introduced || shelfJustOpened) return;
           // A wrong product went back to the shelf: point again, no cards.
           startPicking();
-          setHint("다시 골라 봐요! 손님의 말을 잘 읽어요");
           return;
         case "picked": {
           const { order, carried } = getState();
           if (target !== "product" || !order || carried.length < order.products.length) return;
           light("workbench");
           showCard(2, "작업대로 가져가요",
-            "상품을 들고 아래 작업대 앞으로 가서\nSpace 키를 누르면 만들기 시작해요.",
+            "설계도를 들고 아래 작업대를 터치하면\n상품을 만들기 시작해요.",
             () => {
               spotlight.hide();
               setTarget("workbench");
-              setHint("작업대 앞에서 Space!");
             },
             { x: 640, y: 300 });
           return;
@@ -220,29 +211,28 @@ export function createWorkshopTutorial(
         case "crafting":
           light("craft");
           showCard(3, "타이밍을 맞춰 만들어요",
-            `움직이는 막대가 색이 칠해진 칸 안에 들어왔을 때\nSpace 키나 멈춤 버튼을 눌러요. ${getState().order?.requiredStarHits ?? AI_WORKSHOP_CONFIG.requiredStarHits}번 맞히면 완성!`,
+            `움직이는 막대가 색이 칠해진 칸 안에 들어왔을 때\n멈춤 버튼을 터치해요. ${getState().order?.requiredStarHits ?? AI_WORKSHOP_CONFIG.requiredStarHits}번 맞히면 완성!`,
             () => {
               spotlight.hide();
-              setHint("색 칸 안에서 멈춰요!");
+              // The yellow arrow rises from below to the 멈춤 button until crafting ends.
+              setTarget("stop");
             },
-            { x: 640, y: 118 });
+            { x: 640, y: 150 });
           return;
         case "delivery":
           light("customer");
           showCard(4, "손님에게 전해요",
-            "완성된 상품을 들고 손님 앞으로 가서\nSpace 키를 눌러 전해 줘요.",
+            "완성된 상품을 들고\n손님을 터치해서 전해 줘요.",
             () => {
               spotlight.hide();
               setTarget("customer");
-              setHint("손님 앞에서 Space!");
             },
             { x: 700, y: 380 });
           return;
         case "served":
           spotlight.dimAll();
-          showCard(TOTAL_STEPS, "잘했어요! 이제 진짜 영업 시작!",
-            `${AI_WORKSHOP_CONFIG.gameDurationMs / 60_000}분 동안 손님을 최대한 많이 도와줘요.\n` +
-              `상품을 ${AI_WORKSHOP_CONFIG.maxWrongDeliveries}번 잘못 고르면 영업이 끝나요.`,
+          showCard(TOTAL_STEPS, "이제 진짜 영업 시작!",
+            `${AI_WORKSHOP_CONFIG.gameDurationMs / 60_000}분 동안 손님을 많이 도와줘요.`,
             () => {
               done = true;
               spotlight.destroy();
@@ -255,6 +245,7 @@ export function createWorkshopTutorial(
     },
     /** Keeps the arrow on its target (products slide in, Midi carries them). */
     update() {
+      if (target === "stop" && !getState().crafting) setTarget(undefined);
       if (target) placePointer(target);
     },
   };

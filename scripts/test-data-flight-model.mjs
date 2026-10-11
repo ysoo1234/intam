@@ -236,16 +236,17 @@ assert.equal(
   workshopRules.isWorkshopDeliveryCorrect([{ id: "a" }], [{ id: "b" }]),
   false,
 );
-assert.deepEqual(workshopRules.getWorkshopReward(1, 0), {
-  baseReward: 100,
-  perfectBonus: 50,
-  reward: 150,
-});
-assert.deepEqual(workshopRules.getWorkshopReward(4, 1), {
-  baseReward: 130,
-  perfectBonus: 0,
-  reward: 130,
-});
+// Rewards are a lucky draw in steps of 10: 20–50, then 40–70, 60–90 …
+assert.deepEqual(workshopRules.getWorkshopReward(1, () => 0), { reward: 20 });
+assert.deepEqual(workshopRules.getWorkshopReward(3, () => 0.999), { reward: 50 });
+assert.deepEqual(workshopRules.getWorkshopReward(4, () => 0), { reward: 40 });
+assert.deepEqual(workshopRules.getWorkshopReward(6, () => 0.5), { reward: 60 });
+assert.deepEqual(workshopRules.getWorkshopReward(9, () => 0.999), { reward: 90 });
+assert.deepEqual(workshopRules.getWorkshopRewardRange(10), { min: 80, max: 110 });
+for (let i = 0; i < 200; i += 1) {
+  const { reward } = workshopRules.getWorkshopReward(2);
+  assert.ok([20, 30, 40, 50].includes(reward), `unexpected reward ${reward}`);
+}
 assert.deepEqual(workshopRules.getStarCatchDifficulty(1), {
   speed: 500,
   zoneWidth: 125,
@@ -423,8 +424,8 @@ for (const point of [
   { x: 425, y: 300 },
   { x: 545, y: 655 },
   { x: 765, y: 570 },
-  // beside the fountain basin, where Midi is drawn in front of it
-  { x: 790, y: 380 },
+  // beside the fountain basin, a body width away from its rim
+  { x: 800, y: 380 },
 ]) {
   assert.equal(
     villageCollision.isBlocked(point.x, point.y),
@@ -435,27 +436,83 @@ for (const point of [
 
 // Building probes follow villageLayoutGrid.ts, so moving or resizing a
 // building there keeps these checks meaningful without editing coordinates.
-const polygonCentre = (id) => {
-  const polygon = VILLAGE_MAP.collision.polygons.find((entry) => entry.id === id);
-  assert.ok(polygon, `Village collision polygon ${id} must exist.`);
-  const sum = polygon.points.reduce(
+const villageBodyOffsetY = VILLAGE_MAP.collision.playerBody.feetOffsetY;
+const buildingFootprint = (id) => {
+  const building = VILLAGE_MAP.collision.buildings.find((entry) => entry.id === id);
+  assert.ok(building, `Village building shape ${id} must exist.`);
+  const xs = building.footprint.map(({ x }) => x);
+  const ys = building.footprint.map(({ y }) => y);
+  return {
+    building,
+    minX: Math.min(...xs),
+    maxX: Math.max(...xs),
+    minY: Math.min(...ys),
+    maxY: Math.max(...ys),
+  };
+};
+for (const [label, id] of [
+  ["AI shop body", "ai-shop"],
+  ["data airport body", "airport"],
+  ["Ethics Review body", "ethics-office"],
+  ["AI world tablet and cover", "ai-world-gate"],
+  ["fountain", "fountain"],
+]) {
+  const { building } = buildingFootprint(id);
+  const sum = building.footprint.reduce(
     (total, point) => ({ x: total.x + point.x, y: total.y + point.y }),
     { x: 0, y: 0 },
   );
-  return { x: sum.x / polygon.points.length, y: sum.y / polygon.points.length };
-};
-for (const [label, id] of [
-  ["AI shop body", "ai-shop-building"],
-  ["data airport body", "airport-building"],
-  ["Ethics Review body", "ethics-office-building"],
-  ["AI world tablet and cover", "ai-world-gate-tablet"],
-]) {
-  const point = polygonCentre(id);
+  const centre = {
+    x: sum.x / building.footprint.length,
+    y: sum.y / building.footprint.length - villageBodyOffsetY,
+  };
   assert.equal(
-    villageCollision.isBlocked(point.x, point.y),
+    villageCollision.isBlocked(centre.x, centre.y),
     true,
-    `${label} must keep the player's feet out of the building.`,
+    `${label} must keep the player's feet off its ground outline.`,
   );
+}
+
+// Only the ground under a building blocks Midi, not its whole picture: the
+// lawn behind the fountain's basin and behind the AI shop's roof is open
+// until the building hides too much of her.
+{
+  const fountain = VILLAGE_MAP.scenery.find(({ id }) => id === "fountain");
+  const fountainTop = fountain.position.y - fountain.displaySize.height / 2;
+  const fountainFoot = buildingFootprint("fountain");
+  let lowestBehind = -Infinity;
+  for (let y = fountainTop - 60; y < fountainFoot.minY; y += 1) {
+    if (villageCollision.isBlocked(fountain.position.x, y)) break;
+    lowestBehind = y;
+  }
+  assert.ok(
+    lowestBehind > fountainTop - villageBodyOffsetY + 10,
+    "Midi must be able to step a little behind the fountain, not stop at the top of its picture.",
+  );
+  const shop = VILLAGE_MAP.scenery.find(({ id }) => id === "ai-shop");
+  const shopTop = shop.position.y - shop.displaySize.height / 2;
+  assert.equal(
+    villageCollision.isBlocked(shop.position.x, shopTop + 10),
+    false,
+    "The lawn just behind the AI shop's roof must be walkable.",
+  );
+}
+
+// Beside a wall Midi's whole body stays clear of it: her feet stop a body
+// width away from the ground outline, never half inside the picture.
+for (const id of ["ai-shop", "airport", "ethics-office", "fountain"]) {
+  const foot = buildingFootprint(id);
+  for (const [side, direction] of [["left", -1], ["right", 1]]) {
+    const edgeX = direction < 0 ? foot.minX : foot.maxX;
+    const y = foot.building.footprint
+      .reduce((best, point) => (Math.abs(point.x - edgeX) < Math.abs(best.x - edgeX) ? point : best))
+      .y - villageBodyOffsetY;
+    assert.equal(
+      villageCollision.isBlocked(edgeX + direction * 20, y),
+      true,
+      `Midi must not stand inside the ${side} wall of ${id}.`,
+    );
+  }
 }
 
 for (const portalId of ["shop", "workshop", "library"]) {
@@ -492,6 +549,44 @@ for (const portalId of ["shop", "workshop", "library"]) {
       false,
       `Returning from ${portalId} must place Midi on walkable paving.`,
     );
+  }
+}
+
+// Entry buttons show in a building's front yard but never once Midi has
+// gone behind it.
+{
+  const { isPlayerBehindBuilding } = loadTypeScriptModule(
+    "src/game/features/world/model/villageCollision.ts",
+  );
+  const isEntryShown = (portal, point) =>
+    isPointWithinPortalInteractionArea(portal, point) &&
+    isPlayerBehindBuilding(VILLAGE_MAP.collision, portal.frontOf, point) !== true;
+  for (const portal of VILLAGE_MAP.portals) {
+    assert.ok(portal.frontOf, `Village portal ${portal.id} must name its building.`);
+    const outline = buildingFootprint(portal.frontOf);
+    for (let x = outline.minX; x <= outline.maxX; x += 6) {
+      for (let y = outline.minY - 150; y < outline.minY - villageBodyOffsetY; y += 6) {
+        assert.equal(
+          isEntryShown(portal, { x, y }),
+          false,
+          `Village portal ${portal.id} must not offer entry from behind its building (${x}, ${y}).`,
+        );
+      }
+    }
+  }
+  // Front-yard spots the player expects to work (beside the plane, beside
+  // the workshop steps, in front of the book's cover).
+  const findPortal = (id) => VILLAGE_MAP.portals.find((portal) => portal.id === id);
+  const airport = buildingFootprint("airport");
+  const shop = buildingFootprint("ai-shop");
+  const gate = buildingFootprint("ai-world-gate");
+  for (const [id, point] of [
+    ["library", { x: airport.maxX + 75, y: airport.maxY - 40 }],
+    ["shop", { x: shop.maxX + 45, y: shop.maxY - 25 }],
+    ["starlight-exit", { x: gate.minX + 35, y: gate.minY + 85 }],
+  ]) {
+    assert.equal(villageCollision.isBlocked(point.x, point.y), false, `${id} front-yard probe must be walkable.`);
+    assert.equal(isEntryShown(findPortal(id), point), true, `Village portal ${id} must offer entry from its front yard.`);
   }
 }
 
@@ -650,514 +745,83 @@ function advanceVillagePosition(
   return nextPosition;
 }
 
-function assertSmoothDirectionChange(
-  label,
-  start,
-  firstDisplacement,
-  nextDisplacement,
-) {
-  const rememberedMemory = villageMovement.createVillageMovementMemory();
-  let contactPosition = start;
-  for (
-    let frame = 0;
-    frame < 48 && !rememberedMemory.obstacleKey;
-    frame += 1
-  ) {
-    contactPosition = advanceVillagePosition(
-      contactPosition,
-      firstDisplacement,
-      rememberedMemory,
-      label,
-    );
+// The fountain and the buildings block the ground they stand on.
+// Walking into one and turning along it must keep Midi moving, never stuck.
+const fountainOutline = buildingFootprint("fountain");
+const fountainCentreX = (fountainOutline.minX + fountainOutline.maxX) / 2;
+const fountainBottomY = fountainOutline.maxY - villageBodyOffsetY;
+
+function holdDirection(start, displacement, frames, memory) {
+  let position = start;
+  let moved = 0;
+  for (let frame = 0; frame < frames; frame += 1) {
+    const next = advanceVillagePosition(position, displacement, memory, "Fountain slide");
+    moved += Math.hypot(next.x - position.x, next.y - position.y);
+    position = next;
   }
-  assert.ok(
-    rememberedMemory.obstacleKey,
-    `${label}: the first input must establish an obstacle encounter.`,
-  );
-  for (let frame = 0; frame < 6; frame += 1) {
-    contactPosition = advanceVillagePosition(
-      contactPosition,
-      firstDisplacement,
-      rememberedMemory,
-      label,
-    );
-  }
-
-  let rememberedPosition = contactPosition;
-  let freshPosition = contactPosition;
-  const freshMemory = villageMovement.createVillageMovementMemory();
-  let rememberedOppositeFrames = 0;
-  let freshOppositeFrames = 0;
-  let rememberedOppositeDistance = 0;
-  let freshOppositeDistance = 0;
-  let rememberedStationaryFrames = 0;
-  let freshStationaryFrames = 0;
-  let maxRememberedStationaryFrames = 0;
-  let maxFreshStationaryFrames = 0;
-  const oppositeSamples = [];
-  const requiresCurvedGlide = (position, displacement, memory) => {
-    const guide = villageCurvedGuides.find(
-      (candidate) => candidate.id === memory.obstacleKey,
-    );
-    if (!guide) return false;
-    const normalX =
-      (position.x - guide.center.x) / (guide.radiusX * guide.radiusX);
-    const normalY =
-      (position.y - guide.center.y) / (guide.radiusY * guide.radiusY);
-    const normalLength = Math.hypot(normalX, normalY);
-    if (normalLength === 0) return false;
-    const outwardAmount =
-      displacement.x * (normalX / normalLength) +
-      displacement.y * (normalY / normalLength);
-    const movementLength = Math.hypot(displacement.x, displacement.y);
-    return (
-      outwardAmount < movementLength * 0.5 &&
-      villageCollision.isBlocked(
-        position.x + displacement.x,
-        position.y + displacement.y,
-      )
-    );
-  };
-  for (let frame = 0; frame < 24; frame += 1) {
-    const rememberedRequiresGlide = requiresCurvedGlide(
-      rememberedPosition,
-      nextDisplacement,
-      rememberedMemory,
-      label,
-    );
-    const freshRequiresGlide = requiresCurvedGlide(
-      freshPosition,
-      nextDisplacement,
-      freshMemory,
-      label,
-    );
-    const rememberedNext = advanceVillagePosition(
-      rememberedPosition,
-      nextDisplacement,
-      rememberedMemory,
-    );
-    const freshNext = advanceVillagePosition(
-      freshPosition,
-      nextDisplacement,
-      freshMemory,
-    );
-    const requestedDistance = Math.hypot(
-      nextDisplacement.x,
-      nextDisplacement.y,
-    );
-    const requestedX = nextDisplacement.x / requestedDistance;
-    const requestedY = nextDisplacement.y / requestedDistance;
-    const rememberedProgress =
-      (rememberedNext.x - rememberedPosition.x) * requestedX +
-      (rememberedNext.y - rememberedPosition.y) * requestedY;
-    const freshProgress =
-      (freshNext.x - freshPosition.x) * requestedX +
-      (freshNext.y - freshPosition.y) * requestedY;
-    const rememberedDistance = Math.hypot(
-      rememberedNext.x - rememberedPosition.x,
-      rememberedNext.y - rememberedPosition.y,
-    );
-    const freshDistance = Math.hypot(
-      freshNext.x - freshPosition.x,
-      freshNext.y - freshPosition.y,
-    );
-    if (rememberedProgress < -0.02) {
-      rememberedOppositeFrames += 1;
-      rememberedOppositeDistance += -rememberedProgress;
-      oppositeSamples.push({
-        frame,
-        from: rememberedPosition,
-        to: rememberedNext,
-        rememberedMemory: { ...rememberedMemory },
-      });
-    }
-    if (freshProgress < -0.02) {
-      freshOppositeFrames += 1;
-      freshOppositeDistance += -freshProgress;
-    }
-    rememberedStationaryFrames = rememberedRequiresGlide
-      ? rememberedDistance < 0.1
-        ? rememberedStationaryFrames + 1
-        : 0
-      : 0;
-    freshStationaryFrames = freshRequiresGlide
-      ? freshDistance < 0.1
-        ? freshStationaryFrames + 1
-        : 0
-      : 0;
-    maxRememberedStationaryFrames = Math.max(
-      maxRememberedStationaryFrames,
-      rememberedStationaryFrames,
-    );
-    maxFreshStationaryFrames = Math.max(
-      maxFreshStationaryFrames,
-      freshStationaryFrames,
-    );
-    rememberedPosition = rememberedNext;
-    freshPosition = freshNext;
-  }
-
-  assert.equal(
-    rememberedOppositeFrames <= 1,
-    true,
-    `${label}: remembered slide side opposed the new input repeatedly; ` +
-      JSON.stringify(oppositeSamples),
-  );
-  assert.equal(
-    freshOppositeFrames <= 1,
-    true,
-    `${label}: a fresh tangent choice opposed the new input repeatedly.`,
-  );
-  assert.ok(
-    rememberedOppositeDistance <= 0.5,
-    `${label}: remembered correction moved ` +
-      `${rememberedOppositeDistance.toFixed(2)}px against the new input.`,
-  );
-  assert.ok(
-    freshOppositeDistance <= 0.5,
-    `${label}: fresh correction moved ` +
-      `${freshOppositeDistance.toFixed(2)}px against the new input.`,
-  );
-  assert.ok(
-    maxRememberedStationaryFrames <= 3,
-    `${label}: remembered movement stalled for ` +
-      `${maxRememberedStationaryFrames} frames at ` +
-      `(${rememberedPosition.x.toFixed(2)}, ${rememberedPosition.y.toFixed(2)}), ` +
-      `memory=${JSON.stringify(rememberedMemory)}.`,
-  );
-  assert.ok(
-    maxFreshStationaryFrames <= 3,
-    `${label}: fresh movement stalled for ${maxFreshStationaryFrames} frames.`,
-  );
-  assert.ok(
-    Math.hypot(
-      rememberedPosition.x - freshPosition.x,
-      rememberedPosition.y - freshPosition.y,
-    ) <= 0.1,
-    `${label}: a large input turn must match a fresh-memory endpoint.`,
-  );
-}
-
-const fountainCollision = VILLAGE_MAP.collision.ellipses.find(
-  (ellipse) => ellipse.id === "fountain",
-);
-assert.ok(fountainCollision, "The village fountain collision must exist.");
-const fountainClearance = 14;
-const fountainBottom = {
-  x: fountainCollision.center.x,
-  y: fountainCollision.center.y + fountainCollision.radiusY + fountainClearance,
-};
-const fountainTop = {
-  x: fountainCollision.center.x,
-  y: fountainCollision.center.y - fountainCollision.radiusY - fountainClearance,
-};
-const fountainLeft = {
-  x: fountainCollision.center.x - fountainCollision.radiusX - fountainClearance,
-  y: fountainCollision.center.y,
-};
-const fountainRight = {
-  x: fountainCollision.center.x + fountainCollision.radiusX + fountainClearance,
-  y: fountainCollision.center.y,
-};
-
-for (const transition of [
-  ["fountain bottom up-right", fountainBottom, { x: 0, y: -3.84 }, { x: 3.84, y: 0 }],
-  ["fountain bottom up-right diagonal", fountainBottom, { x: 0, y: -3.84 }, { x: Math.SQRT1_2 * 3.84, y: -Math.SQRT1_2 * 3.84 }],
-  ["fountain bottom exact 60-degree turn", fountainBottom, { x: 0, y: -3.84 }, { x: Math.sqrt(3) * 1.92, y: -1.92 }],
-  ["fountain west right-down", fountainLeft, { x: 3.84, y: 0 }, { x: 0, y: 3.84 }],
-  ["fountain east left-down", fountainRight, { x: -3.84, y: 0 }, { x: 0, y: 3.84 }],
-  ["fountain north down-right", fountainTop, { x: 0, y: 3.84 }, { x: 3.84, y: 0 }],
-]) {
-  assertSmoothDirectionChange(...transition);
-}
-
-function assertSmoothGradualDirectionChange(rampFrames) {
-  const label = `fountain gradual 90-degree turn over ${rampFrames} frames`;
-  const firstDisplacement = { x: 0, y: -3.84 };
-  const rememberedMemory = villageMovement.createVillageMovementMemory();
-  let contactPosition = fountainBottom;
-  for (
-    let frame = 0;
-    frame < 48 && !rememberedMemory.obstacleKey;
-    frame += 1
-  ) {
-    contactPosition = advanceVillagePosition(
-      contactPosition,
-      firstDisplacement,
-      rememberedMemory,
-    );
-  }
-  assert.ok(
-    rememberedMemory.obstacleKey,
-    `${label}: the initial input must establish an obstacle encounter.`,
-  );
-  for (let frame = 0; frame < 6; frame += 1) {
-    contactPosition = advanceVillagePosition(
-      contactPosition,
-      firstDisplacement,
-      rememberedMemory,
-    );
-  }
-
-  let rememberedPosition = contactPosition;
-  let freshPosition = contactPosition;
-  const freshMemory = villageMovement.createVillageMovementMemory();
-  let rememberedOppositeFrames = 0;
-  let freshOppositeFrames = 0;
-  let rememberedOppositeDistance = 0;
-  let freshOppositeDistance = 0;
-  const rememberedOppositeSamples = [];
-  const freshOppositeSamples = [];
-  let rememberedStationaryFrames = 0;
-  let freshStationaryFrames = 0;
-  let maxRememberedStationaryFrames = 0;
-  let maxFreshStationaryFrames = 0;
-  let rememberedSevereReversals = 0;
-  let freshSevereReversals = 0;
-  const rememberedReversalSamples = [];
-  const freshReversalSamples = [];
-  let previousRememberedMovement = null;
-  let previousFreshMovement = null;
-  const totalFrames = rampFrames + 24;
-
-  for (let frame = 0; frame < totalFrames; frame += 1) {
-    const progress = Math.min((frame + 1) / rampFrames, 1);
-    const angle = progress * (Math.PI / 2);
-    const displacement = {
-      x: Math.sin(angle) * 3.84,
-      y: -Math.cos(angle) * 3.84,
-    };
-    const rememberedNext = advanceVillagePosition(
-      rememberedPosition,
-      displacement,
-      rememberedMemory,
-    );
-    const freshNext = advanceVillagePosition(
-      freshPosition,
-      displacement,
-      freshMemory,
-    );
-    const inputLength = Math.hypot(displacement.x, displacement.y);
-    const inputX = displacement.x / inputLength;
-    const inputY = displacement.y / inputLength;
-    const rememberedMovement = {
-      x: rememberedNext.x - rememberedPosition.x,
-      y: rememberedNext.y - rememberedPosition.y,
-    };
-    const freshMovement = {
-      x: freshNext.x - freshPosition.x,
-      y: freshNext.y - freshPosition.y,
-    };
-    const rememberedProgress =
-      rememberedMovement.x * inputX + rememberedMovement.y * inputY;
-    const freshProgress =
-      freshMovement.x * inputX + freshMovement.y * inputY;
-    const rememberedDistance = Math.hypot(
-      rememberedMovement.x,
-      rememberedMovement.y,
-    );
-    const freshDistance = Math.hypot(freshMovement.x, freshMovement.y);
-
-    if (rememberedProgress < -0.02) {
-      rememberedOppositeFrames += 1;
-      rememberedOppositeDistance += -rememberedProgress;
-      rememberedOppositeSamples.push({
-        frame,
-        input: displacement,
-        movement: rememberedMovement,
-        memory: { ...rememberedMemory },
-      });
-    }
-    if (freshProgress < -0.02) {
-      freshOppositeFrames += 1;
-      freshOppositeDistance += -freshProgress;
-      freshOppositeSamples.push({
-        frame,
-        input: displacement,
-        movement: freshMovement,
-        memory: { ...freshMemory },
-      });
-    }
-    if (previousRememberedMovement && rememberedDistance >= 0.1) {
-      const previousDistance = Math.hypot(
-        previousRememberedMovement.x,
-        previousRememberedMovement.y,
-      );
-      if (
-        previousDistance >= 0.1 &&
-        (previousRememberedMovement.x * rememberedMovement.x +
-          previousRememberedMovement.y * rememberedMovement.y) /
-          (previousDistance * rememberedDistance) <
-          -0.8
-      ) {
-        rememberedSevereReversals += 1;
-        rememberedReversalSamples.push({
-          frame,
-          previous: previousRememberedMovement,
-          current: rememberedMovement,
-          position: rememberedPosition,
-          memory: { ...rememberedMemory },
-        });
-      }
-    }
-    if (previousFreshMovement && freshDistance >= 0.1) {
-      const previousDistance = Math.hypot(
-        previousFreshMovement.x,
-        previousFreshMovement.y,
-      );
-      if (
-        previousDistance >= 0.1 &&
-        (previousFreshMovement.x * freshMovement.x +
-          previousFreshMovement.y * freshMovement.y) /
-          (previousDistance * freshDistance) <
-          -0.8
-      ) {
-        freshSevereReversals += 1;
-        freshReversalSamples.push({
-          frame,
-          previous: previousFreshMovement,
-          current: freshMovement,
-          position: freshPosition,
-          memory: { ...freshMemory },
-        });
-      }
-    }
-    rememberedStationaryFrames =
-      rememberedDistance < 0.1 ? rememberedStationaryFrames + 1 : 0;
-    freshStationaryFrames =
-      freshDistance < 0.1 ? freshStationaryFrames + 1 : 0;
-    maxRememberedStationaryFrames = Math.max(
-      maxRememberedStationaryFrames,
-      rememberedStationaryFrames,
-    );
-    maxFreshStationaryFrames = Math.max(
-      maxFreshStationaryFrames,
-      freshStationaryFrames,
-    );
-    previousRememberedMovement = rememberedMovement;
-    previousFreshMovement = freshMovement;
-    rememberedPosition = rememberedNext;
-    freshPosition = freshNext;
-  }
-
-  assert.ok(
-    rememberedOppositeFrames <= 1 && rememberedOppositeDistance <= 0.5,
-    `${label}: remembered movement opposed the rotating input for ` +
-      `${rememberedOppositeFrames} frames / ` +
-      `${rememberedOppositeDistance.toFixed(2)}px; ` +
-      JSON.stringify(rememberedOppositeSamples),
-  );
-  assert.ok(
-    freshOppositeFrames <= 1 && freshOppositeDistance <= 0.5,
-    `${label}: fresh movement opposed the rotating input for ` +
-      `${freshOppositeFrames} frames / ` +
-      `${freshOppositeDistance.toFixed(2)}px; ` +
-      JSON.stringify(freshOppositeSamples),
-  );
-  assert.equal(
-    rememberedSevereReversals,
-    0,
-    `${label}: remembered movement must not bounce between frames; ` +
-      JSON.stringify(rememberedReversalSamples),
-  );
-  assert.equal(
-    freshSevereReversals,
-    0,
-    `${label}: fresh movement must not bounce between frames; ` +
-      JSON.stringify(freshReversalSamples),
-  );
-  assert.ok(
-    maxRememberedStationaryFrames <= 4,
-    `${label}: remembered movement stalled for ` +
-      `${maxRememberedStationaryFrames} frames.`,
-  );
-  assert.ok(
-    maxFreshStationaryFrames <= 4,
-    `${label}: fresh movement stalled for ${maxFreshStationaryFrames} frames.`,
-  );
-  assert.ok(
-    Math.hypot(
-      rememberedPosition.x - freshPosition.x,
-      rememberedPosition.y - freshPosition.y,
-    ) <= 0.1,
-    `${label}: remembered movement must converge with fresh-memory movement.`,
-  );
-}
-
-for (const rampFrames of [6, 12, 18, 30]) {
-  assertSmoothGradualDirectionChange(rampFrames);
+  return { position, moved };
 }
 
 {
+  // Walk up into the fountain from the plaza below it, then turn right.
   const memory = villageMovement.createVillageMovementMemory();
-  const displacement = { x: 0, y: -3.84 };
-  let position = fountainBottom;
-  let positionTwoFramesAgo = null;
-  let previousMovement = null;
-  let severeReversals = 0;
-  let twoFrameReturns = 0;
-  const reversalSamples = [];
+  const start = { x: fountainCentreX, y: fountainBottomY + 30 };
+  assert.equal(villageCollision.isBlocked(start.x, start.y), false, "The plaza below the fountain must be walkable.");
+  const up = holdDirection(start, { x: 0, y: -3.84 }, 30, memory);
+  assert.ok(up.position.y >= fountainBottomY - 20, "Midi must stop at the fountain, not walk through it.");
+  const right = holdDirection(up.position, { x: 3.84, y: 0 }, 20, memory);
+  assert.ok(right.moved >= 3.84 * 20 * 0.7, "Turning along the fountain must keep Midi moving.");
+  const diagonal = holdDirection(up.position, { x: 2.7, y: -2.7 }, 40, villageMovement.createVillageMovementMemory());
+  assert.ok(diagonal.moved >= 40, "Pushing diagonally into the fountain must slide along it.");
+}
 
-  for (let frame = 0; frame < 130; frame += 1) {
-    const nextPosition = advanceVillagePosition(
-      position,
-      displacement,
-      memory,
-    );
-    const movement = {
-      x: nextPosition.x - position.x,
-      y: nextPosition.y - position.y,
-    };
-    const movementDistance = Math.hypot(movement.x, movement.y);
-    if (previousMovement && movementDistance >= 0.1) {
-      const previousDistance = Math.hypot(
-        previousMovement.x,
-        previousMovement.y,
-      );
-      if (
-        previousDistance >= 0.1 &&
-        (previousMovement.x * movement.x +
-          previousMovement.y * movement.y) /
-          (previousDistance * movementDistance) <
-          -0.8
-      ) {
-        severeReversals += 1;
-        reversalSamples.push({
-          frame,
-          from: position,
-          to: nextPosition,
-          previousMovement,
-          movement,
-          memory: { ...memory },
-        });
-      }
-    }
-    if (
-      positionTwoFramesAgo &&
-      movementDistance >= 0.1 &&
-      Math.hypot(
-        nextPosition.x - positionTwoFramesAgo.x,
-        nextPosition.y - positionTwoFramesAgo.y,
-      ) < 0.05
-    ) {
-      twoFrameReturns += 1;
-    }
-    positionTwoFramesAgo = position;
-    position = nextPosition;
-    previousMovement = movement;
-  }
-
+{
+  // Midi can walk straight along the back of the fountain, but her feet
+  // stay above the basin's back rim so the basin never covers them.
+  const memory = villageMovement.createVillageMovementMemory();
+  const behindY = fountainOutline.minY - villageBodyOffsetY - 25;
+  const start = { x: fountainOutline.minX - 10, y: behindY };
+  assert.equal(villageCollision.isBlocked(start.x, start.y), false, "The lawn behind the fountain's left side must be walkable.");
+  const across = holdDirection(start, { x: 3.84, y: 0 }, 70, memory);
+  assert.ok(across.position.x > fountainOutline.maxX, "Midi must be able to pass behind the fountain.");
+  assert.ok(Math.abs(across.position.y - behindY) < 12, "Passing behind the fountain must not need a detour.");
   assert.equal(
-    severeReversals,
-    0,
-    "A continuous upward hold against the fountain " +
-      "must not reverse direction between mask cells; " +
-      JSON.stringify(reversalSamples),
+    villageCollision.isBlocked(fountainCentreX, fountainOutline.minY - villageBodyOffsetY),
+    true,
+    "Behind the fountain Midi's feet must stop before the basin rim.",
   );
-  assert.equal(
-    twoFrameReturns,
-    0,
-    "A continuous upward hold must not alternate between two positions.",
+}
+
+{
+  // The starlight gate is a thin standing book: Midi can walk along the
+  // lawn behind it from one side to the other.
+  const gate = buildingFootprint("ai-world-gate");
+  const behindY = gate.minY - villageBodyOffsetY - 30;
+  const start = { x: gate.minX - 40, y: behindY };
+  assert.equal(villageCollision.isBlocked(start.x, start.y), false, "The lawn behind the starlight gate's left side must be walkable.");
+  const across = holdDirection(start, { x: 3.84, y: 0 }, 110, villageMovement.createVillageMovementMemory());
+  assert.ok(across.position.x > gate.maxX, "Midi must be able to pass behind the starlight gate.");
+}
+
+{
+  // Walking from the fountain to the lawn behind the Ethics Review dome
+  // passes bush corners in the painted mask; none of them may trap Midi.
+  const memory = villageMovement.createVillageMovementMemory();
+  const target = { x: 1_100, y: 385 };
+  let position = { x: 758, y: 313 };
+  let stalled = 0;
+  for (let frame = 0; frame < 220 && Math.hypot(target.x - position.x, target.y - position.y) > 20; frame += 1) {
+    const dx = target.x - position.x;
+    const dy = target.y - position.y;
+    const length = Math.hypot(dx, dy);
+    const next = advanceVillagePosition(position, { x: (dx / length) * 2.88, y: (dy / length) * 2.88 }, memory, "Pocket");
+    stalled = Math.hypot(next.x - position.x, next.y - position.y) < 0.05 ? stalled + 1 : 0;
+    assert.ok(stalled < 20, `Midi must not get stuck in a bush corner (at ${position.x.toFixed(0)}, ${position.y.toFixed(0)}).`);
+    position = next;
+  }
+  assert.ok(
+    Math.hypot(target.x - position.x, target.y - position.y) <= 20,
+    "Midi must reach the lawn behind the Ethics Review dome.",
   );
 }
 

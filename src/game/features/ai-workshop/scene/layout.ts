@@ -1,5 +1,7 @@
 export const AI_WORKSHOP_LAYOUT = {
-  customerArt: { x: -16, y: -43, width: 227, height: 340 },
+  // x: the point between the customer's feet (the art is centred on it),
+  // a little left of the step's edge.
+  customerArt: { x: -34, y: -43, width: 227, height: 340 },
   customerStage: { x: 183, y: 482 },
   customerInteraction: { x: 245, y: 500, radius: 175 },
   workbench: { x: 855, y: 714, interactionY: 585, depth: 33 },

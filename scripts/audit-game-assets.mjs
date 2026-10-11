@@ -9,6 +9,9 @@ const MAX_RUNTIME_BYTES = 20 * 1024 * 1024;
 const MAX_RUNTIME_SINGLE_BYTES = 2 * 1024 * 1024;
 const EXPECTED_CUSTOMER_COUNT = 52;
 const CUSTOMER_RUNTIME_PREFIX = "customers/v3-game/";
+// The 24 ethics review students (both moods each), on a 1.4x customer canvas: 636 x 952.
+const STUDENT_RUNTIME_PREFIX = "ethics-review/students/";
+const EXPECTED_STUDENT_COUNT = 48;
 const CUSTOMER_RUNTIME_SPEC = {
   format: "webp",
   width: 454,
@@ -44,15 +47,23 @@ const WORKSHOP_PRODUCT_IDS = [
 ];
 
 const RUNTIME_SPECS = new Map([
-  ["ethics-review/stamp-tool-approve-v1.webp", { format: "webp", width: 320, height: 287, hasAlpha: true }],
-  ["ethics-review/stamp-tool-reject-v1.webp", { format: "webp", width: 320, height: 286, hasAlpha: true }],
+  ["ethics-review/stamp-tool-approve-v3.webp", { format: "webp", width: 444, height: 476, hasAlpha: true }],
+  ["ethics-review/stamp-tool-reject-v3.webp", { format: "webp", width: 444, height: 476, hasAlpha: true }],
   ["ethics-review/stamp-topic-permission-v2.webp", { format: "webp", width: 320, height: 244, hasAlpha: true }],
   ["ethics-review/stamp-topic-privacy-v1.webp", { format: "webp", width: 311, height: 280, hasAlpha: true }],
   ["ethics-review/stamp-topic-checking-v1.webp", { format: "webp", width: 320, height: 263, hasAlpha: true }],
   ["ethics-review/stamp-topic-honesty-v1.webp", { format: "webp", width: 289, height: 280, hasAlpha: true }],
   ["ethics-review/stamp-topic-respect-v1.webp", { format: "webp", width: 320, height: 269, hasAlpha: true }],
-  ["ethics-review/inspection-booth-v2.webp", { format: "webp", width: 1672, height: 941, hasAlpha: false }],
-  ["ethics-review/inspection-form-v2.webp", { format: "webp", width: 885, height: 532, hasAlpha: true }],
+  ["ethics-review/ethics-booth-panel-v8.webp", { format: "webp", width: 1086, height: 1448, hasAlpha: false }],
+  ["ethics-review/ethics-booth-front-v8.webp", { format: "webp", width: 1086, height: 1448, hasAlpha: true }],
+  ["ethics-review/ethics-desk-panel-v9.webp", { format: "webp", width: 1254, height: 1254, hasAlpha: false }],
+  ["ethics-review/inspection-form-v4.webp", { format: "webp", width: 960, height: 440, hasAlpha: true }],
+  ["ethics-review/midi-back-v1.webp", { format: "webp", width: 327, height: 405, hasAlpha: true }],
+  ["ethics-review/midi-effect-sparkle-1.webp", { format: "webp", width: 119, height: 128, hasAlpha: true }],
+  ["ethics-review/midi-effect-sparkle-2.webp", { format: "webp", width: 119, height: 128, hasAlpha: true }],
+  ["ethics-review/midi-effect-sparkle-3.webp", { format: "webp", width: 122, height: 128, hasAlpha: true }],
+  ["ethics-review/midi-effect-sweat-1.webp", { format: "webp", width: 89, height: 128, hasAlpha: true }],
+  ["ethics-review/midi-effect-sweat-2.webp", { format: "webp", width: 90, height: 128, hasAlpha: true }],
   [
     "ui/game-return-button-house-v2.webp",
     { format: "webp", width: 720, height: 237 },
@@ -86,33 +97,18 @@ const RUNTIME_SPECS = new Map([
     "ui/game-result-panel-v1.webp",
     { format: "webp", width: 1560, height: 1000 },
   ],
-  [
-    "ui/game-result-retry-button-v1.webp",
-    { format: "webp", width: 664, height: 144 },
-  ],
-  [
-    "ui/game-result-return-button-v1.webp",
-    { format: "webp", width: 674, height: 144 },
-  ],
   ["intro/gem-board.webp", { format: "webp", width: 1448, height: 1086 }],
   ["intro/intro-title-ai-world-v1.webp", { format: "webp", width: 1100, height: 192, hasAlpha: true }],
   ["intro/intro-entry-button-v3.webp", { format: "webp", width: 640, height: 134, hasAlpha: true }],
   ["intro/story-village-v5.webp", { format: "webp", width: 1440, height: 810, hasAlpha: false }],
   ["intro/story-portal-frame-v1.webp", { format: "webp", width: 1639, height: 960, hasAlpha: true }],
+  ["ending/story-library-v1.webp", { format: "webp", width: 1440, height: 810, hasAlpha: false }],
   ["world/village-ground-v8.webp", { format: "webp", width: 2560, height: 1440 }],
   ["world/village-ai-shop.webp", { format: "webp", width: 584, height: 555 }],
   ["world/village-airport.webp", { format: "webp", width: 538, height: 504 }],
   ["world/village-ethics-office.webp", { format: "webp", width: 502, height: 542 }],
   ["world/village-tablet-gate-v4.webp", { format: "webp", width: 640, height: 608, hasAlpha: true }],
-  [
-    "world/village-ai-world-portal-night-v4.webp",
-    { format: "webp", width: 840, height: 840 },
-  ],
   ["world/village-fountain.webp", { format: "webp", width: 422, height: 445 }],
-  [
-    "world/village-fountain-water-frames-v1.webp",
-    { format: "webp", width: 1252, height: 1252 },
-  ],
   ["characters/midi-v2/front-idle.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
   ["characters/midi-v2/front-blink.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
   ["characters/midi-v2/front-talk-small.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
@@ -157,9 +153,11 @@ const RUNTIME_SPECS = new Map([
     { format: "webp", width: 760, height: 440 },
   ],
   [
-    "shop/workshop-crafting-panel-v2.webp",
+    "shop/workshop-crafting-panel-v3.webp",
     { format: "webp", width: 1624, height: 818 },
   ],
+  ["shop/workshop-stop-button-normal-v1.webp", { format: "webp", width: 600, height: 205, hasAlpha: true }],
+  ["shop/workshop-stop-button-pressed-v1.webp", { format: "webp", width: 600, height: 205, hasAlpha: true }],
   [
     "shop/workshop-action-button-v4.webp",
     { format: "webp", width: 256, height: 264 },
@@ -212,21 +210,18 @@ const RUNTIME_SPECS = new Map([
     "shop/workshop-customer-nameplate-v4.webp",
     { format: "webp", width: 360, height: 90 },
   ],
-  [
-    "shop/workshop-dialogue-bubble-v2.webp",
-    { format: "webp", width: 420, height: 231 },
-  ],
+  ["shop/workshop-coin-v1.webp", { format: "webp", width: 128, height: 128, hasAlpha: true }],
   ...WORKSHOP_PRODUCT_IDS.map((productId) => [
     `shop/products-v2/${productId}.webp`,
     { format: "webp", width: 256, height: 256 },
   ]),
+  ...WORKSHOP_PRODUCT_IDS.map((productId) => [
+    `shop/blueprints-v1/${productId}.webp`,
+    { format: "webp", width: 256, height: 256, hasAlpha: true },
+  ]),
   ["airport/bg_sky.webp", { format: "webp", width: 3200, height: 1440 }],
   ["airport/bg_city.webp", { format: "webp", width: 3200, height: 1440 }],
   ["airport/bg_ground.webp", { format: "webp", width: 3200, height: 1440 }],
-  [
-    "airport/data-flight-quiz-card-v1.webp",
-    { format: "webp", width: 1967, height: 800 },
-  ],
   ["airport/data_doc.webp", { format: "webp", width: 256, height: 256 }],
   ["airport/data_image.webp", { format: "webp", width: 256, height: 256 }],
   ["airport/data_sound.webp", { format: "webp", width: 256, height: 256 }],
@@ -283,11 +278,11 @@ const measured = await Promise.all(
   })),
 );
 const totalBytes = measured.reduce((sum, file) => sum + file.bytes, 0);
+const isCastFile = (asset) =>
+  (asset.startsWith(CUSTOMER_RUNTIME_PREFIX) || asset.startsWith(STUDENT_RUNTIME_PREFIX)) &&
+  asset.endsWith(".webp");
 const runtime = measured.filter(
-  (file) =>
-    RUNTIME_FILES.has(file.asset) ||
-    (file.asset.startsWith(CUSTOMER_RUNTIME_PREFIX) &&
-      file.asset.endsWith(".webp")),
+  (file) => RUNTIME_FILES.has(file.asset) || isCastFile(file.asset),
 );
 const runtimeBytes = runtime.reduce((sum, file) => sum + file.bytes, 0);
 const oversized = runtime
@@ -311,11 +306,7 @@ const runtimeMetadata = new Map(
 const validationErrors = [];
 const unexpectedPublicFiles = measured.filter(
   (file) =>
-    !RUNTIME_FILES.has(file.asset) &&
-    !(
-      file.asset.startsWith(CUSTOMER_RUNTIME_PREFIX) &&
-      file.asset.endsWith(".webp")
-    ),
+    !RUNTIME_FILES.has(file.asset) && !isCastFile(file.asset),
 );
 
 for (const file of unexpectedPublicFiles) {
@@ -364,6 +355,15 @@ if (customerRuntime.length !== EXPECTED_CUSTOMER_COUNT) {
 }
 for (const customer of customerRuntime) {
   validateMetadata(customer.asset, CUSTOMER_RUNTIME_SPEC);
+}
+const studentRuntime = runtime.filter((file) => file.asset.startsWith(STUDENT_RUNTIME_PREFIX));
+if (studentRuntime.length !== EXPECTED_STUDENT_COUNT) {
+  validationErrors.push(
+    `Unexpected ethics student runtime count: ${studentRuntime.length} (expected ${EXPECTED_STUDENT_COUNT})`,
+  );
+}
+for (const student of studentRuntime) {
+  validateMetadata(student.asset, { format: "webp", width: 636, height: 952 });
 }
 
 console.log(

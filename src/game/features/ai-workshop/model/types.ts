@@ -9,6 +9,8 @@ export type WorkshopPhase =
   | "crafting"
   | "delivery"
   | "transition"
+  /** The customer pays and leaves: Midi may walk, but nothing can be used. */
+  | "settling"
   | "finished";
 
 export type WorkshopOrder = {

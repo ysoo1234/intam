@@ -5,7 +5,7 @@
  */
 export const TUTORIAL_PROGRESS_STORAGE_KEY = "intam:tutorials-seen:v1";
 
-export type TutorialId = "village" | "ai-workshop";
+export type TutorialId = "village" | "ai-workshop" | "data-flight" | "ethics-review";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
 

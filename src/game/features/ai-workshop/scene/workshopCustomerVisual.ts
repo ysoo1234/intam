@@ -1,60 +1,57 @@
 import type Phaser from "phaser";
 import { AI_WORKSHOP_LAYOUT } from "./layout";
 
-type WorkshopCustomerVisualMetric = {
-  visibleHeight: number;
-  opaqueArea: number;
-};
-
-// Every v3-game customer asset uses a 454 x 680 transparent canvas and the
-// last visible foot pixel ends at y=642. The numbers below are the alpha-bound
-// heights measured from both worried/happy runtime WebP files. Keeping this
-// metadata beside the workshop scene lets us normalize the visible character,
-// rather than scaling the transparent canvas as though every drawing filled it.
+// Every v3-game customer is a 454 x 680 transparent canvas, drawn facing right
+// (toward Midi). The drawings are built by the art script with the feet at
+// y 641, the point between both feet on the canvas's centre line (x 227), and
+// each person at a natural height (students smallest, then the elderly, then
+// adults). So every customer gets the same scale; only these measurements
+// differ: where the head (hat included) starts, and how wide the stance is.
 const CUSTOMER_SOURCE_CANVAS_HEIGHT = 680;
 const CUSTOMER_SOURCE_FOOT_Y = 642;
-export const WORKSHOP_CUSTOMER_TARGET_VISIBLE_HEIGHT = 523;
-// Equal height alone still makes narrow drawings (notably phone-parent) read
-// like miniature people next to broader poses. This area target is measured at
-// alpha >= 32. We apply half of the area correction after height normalization
-// (the geometric mean below), so short students keep their corrected height
-// while slender adults gain enough uniform scale to stop reading as miniatures.
-export const WORKSHOP_CUSTOMER_TARGET_OPAQUE_AREA = 70_000;
-export const WORKSHOP_CUSTOMER_VISUAL_SCALE_LIMITS = {
-  min: 0.96,
-  max: 1.13,
-} as const;
 
-const CUSTOMER_VISUAL_METRICS: Readonly<
-  Record<string, WorkshopCustomerVisualMetric>
-> = {
-  "school-prep-student": { visibleHeight: 465, opaqueArea: 61_676 },
-  "foreign-call-student": { visibleHeight: 496, opaqueArea: 66_189 },
-  "foreign-restaurant-traveler": { visibleHeight: 523, opaqueArea: 63_769 },
-  "science-homework-student": { visibleHeight: 465, opaqueArea: 58_645 },
-  "phone-parent": { visibleHeight: 532, opaqueArea: 59_905 },
-  "diary-student": { visibleHeight: 465, opaqueArea: 56_122 },
-  "dinner-parent": { visibleHeight: 532, opaqueArea: 64_807 },
-  "busy-cleaner": { visibleHeight: 532, opaqueArea: 68_003 },
-  "pet-owner": { visibleHeight: 523, opaqueArea: 70_685 },
-  "elderly-home-alone": { visibleHeight: 505, opaqueArea: 66_644 },
-  "stuffy-air-resident": { visibleHeight: 532, opaqueArea: 65_823 },
-  "frequent-laundry-person": { visibleHeight: 523, opaqueArea: 70_850 },
-  "wrong-answer-student": { visibleHeight: 465, opaqueArea: 61_180 },
-  "cafeteria-student": { visibleHeight: 465, opaqueArea: 57_506 },
-  "xray-doctor": { visibleHeight: 541, opaqueArea: 75_294 },
-  "exercising-elderly": { visibleHeight: 505, opaqueArea: 62_943 },
-  "mobility-patient": { visibleHeight: 523, opaqueArea: 71_287 },
-  "crosswalk-police": { visibleHeight: 541, opaqueArea: 74_962 },
-  "novice-driver": { visibleHeight: 532, opaqueArea: 64_360 },
-  courier: { visibleHeight: 532, opaqueArea: 73_822 },
-  "long-distance-traveler": { visibleHeight: 523, opaqueArea: 75_941 },
-  "wide-field-farmer": { visibleHeight: 532, opaqueArea: 72_472 },
-  "orchard-farmer": { visibleHeight: 532, opaqueArea: 71_372 },
-  "greenhouse-farmer": { visibleHeight: 532, opaqueArea: 67_230 },
-  "water-saving-farmer": { visibleHeight: 532, opaqueArea: 63_317 },
-  "foreign-theatergoer": { visibleHeight: 536, opaqueArea: 74_338 },
+/** Every customer is drawn this much larger than the art box. */
+export const WORKSHOP_CUSTOMER_DISPLAY_SCALE = 1.2;
+
+const CUSTOMER_ART_METRICS: Readonly<Record<string, Readonly<{ topY: number; footSpan: number }>>> = {
+  "busy-cleaner": { topY: 87, footSpan: 189 },
+  "cafeteria-student": { topY: 217, footSpan: 106 },
+  "courier": { topY: 75, footSpan: 194 },
+  "crosswalk-police": { topY: 98, footSpan: 137 },
+  "diary-student": { topY: 217, footSpan: 112 },
+  "dinner-parent": { topY: 87, footSpan: 176 },
+  "elderly-home-alone": { topY: 148, footSpan: 139 },
+  "exercising-elderly": { topY: 138, footSpan: 135 },
+  "foreign-call-student": { topY: 217, footSpan: 102 },
+  "foreign-restaurant-traveler": { topY: 97, footSpan: 121 },
+  "foreign-theatergoer": { topY: 112, footSpan: 99 },
+  "frequent-laundry-person": { topY: 112, footSpan: 152 },
+  "greenhouse-farmer": { topY: 87, footSpan: 174 },
+  "long-distance-traveler": { topY: 112, footSpan: 140 },
+  "mobility-patient": { topY: 152, footSpan: 103 },
+  "novice-driver": { topY: 87, footSpan: 173 },
+  "orchard-farmer": { topY: 113, footSpan: 150 },
+  "pet-owner": { topY: 113, footSpan: 109 },
+  "phone-parent": { topY: 113, footSpan: 114 },
+  "school-prep-student": { topY: 217, footSpan: 143 },
+  "science-homework-student": { topY: 207, footSpan: 146 },
+  "stuffy-air-resident": { topY: 87, footSpan: 191 },
+  "water-saving-farmer": { topY: 75, footSpan: 206 },
+  "wide-field-farmer": { topY: 69, footSpan: 213 },
+  "wrong-answer-student": { topY: 217, footSpan: 142 },
+  "xray-doctor": { topY: 112, footSpan: 160 },
 };
+const DEFAULT_ART_METRIC = { topY: 102, footSpan: 150 } as const;
+
+/** Where the drawing's head starts on its canvas. */
+export function getWorkshopCustomerArtTopY(requestId: string) {
+  return (CUSTOMER_ART_METRICS[requestId] ?? DEFAULT_ART_METRIC).topY;
+}
+
+/** How wide the stance is on the canvas (outer edge of one foot to the other). */
+function getWorkshopCustomerFootSpan(requestId: string) {
+  return (CUSTOMER_ART_METRICS[requestId] ?? DEFAULT_ART_METRIC).footSpan;
+}
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -66,47 +63,37 @@ export type WorkshopCustomerVisualTransform = {
   x: number;
   y: number;
   footBaselineY: number;
+  /** Top of the head, in the customer container (same space as `y`). */
+  headTopY: number;
+  /** Width of the stance on screen, for the shadow under the feet. */
+  footSpan: number;
 };
 
 export function getWorkshopCustomerVisualTransform(
   requestId: string,
 ): WorkshopCustomerVisualTransform {
   const artLayout = AI_WORKSHOP_LAYOUT.customerArt;
-  const sourceVisibleHeight =
-    CUSTOMER_VISUAL_METRICS[requestId]?.visibleHeight ??
-    WORKSHOP_CUSTOMER_TARGET_VISIBLE_HEIGHT;
-  const sourceOpaqueArea =
-    CUSTOMER_VISUAL_METRICS[requestId]?.opaqueArea ??
-    WORKSHOP_CUSTOMER_TARGET_OPAQUE_AREA;
-  const heightScale =
-    WORKSHOP_CUSTOMER_TARGET_VISIBLE_HEIGHT / sourceVisibleHeight;
-  const perceivedAreaScale = Math.sqrt(
-    WORKSHOP_CUSTOMER_TARGET_OPAQUE_AREA / sourceOpaqueArea,
-  );
-  const perceivedScale = Math.sqrt(
-    heightScale * Math.max(heightScale, perceivedAreaScale),
-  );
-  const visualScale = clamp(
-    perceivedScale,
-    WORKSHOP_CUSTOMER_VISUAL_SCALE_LIMITS.min,
-    WORKSHOP_CUSTOMER_VISUAL_SCALE_LIMITS.max,
-  );
+  const visualScale = WORKSHOP_CUSTOMER_DISPLAY_SCALE;
   const displayWidth = artLayout.width * visualScale;
   const displayHeight = artLayout.height * visualScale;
   const sourceFootOffsetFromCenter =
     CUSTOMER_SOURCE_FOOT_Y / CUSTOMER_SOURCE_CANVAS_HEIGHT - 0.5;
   const footBaselineY =
     artLayout.y + artLayout.height * sourceFootOffsetFromCenter;
+  const y = footBaselineY - displayHeight * sourceFootOffsetFromCenter;
+  const headTopY =
+    y - displayHeight / 2 + (getWorkshopCustomerArtTopY(requestId) / CUSTOMER_SOURCE_CANVAS_HEIGHT) * displayHeight;
 
-  return {
-    visualScale,
-    displayWidth,
-    displayHeight,
-    x: artLayout.x,
-    y: footBaselineY - displayHeight * sourceFootOffsetFromCenter,
-    footBaselineY,
-  };
+  const footSpan = getWorkshopCustomerFootSpan(requestId) * (displayHeight / CUSTOMER_SOURCE_CANVAS_HEIGHT);
+
+  return { visualScale, displayWidth, displayHeight, x: artLayout.x, y, footBaselineY, headTopY, footSpan };
 }
+
+/**
+ * The customer's head top on screen, which the speech bubble stays above.
+ * Stored on the art when its picture is set.
+ */
+export const WORKSHOP_CUSTOMER_HEAD_TOP_KEY = "head-top-screen-y";
 
 export function applyWorkshopCustomerVisualTransform(
   customerArt: Phaser.GameObjects.Image,
@@ -115,7 +102,8 @@ export function applyWorkshopCustomerVisualTransform(
   const transform = getWorkshopCustomerVisualTransform(requestId);
   customerArt
     .setDisplaySize(transform.displayWidth, transform.displayHeight)
-    .setPosition(transform.x, transform.y);
+    .setPosition(transform.x, transform.y)
+    .setData(WORKSHOP_CUSTOMER_HEAD_TOP_KEY, AI_WORKSHOP_LAYOUT.customerStage.y + transform.headTopY);
   return transform;
 }
 
@@ -143,7 +131,7 @@ export function applyWorkshopCustomerRequestVisual({
 
   customerArt
     .setTexture(hasTexture ? textureKey : "customer-fallback")
-    .setFlipX(hasTexture)
+    .setFlipX(false)
     .setAngle(0);
   if (hasTexture) {
     const transform = applyWorkshopCustomerVisualTransform(
@@ -170,11 +158,9 @@ export function syncWorkshopNormalizedCustomerShadow(
   customerArt: Phaser.GameObjects.Image,
   transform: WorkshopCustomerVisualTransform,
 ) {
+  // A soft oval just wider than the stance, centred between the feet.
   customerShadow
-    ?.setDisplaySize(
-      clamp(customerArt.displayWidth * 0.48, 82, 112),
-      16,
-    )
-    .setPosition(customerArt.x, transform.footBaselineY - 5)
+    ?.setDisplaySize(clamp(transform.footSpan * 1.15 + 18, 70, 140), 18)
+    .setPosition(customerArt.x, transform.footBaselineY - 3)
     .setVisible(customerArt.visible);
 }

@@ -5,7 +5,9 @@ import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import { preloadGameChromeAssets } from "../../../core/visual/gameChrome";
 import { preloadGameResultOverlayAssets } from "../../../core/visual/gameResultOverlay";
 import { createGameStartOverlay, isGameStartOverlayOpen, preloadGameStartOverlayAssets } from "../../../core/visual/gameStartOverlay";
-import { COLORS, FONT_FAMILY } from "../../../core/visual/theme";
+import { isCoachCardOpen, playCoachCountdown, preloadCoachAssets } from "../../../core/visual/coachGuide";
+import { markTutorialSeen, shouldPlayTutorial } from "../../../core/navigation/tutorialProgressStorage";
+import { COLORS } from "../../../core/visual/theme";
 import {
   FLIGHT_DATA_KINDS,
   FLIGHT_DATA_META,
@@ -43,6 +45,8 @@ import { AIRPORT_FEVER_COLORS, AirportHud } from "./airportHud";
 import { updateAirportPlayer } from "./airportPlayer";
 import { createAirportResultOverlay } from "./airportResult";
 import { DATA_FLIGHT_START, showAirportLevelUp, showAirportNotice } from "./airportOverlays";
+import { createAirportTutorial, type AirportTutorial } from "./airportTutorial";
+import { createAirportMissionBanner, createAirportQuestionOverlay } from "./airportQuestionView";
 import { updateAirportObstacleMotion } from "./airportObjectMotion";
 import { preloadAirportAssets, releaseAirportTextures } from "./airportTextures";
 import { createAirportDataObject, createAirportEdgeObstacles, createAirportMovingObstacle } from "./airportObjects";
@@ -83,6 +87,8 @@ export class AirportScene extends Phaser.Scene {
   private failurePending = false;
   private finished = false;
   private earnedStars?: 1 | 2 | 3;
+  /** Set while the first-play lesson runs; the clock and hearts wait for it. */
+  private tutorial?: AirportTutorial;
 
   constructor(private readonly renderScale: number) {
     super(SCENE_KEYS.airport);
@@ -92,6 +98,7 @@ export class AirportScene extends Phaser.Scene {
     preloadGameChromeAssets(this);
     preloadGameResultOverlayAssets(this);
     preloadGameStartOverlayAssets(this);
+    preloadCoachAssets(this);
   }
   create() {
     configureSceneCamera(this, this.renderScale);
@@ -110,8 +117,52 @@ export class AirportScene extends Phaser.Scene {
       () => this.finished,
       () => this.scene.restart(),
     );
-    createGameStartOverlay(this, DATA_FLIGHT_START);
+    createGameStartOverlay(this, DATA_FLIGHT_START, (withTutorial) => this.handleStart(withTutorial), {
+      help: { question: "튜토리얼을 다시 볼까요?" },
+    });
     this.cameras.main.fadeIn(350, 220, 250, 255);
+  }
+
+  /** `withTutorial`: set by ? (then it ends on the start screen); else first plays only. */
+  private handleStart(withTutorial?: boolean) {
+    const replaying = withTutorial === true;
+    const playTutorial = withTutorial ?? shouldPlayTutorial("data-flight");
+    if (!playTutorial) return;
+    this.countdownMs = 0;
+    this.hud?.hideCountdown();
+    this.tutorial = createAirportTutorial(
+      this,
+      {
+        getPlayer: () => this.player,
+        spawnData: (kind, x, y) => this.spawnData(kind, x, y),
+        spawnObstacle: () => this.objects.push(createAirportMovingObstacle(this, 0)),
+        startQuestion: (question, readingMs) => this.startQuestion(question, readingMs),
+        resendChoices: (question) => this.sendQuestionChoices({ question, phase: "choices", readingUntilMs: this.elapsedMs }),
+        getChoices: () => this.objects.filter((object) => object.kind === "question" && object.dataKind)
+          .map((object) => ({ kind: object.dataKind!, x: object.container.x, y: object.container.y })),
+        clearObjects: () => this.clearObjects(),
+      },
+      () => {
+        markTutorialSeen("data-flight");
+        this.tutorial = undefined;
+        if (replaying) { this.scene.restart(); return; }
+        this.resetForRealGame();
+        playCoachCountdown(this, () => this.renderHud());
+      },
+    );
+  }
+
+  /** After the lesson: a clean slate, without the HUD countdown (3-2-1 already played). */
+  private resetForRealGame() {
+    this.clearObjects();
+    this.questionOverlay?.destroy(true);
+    this.missionBanner?.destroy(true);
+    const controls = this.controls;
+    this.resetState();
+    this.controls = controls;
+    this.countdownMs = 0;
+    this.hud?.hideFever();
+    this.renderHud();
   }
   private resetState() {
     this.earnedStars = undefined;
@@ -199,10 +250,10 @@ export class AirportScene extends Phaser.Scene {
     showAirportLevelUp(this, this.difficultyTier + 1);
   }
 
-  private startQuestion() {
-    const question =
-      this.questions[this.questionIndex % this.questions.length] ??
-      FLIGHT_QUESTIONS[0];
+  private startQuestion(
+    question: FlightQuestion = this.questions[this.questionIndex % this.questions.length] ?? FLIGHT_QUESTIONS[0],
+    readingMs: number = DATA_FLIGHT_CONFIG.questionReadingMs,
+  ) {
     this.questionIndex += 1;
     this.nextQuestionAtMs =
       this.elapsedMs + DATA_FLIGHT_CONFIG.questionIntervalMs;
@@ -210,70 +261,10 @@ export class AirportScene extends Phaser.Scene {
     this.activeQuestion = {
       question,
       phase: "reading",
-      readingUntilMs: this.elapsedMs + DATA_FLIGHT_CONFIG.questionReadingMs,
+      readingUntilMs: this.elapsedMs + readingMs,
     };
 
-    const overlay = this.add.container(640, 360).setDepth(90);
-    const shade = this.add.rectangle(0, 0, 1280, 720, 0x112f43, 0.82);
-    const panel = this.add
-      .image(0, 0, "airport-quiz-card")
-      .setDisplaySize(1_040, 425);
-    const badge = this.add
-      .text(0, -172, "데이터 퀴즈", {
-        color: "#fffaf1",
-        fontFamily: FONT_FAMILY,
-        fontSize: "24px",
-        fontStyle: "bold",
-        shadow: {
-          offsetY: 2,
-          color: "#9f352f",
-          blur: 1,
-          fill: true,
-        },
-      })
-      .setOrigin(0.5);
-    const prompt = this.add
-      .text(0, -12, question.prompt, {
-        color: "#173f43",
-        fontFamily: FONT_FAMILY,
-        fontSize: "39px",
-        fontStyle: "bold",
-        align: "center",
-        lineSpacing: 8,
-        wordWrap: { width: 760 },
-      })
-      .setOrigin(0.5);
-    const instruction = this.add
-      .text(0, 132, "곧 데이터 4개가 날아옵니다  ·  정답을 향해 비행하세요!", {
-        color: "#145c77",
-        fontFamily: FONT_FAMILY,
-        fontSize: "20px",
-        fontStyle: "bold",
-      })
-      .setOrigin(0.5);
-    const readingTrack = this.add.graphics();
-    readingTrack.fillStyle(0x145c77, 0.78);
-    readingTrack.fillRoundedRect(-236, 153, 472, 20, 10);
-    readingTrack.lineStyle(2, 0x73d9e4, 0.95);
-    readingTrack.strokeRoundedRect(-236, 153, 472, 20, 10);
-    const readingFill = this.add.graphics().fillStyle(0xf3b94d, 1);
-    readingFill.fillRoundedRect(0, -6, 460, 12, 6).setPosition(-230, 163);
-    overlay.add([shade, panel, badge, prompt, instruction, readingTrack, readingFill]);
-    overlay.setScale(0.82).setAlpha(0);
-    this.tweens.add({
-      targets: overlay,
-      scale: 1,
-      alpha: 1,
-      duration: 330,
-      ease: "Back.easeOut",
-    });
-    this.tweens.add({
-      targets: readingFill,
-      scaleX: 0,
-      duration: DATA_FLIGHT_CONFIG.questionReadingMs,
-      ease: "Linear",
-    });
-    this.questionOverlay = overlay;
+    this.questionOverlay = createAirportQuestionOverlay(this, question, readingMs);
   }
 
   private releaseQuestionChoices() {
@@ -282,38 +273,21 @@ export class AirportScene extends Phaser.Scene {
     active.phase = "choices";
     this.questionOverlay?.destroy(true);
     this.questionOverlay = undefined;
+    this.sendQuestionChoices(active);
+  }
 
+  /** The four answers fly in, with the question kept in view above them. */
+  private sendQuestionChoices(active: ActiveFlightQuestion) {
+    this.activeQuestion = active;
     const order = Phaser.Utils.Array.Shuffle([...FLIGHT_DATA_KINDS]);
     const ys = [165, 295, 425, 555];
     order.forEach((kind, index) => {
       this.spawnData(kind, 1390 + index * 28, ys[index], true);
     });
 
-    const banner = this.add.container(640, 115).setDepth(65);
-    const panel = this.add.graphics();
-    panel.fillStyle(COLORS.ink, 0.92);
-    panel.lineStyle(5, 0xdffcff, 0.95);
-    panel.fillRoundedRect(-410, -35, 820, 70, 30);
-    panel.strokeRoundedRect(-410, -35, 820, 70, 30);
-    this.missionText = this.add
-      .text(0, 0, active.question.prompt, {
-        color: "#fff7df",
-        fontFamily: FONT_FAMILY,
-        fontSize: "22px",
-        fontStyle: "bold",
-        align: "center",
-        wordWrap: { width: 750 },
-      })
-      .setOrigin(0.5);
-    banner.add([panel, this.missionText]);
-    banner.setScale(0);
-    this.tweens.add({
-      targets: banner,
-      scale: 1,
-      duration: 280,
-      ease: "Back.easeOut",
-    });
-    this.missionBanner = banner;
+    const banner = createAirportMissionBanner(this, active.question.prompt);
+    this.missionText = banner.text;
+    this.missionBanner = banner.container;
   }
 
   private resolveQuestion(selected?: FlightDataKind) {
@@ -325,6 +299,13 @@ export class AirportScene extends Phaser.Scene {
     this.missionBanner = undefined;
     this.missionText = undefined;
     this.activeQuestion = undefined;
+
+    if (this.tutorial) {
+      // The lesson explains the outcome itself; no hearts or fever here.
+      if (!correct && selected) this.reactPlayer?.("ouch");
+      this.tutorial.notify(correct ? "question-correct" : selected ? "question-wrong" : "question-missed");
+      return;
+    }
 
     if (!selected) {
       showAirportNotice(this, "데이터를 놓쳤어요!", "다음 문제에 다시 도전해요.", 0xf5bd46);
@@ -469,6 +450,7 @@ export class AirportScene extends Phaser.Scene {
 
       if (object.container.x < DATA_FLIGHT_CONFIG.objectRemovalX) {
         object.container.destroy(true);
+        if (object.kind === "obstacle") this.tutorial?.notify("obstacle-passed");
         return;
       }
       survivors.push(object);
@@ -507,10 +489,19 @@ export class AirportScene extends Phaser.Scene {
       onComplete: () => object.container.destroy(true),
     });
     this.renderHud();
+    this.tutorial?.notify("collected");
   }
 
   private hitObstacle(object: FlightObject) {
     this.reactPlayer?.("ouch");
+    if (this.tutorial) {
+      // A bump in the lesson stings but costs nothing.
+      this.cameras.main.shake(170, 0.006);
+      createAirportBurst(this, object.container.x, object.container.y, COLORS.danger);
+      object.container.destroy(true);
+      this.tutorial.notify("obstacle-hit");
+      return;
+    }
     this.hearts = decrementHeart(this.hearts);
     this.invulnerableUntilMs =
       this.elapsedMs + DATA_FLIGHT_CONFIG.invulnerabilityMs;
@@ -579,7 +570,7 @@ export class AirportScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
-    if (isGameStartOverlayOpen(this)) return;
+    if (isGameStartOverlayOpen(this) || isCoachCardOpen(this)) return;
     const safeDelta = clampFrameDelta(delta);
     const difficultyProfile = getDifficultyProfile(this.difficultyScore);
     const speedMultiplier =
@@ -592,6 +583,10 @@ export class AirportScene extends Phaser.Scene {
     if (this.ground) advanceAirportBackgroundTile(this.ground, 249 * speedMultiplier * (safeDelta / 1000));
 
     if (this.finished) return;
+    if (this.tutorial) {
+      this.updateTutorial(safeDelta);
+      return;
+    }
     if (this.countdownMs > 0) {
       this.countdownMs -= safeDelta;
       const count = Math.max(1, Math.ceil(this.countdownMs / 1000));
@@ -683,5 +678,22 @@ export class AirportScene extends Phaser.Scene {
     this.updateFlightObjects(safeDelta);
     this.renderHud();
     if (this.remainingMs <= 0) this.finishGame(true);
+  }
+
+  /** The lesson's frame: Midi flies, the tutorial spawns, the clock stands still. */
+  private updateTutorial(safeDelta: number) {
+    const tutorial = this.tutorial;
+    if (!tutorial) return;
+    this.elapsedMs += safeDelta;
+    if (!tutorial.isWaiting()) updateAirportPlayer(this.player, this.controls, this.finished, safeDelta);
+    tutorial.update(safeDelta);
+    if (
+      this.activeQuestion?.phase === "reading" &&
+      this.elapsedMs >= this.activeQuestion.readingUntilMs
+    ) {
+      this.releaseQuestionChoices();
+    }
+    this.updateFlightObjects(safeDelta);
+    this.renderHud();
   }
 }

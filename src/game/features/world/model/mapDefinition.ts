@@ -37,6 +37,12 @@ export type SceneryDefinition = Readonly<{
   position: Point;
   displaySize: Size;
   occlusionArea: AxisAlignedBounds;
+  /**
+   * Where the thing meets the ground, as a fraction of its height from the
+   * top of its picture (0 = top, 1 = bottom). Midi with her feet above this
+   * line walks behind it; below it, in front.
+   */
+  groundLine: number;
   /** Drawn mirrored left-to-right (its points are mirrored to match). */
   flipX?: boolean;
   progressMarker?:
@@ -64,6 +70,11 @@ type PortalBase = Readonly<{
     radiusY: number;
   }>;
   interactionComparison: "strictly-less-than";
+  /**
+   * Scenery id: the entry button never shows while Midi stands behind this
+   * building (past the middle of its ground outline).
+   */
+  frontOf?: string;
 }>;
 
 export type FeaturePortalDefinition = PortalBase &
@@ -143,11 +154,48 @@ export type PrecomputedCollisionMaskDefinition = Readonly<{
   sampleOffsets: readonly Point[];
 }>;
 
+/**
+ * A building's ground outline and painted columns, in map coordinates.
+ * `id` is the scenery piece it belongs to.
+ */
+export type BuildingShapeDefinition = Readonly<{
+  id: string;
+  /** Where the building meets the ground; Midi's feet stay outside it. */
+  footprint: readonly Point[];
+  /** The picture split into equal columns, left to right. */
+  columnLeft: number;
+  columnWidth: number;
+  /** First and last painted y of each column (null = nothing painted). */
+  columnTop: readonly (number | null)[];
+  columnBottom: readonly (number | null)[];
+  /** Overrides `maxHiddenBehindBuilding` for this building. */
+  maxHiddenBehind?: number;
+}>;
+
+/** Midi's size on the ground and on screen, around her position. */
+export type PlayerBodyDefinition = Readonly<{
+  /** Her feet are this far below her position. */
+  feetOffsetY: number;
+  /** The patch of ground under her that must stay off a building. */
+  footRadiusX: number;
+  footRadiusY: number;
+  /** Her body on screen, measured up from her feet. */
+  bodyHalfWidth: number;
+  bodyHeight: number;
+}>;
+
 export type CollisionDefinition = Readonly<{
   movementBounds: AxisAlignedBounds;
   blockedOutsideBounds: AxisAlignedBounds;
   resolution: "x-then-y";
   polygons: readonly PolygonCollisionDefinition[];
+  buildings: readonly BuildingShapeDefinition[];
+  playerBody: PlayerBodyDefinition;
+  /**
+   * Behind a building, Midi may walk on until the building hides this
+   * fraction of her body (0 = not at all, 1 = completely).
+   */
+  maxHiddenBehindBuilding: number;
   ellipses: readonly EllipseCollisionDefinition[];
   curvedMovementGuides: readonly CurvedMovementGuideDefinition[];
   maskWalkableOverrides?: readonly AxisAlignedBounds[];

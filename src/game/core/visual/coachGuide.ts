@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { GAME_ASSETS } from "../../assets";
 import { DISPLAY_FONT_FAMILY } from "./fonts";
+import { drawOutlinedPill, outlinedButtonTextStyle } from "./outlinedButton";
 import { COLORS, FONT_FAMILY, TEXT_COLORS, UI_MOTION } from "./theme";
 
 /**
@@ -37,69 +38,81 @@ export type CoachCard = Readonly<{
 }>;
 
 export function createCoachCard(scene: Phaser.Scene, config: CoachCardConfig): CoachCard {
-  const width = config.width ?? 560;
-  const padding = 26;
-  const iconSize = 78;
-  const textLeft = -width / 2 + padding + iconSize + 20;
-  const textWidth = width / 2 - padding - textLeft;
+  // Left: Midi with the progress dots under her. Right: the words, and the
+  // button at the bottom right under them. The card is only as wide as its
+  // words need (up to `width`), so short tips get a small card.
+  const maxWidth = Math.max(config.width ?? 0, 620);
+  const padding = 22;
+  const iconSize = 68;
+  const sideRoom = 12;
+  const iconColumn = iconSize + sideRoom * 2;
+  const gap = 14;
+  const buttonWidth = 120;
+  const buttonHeight = 44;
+  const maxTextWidth = maxWidth - padding * 2 - iconColumn - gap;
 
   const title = scene.add
-    .text(textLeft, 0, config.title, {
-      color: TEXT_COLORS.primary, fontFamily: FONT_FAMILY, fontSize: "23px", fontStyle: "bold",
-      wordWrap: { width: textWidth, useAdvancedWrap: true },
+    .text(0, 0, config.title, {
+      color: TEXT_COLORS.primary, fontFamily: FONT_FAMILY, fontSize: "22px", fontStyle: "bold",
+      wordWrap: { width: maxTextWidth, useAdvancedWrap: true },
     })
     .setResolution(3);
   const body = scene.add
-    .text(textLeft, 0, config.text, {
+    .text(0, 0, config.text, {
       color: TEXT_COLORS.secondary, fontFamily: FONT_FAMILY, fontSize: "18px", fontStyle: "bold",
-      lineSpacing: 6, wordWrap: { width: textWidth, useAdvancedWrap: true },
+      lineSpacing: 5, wordWrap: { width: maxTextWidth, useAdvancedWrap: true },
     })
     .setResolution(3);
-  const buttonHeight = 50;
-  const contentHeight = title.height + 10 + body.height;
-  const height = Math.max(iconSize + padding * 2, contentHeight + padding * 2) + buttonHeight + 14;
+  const showDots = Boolean(config.step && config.step.total > 1);
+  const dotsRoom = showDots ? 22 : 0;
+  const textWidth = Math.max(title.width, body.width, buttonWidth + 60);
+  const rightHeight = title.height + 12 + body.height + 12 + buttonHeight;
+  const leftHeight = iconSize + dotsRoom;
+  const contentHeight = Math.max(rightHeight, leftHeight);
+  const width = padding * 2 + iconColumn + gap + textWidth;
+  const height = contentHeight + padding * 2;
   const top = -height / 2;
-  title.setY(top + padding);
-  body.setY(top + padding + title.height + 10);
+  const left = -width / 2;
+  const contentTop = top + padding;
+  const textLeft = left + padding + iconColumn + gap;
+  title.setPosition(textLeft, contentTop);
+  body.setPosition(textLeft, contentTop + title.height + 12);
 
   const surface = scene.add.graphics();
-  surface.fillStyle(COLORS.ink, 0.2).fillRoundedRect(-width / 2 + 3, top + 7, width, height, 28);
-  surface.fillStyle(0xfffdf6, 1).fillRoundedRect(-width / 2, top, width, height, 28);
-  surface.lineStyle(4, 0x6fb0b2, 1).strokeRoundedRect(-width / 2, top, width, height, 28);
+  surface.fillStyle(COLORS.ink, 0.2).fillRoundedRect(left + 3, top + 6, width, height, 26);
+  surface.fillStyle(0xfffdf6, 1).fillRoundedRect(left, top, width, height, 26);
+  surface.lineStyle(4, 0x6fb0b2, 1).strokeRoundedRect(left, top, width, height, 26);
 
-  const iconX = -width / 2 + padding + iconSize / 2;
-  const iconY = top + padding + iconSize / 2;
+  const iconX = left + padding + iconColumn / 2;
+  const iconY = contentTop + (contentHeight - leftHeight) / 2 + iconSize / 2;
   const iconBack = scene.add.graphics();
   iconBack.fillStyle(0xdff3ef, 1).fillCircle(iconX, iconY, iconSize / 2);
   const children: Phaser.GameObjects.GameObject[] = [surface, iconBack];
   if (scene.textures.exists(MIDI_TEXTURE)) {
-    const midi = scene.add.image(iconX, iconY + 4, MIDI_TEXTURE);
+    const midi = scene.add.image(iconX, iconY + 3, MIDI_TEXTURE);
     midi.setScale((iconSize * 0.86) / midi.height);
     children.push(midi);
   }
   children.push(title, body);
 
-  if (config.step && config.step.total > 1) {
+  if (config.step && showDots) {
     const dots = scene.add.graphics();
-    const gap = 16;
-    const startX = -width / 2 + padding + 8;
-    const dotY = top + height - padding - buttonHeight / 2 + 3;
+    const dotGap = 13;
+    const dotY = iconY + iconSize / 2 + 15;
+    const startX = iconX - ((config.step.total - 1) * dotGap) / 2;
     for (let i = 0; i < config.step.total; i += 1) {
       dots.fillStyle(i === config.step.index ? 0x2a8b7e : 0xd9c7a2, 1);
-      dots.fillCircle(startX + i * gap, dotY, i === config.step.index ? 6 : 5);
+      dots.fillCircle(startX + i * dotGap, dotY, i === config.step.index ? 5 : 4);
     }
     children.push(dots);
   }
 
-  const buttonWidth = 168;
-  const buttonX = width / 2 - padding - buttonWidth / 2;
-  const buttonY = top + height - padding - buttonHeight / 2 + 4;
-  const buttonSurface = scene.add.graphics();
-  buttonSurface.fillStyle(0x1f6f6c, 1).fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2 + 4, buttonWidth, buttonHeight, 25);
-  buttonSurface.fillStyle(0x3fa9a3, 1).fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 25);
+  const buttonX = -left - padding - buttonWidth / 2;
+  const buttonY = top + height - padding - buttonHeight / 2;
+  const buttonSurface = drawOutlinedPill(scene.add.graphics(), buttonWidth, buttonHeight, "teal");
   const buttonLabel = scene.add
-    .text(0, -1, `${config.buttonLabel ?? "다음"}  ▶`, {
-      color: "#fffdf2", fontFamily: FONT_FAMILY, fontSize: "21px", fontStyle: "bold",
+    .text(0, -1, `${config.buttonLabel ?? "다음"} ▶`, {
+      fontFamily: FONT_FAMILY, fontSize: "17px", fontStyle: "bold", ...outlinedButtonTextStyle("teal"),
     })
     .setOrigin(0.5)
     .setResolution(3);
@@ -107,13 +120,8 @@ export function createCoachCard(scene: Phaser.Scene, config: CoachCardConfig): C
     .container(buttonX, buttonY, [buttonSurface, buttonLabel])
     .setSize(buttonWidth, buttonHeight)
     .setInteractive({ useHandCursor: true });
-  const keyHint = scene.add
-    .text(buttonX - buttonWidth / 2 - 14, buttonY, "Space", {
-      color: TEXT_COLORS.secondary, fontFamily: FONT_FAMILY, fontSize: "15px", fontStyle: "bold",
-    })
-    .setOrigin(1, 0.5)
-    .setResolution(3);
-  children.push(keyHint, button);
+  // (Space and Enter still press it; the card text says so where it matters.)
+  children.push(button);
 
   // Touches on the card must not also steer Midi underneath it.
   const hitArea = scene.add
@@ -331,28 +339,30 @@ export function createCoachSpotlight(
     scene.tweens.add({ targets: image, alpha: 1, duration: reducedMotion ? 0 : 260 });
   };
   const softEdge = 70;
-  // A ring of feathered copies so the edge fades instead of cutting.
+  // The hole's edge is one smooth blur (a canvas shadow), not stacked rings:
+  // the shape itself is drawn far off the canvas and only its blurred shadow
+  // lands on the spot, so the light fades out evenly with no visible steps.
+  const offCanvas = width * 2;
   const cutArea = (context: CanvasRenderingContext2D, area: CoachSpotlightArea) => {
-    const steps = 10;
-    const trace = (grow: number) => {
-      context.beginPath();
-      if (area.shape === "rect") {
-        context.roundRect(
-          area.x - area.width / 2 - grow, area.y - area.height / 2 - grow,
-          area.width + grow * 2, area.height + grow * 2, 28 + grow,
-        );
-      } else {
-        context.ellipse(area.x, area.y, area.width / 2 + grow, area.height / 2 + grow, 0, 0, Math.PI * 2);
-      }
-    };
-    for (let step = 0; step < steps; step += 1) {
-      trace((softEdge * step) / steps);
-      context.fillStyle = `rgba(0, 0, 0, ${1 / steps + 0.03})`;
-      context.fill();
+    const grow = softEdge / 2;
+    context.save();
+    context.translate(-offCanvas, 0);
+    context.shadowColor = "rgba(0, 0, 0, 1)";
+    context.shadowBlur = softEdge;
+    context.shadowOffsetX = offCanvas;
+    context.shadowOffsetY = 0;
+    context.beginPath();
+    if (area.shape === "rect") {
+      context.roundRect(
+        area.x - area.width / 2 - grow, area.y - area.height / 2 - grow,
+        area.width + grow * 2, area.height + grow * 2, 28 + grow,
+      );
+    } else {
+      context.ellipse(area.x, area.y, area.width / 2 + grow, area.height / 2 + grow, 0, 0, Math.PI * 2);
     }
-    trace(0);
     context.fillStyle = "rgba(0, 0, 0, 1)";
     context.fill();
+    context.restore();
   };
   const focusAreas = (areas: readonly CoachSpotlightArea[]) => {
     paint((context) => areas.forEach((area) => cutArea(context, area)));

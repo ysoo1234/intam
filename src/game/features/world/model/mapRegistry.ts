@@ -86,3 +86,12 @@ export function createMapRegistry<const TMap extends MapDefinition>(
 }
 
 export const mapRegistry = createMapRegistry([VILLAGE_MAP]);
+
+/** The village ("world") map; it must always be registered. */
+export function getWorldMapDefinition() {
+  const definition = mapRegistry.get("world");
+  if (!definition) {
+    throw new Error('World map definition "world" is not registered.');
+  }
+  return definition;
+}

@@ -128,10 +128,6 @@ const WORKSHOP_PRODUCT_IDS = [
 ];
 
 const ASSETS = [
-  ...["approve", "reject"].map(verdict => highDpiPanelAsset({
-    source: `ethics-review/stamp-tool-${verdict}-v1.png`,
-    trim: true, quality: 96, alphaQuality: 100,
-  }, { width: 160, height: 150 })),
   ...["permission", "privacy", "checking", "honesty", "respect"].map(topic => highDpiPanelAsset({
     source: `ethics-review/stamp-topic-${topic}-${topic === "permission" ? "v2" : "v1"}.png`,
     trim: true, quality: 96, alphaQuality: 100,
@@ -205,6 +201,14 @@ const ASSETS = [
     fit: "inside",
     quality: 92,
   },
+  // The school library seen through the ending's door home (textbook prologue).
+  {
+    source: "ending/story-library-v1.png",
+    output: "ending/story-library-v1.webp",
+    width: 1440,
+    fit: "inside",
+    quality: 92,
+  },
   // Generated door frame for the intro story (ring with three gems, transparent inside).
   {
     source: "intro/story-portal-frame-v1.png",
@@ -272,18 +276,6 @@ const ASSETS = [
     quality: 94,
     alphaQuality: 100,
   }, { width: 780, height: 520 }),
-  highDpiPanelAsset({
-    source: "ui/game-result-retry-button-v1.png",
-    trim: true,
-    quality: 94,
-    alphaQuality: 100,
-  }, { width: 340, height: 72 }),
-  highDpiPanelAsset({
-    source: "ui/game-result-return-button-v1.png",
-    trim: true,
-    quality: 94,
-    alphaQuality: 100,
-  }, { width: 340, height: 72 }),
   // v8: garden village (village_garden_raw_v2.png: the garden with a band of
   // sky, hills and forest added above it, upscaled to 2x). Walkable area:
   // assets-source/world/build_garden_walkable_mask_v8.py.
@@ -324,26 +316,13 @@ const ASSETS = [
     alphaQuality: 100,
   },
   highDpiPanelAsset({
-    source: "world/village-ai-world-portal-night-v4.png",
-    output: "world/village-ai-world-portal-night-v4.webp",
-    quality: 94,
-  }, { width: 420, height: 420 }),
-  highDpiPanelAsset({
-    source: "world/village-fountain-v3.png",
+    source: "world/village-fountain-v4.png",
     output: "world/village-fountain.webp",
-    trim: true,
+    // Pre-aligned to the v3 basin (the grid size is fixed), so no trim.
+    trim: false,
     lossless: true,
     alphaQuality: 100,
   }, { width: 211 }),
-  {
-    source: "world/village-fountain-water-frames-v1.png",
-    output: "world/village-fountain-water-frames-v1.webp",
-    width: 1252,
-    height: 1252,
-    fit: "fill",
-    lossless: true,
-    alphaQuality: 100,
-  },
   fullScreenAsset({
     source: "shop/ai-workshop-interior-v6.png",
     output: "shop/ai-workshop-interior-v6.webp",
@@ -362,9 +341,10 @@ const ASSETS = [
     alphaQuality: 100,
   }, { width: 380 }),
   highDpiPanelAsset({
-    source: "shop/workshop-crafting-panel-v2.png",
-    output: "shop/workshop-crafting-panel-v2.webp",
-    trim: true,
+    source: "shop/workshop-crafting-panel-v3.png",
+    output: "shop/workshop-crafting-panel-v3.webp",
+    // Pre-cropped to the v2 frame (no bottom plate now), so parts stay where they were.
+    trim: false,
     lossless: true,
     alphaQuality: 100,
   }, { width: 860 }),
@@ -464,14 +444,6 @@ const ASSETS = [
     quality: 94,
     alphaQuality: 100,
   },
-  {
-    source: "shop/workshop-dialogue-bubble-v2.png",
-    output: "shop/workshop-dialogue-bubble-v2.webp",
-    trim: true,
-    width: 420,
-    quality: 92,
-    alphaQuality: 100,
-  },
   ...WORKSHOP_PRODUCT_IDS.map((productId) => ({
     source: `shop/products-v2/${productId}.png`,
     width: 256,
@@ -488,12 +460,6 @@ const ASSETS = [
   tiledBackgroundAsset({
     source: "airport/bg_ground.png",
   }),
-  {
-    source: "airport/data-flight-quiz-card-v3.png",
-    output: "airport/data-flight-quiz-card-v1.webp",
-    lossless: true,
-    alphaQuality: 100,
-  },
   {
     source: "airport/data_doc.png",
     width: 256,
@@ -620,14 +586,6 @@ const ASSETS = [
     lossless: true,
     alphaQuality: 100,
   }, { width: 190 }),
-  fullScreenAsset({
-    source: "ethics-review/inspection-booth-v2.png",
-    quality: 96,
-  }),
-  highDpiPanelAsset({
-    source: "ethics-review/inspection-form-v2.png",
-    trim: true, quality: 96, alphaQuality: 100,
-  }, { width: 510, height: 266 }),
   fullScreenAsset({
     source: "ethics-review/office-v2.png",
     lossless: true,

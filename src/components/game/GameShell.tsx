@@ -20,6 +20,15 @@ function readDevelopmentScene() {
   }
 }
 
+/** `?ending` opens the ending straight away (for checking it and classroom demos). */
+function readRequestedEnding() {
+  try {
+    return new URLSearchParams(window.location.search).has("ending");
+  } catch {
+    return false;
+  }
+}
+
 function rememberDevelopmentScene(sceneKey?: string) {
   if (
     process.env.NODE_ENV !== "development" ||
@@ -70,7 +79,10 @@ export function GameShell() {
 
       const nextGame = createLearningGame(parent, () => {
         if (cancelled) return;
-        if (sceneToRestore && sceneToRestore !== "intro") {
+        if (readRequestedEnding()) {
+          nextGame.scene.stop("intro");
+          nextGame.scene.start("ending");
+        } else if (sceneToRestore && sceneToRestore !== "intro") {
           nextGame.scene.start(sceneToRestore);
         }
         setReady(true);

@@ -1,8 +1,9 @@
 import Phaser from "phaser";
 import { GAME_ASSETS } from "../../assets";
+import { drawOutlinedCircle, drawOutlinedPill, outlinedButtonTextStyle, type OutlinedButtonVariant } from "./outlinedButton";
 import { FONT_FAMILY, UI_MOTION } from "./theme";
 
-const GAME_START_TEXTURES = {
+export const GAME_START_TEXTURES = {
   panel: "game-start-panel",
   button: "game-start-button",
 } as const;
@@ -111,17 +112,17 @@ export function isGameStartOverlayOpen(scene: Phaser.Scene) {
 }
 
 export type GameStartHelp = Readonly<{
-  /** The question in the ? dialog, e.g. "튜토리얼을 보고 시작할까요?". */
+  /** The question in the ? dialog, e.g. "튜토리얼을 다시 볼까요?". */
   question: string;
   /** Hides the ? button when false (the tutorial plays anyway on a first visit). */
   shouldOffer?: () => boolean;
 }>;
 
 /**
- * Asks `question` with 예 / 아니요; resolves true for 예. Sits above the start
- * panel and swallows the Space/Enter keys while open.
+ * Asks `question` with 예 / 아니요; resolves true for 예. Sits above
+ * everything at `depth` and swallows the Space/Enter keys while open.
  */
-function askYesNo(scene: Phaser.Scene, question: string, depth: number) {
+export function askYesNo(scene: Phaser.Scene, question: string, depth: number) {
   return new Promise<boolean>((resolve) => {
     const width = 520;
     const height = 230;
@@ -132,19 +133,20 @@ function askYesNo(scene: Phaser.Scene, question: string, depth: number) {
     panel.lineStyle(4, 0x6fb0b2, 1).strokeRoundedRect(-width / 2, -height / 2, width, height, 28);
     const text = scene.add
       .text(0, -46, question, {
-        color: "#315567", fontFamily: FONT_FAMILY, fontSize: "27px", fontStyle: "bold", align: "center",
+        color: "#315567", fontFamily: FONT_FAMILY, fontSize: question.includes("\n") ? "24px" : "27px",
+        fontStyle: "bold", align: "center", lineSpacing: 8,
         wordWrap: { width: width - 60, useAdvancedWrap: true },
       })
       .setOrigin(0.5)
       .setResolution(3);
-    const makeButton = (x: number, label: string, fill: number, shade: number, color: string) => {
-      const buttonWidth = 190;
-      const buttonHeight = 58;
-      const surface = scene.add.graphics();
-      surface.fillStyle(shade, 1).fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2 + 4, buttonWidth, buttonHeight, 29);
-      surface.fillStyle(fill, 1).fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 29);
+    const makeButton = (x: number, label: string, variant: OutlinedButtonVariant) => {
+      const buttonWidth = 196;
+      const buttonHeight = 62;
+      const surface = drawOutlinedPill(scene.add.graphics(), buttonWidth, buttonHeight, variant);
       const caption = scene.add
-        .text(0, -1, label, { color, fontFamily: FONT_FAMILY, fontSize: "24px", fontStyle: "bold" })
+        .text(0, -1, label, {
+          fontFamily: FONT_FAMILY, fontSize: "24px", fontStyle: "bold", ...outlinedButtonTextStyle(variant),
+        })
         .setOrigin(0.5)
         .setResolution(3);
       return scene.add
@@ -152,8 +154,8 @@ function askYesNo(scene: Phaser.Scene, question: string, depth: number) {
         .setSize(buttonWidth, buttonHeight)
         .setInteractive({ useHandCursor: true });
     };
-    const yes = makeButton(-110, "예", 0x3fa9a3, 0x1f6f6c, "#fffdf2");
-    const no = makeButton(110, "아니요", 0xfff2d6, 0xd9c7a2, "#315567");
+    const yes = makeButton(-110, "예", "teal");
+    const no = makeButton(110, "아니요", "cream");
     const container = scene.add
       .container(640, 360, [panel, text, yes, no])
       .setDepth(depth)
@@ -285,13 +287,12 @@ export function createGameStartOverlay(
   const showHelp = Boolean(help && (help.shouldOffer?.() ?? true));
   const helpButton = scene.add.container(0, 0).setVisible(showHelp);
   if (help && showHelp) {
-    const radius = 24;
-    const helpSurface = scene.add.graphics();
-    helpSurface.fillStyle(0x1f6f6c, 1).fillCircle(0, 4, radius);
-    helpSurface.fillStyle(0x3fa9a3, 1).fillCircle(0, 0, radius);
-    helpSurface.lineStyle(3, 0xffffff, 1).strokeCircle(0, 0, radius);
+    const radius = 27;
+    const helpSurface = drawOutlinedCircle(scene.add.graphics(), radius, "teal");
     const helpLabel = scene.add
-      .text(0, -1, "?", { color: "#fffdf2", fontFamily: FONT_FAMILY, fontSize: "30px", fontStyle: "bold" })
+      .text(0, -1, "?", {
+        fontFamily: FONT_FAMILY, fontSize: "30px", fontStyle: "bold", ...outlinedButtonTextStyle("teal"),
+      })
       .setOrigin(0.5)
       .setResolution(3);
     helpButton

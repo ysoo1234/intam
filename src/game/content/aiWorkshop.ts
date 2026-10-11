@@ -80,7 +80,7 @@ export const WORKSHOP_PRODUCTS: WorkshopProduct[] = [
   },
   {
     id: "pet-care-robot",
-    label: "반려동물 돌봄 로봇",
+    label: "반려동물 돌봄 AI",
     emoji: "🐶",
     color: 0x78c99a,
     description: "보호자가 없는 동안 반려동물 곁에서 돌봐 줘요.",
@@ -122,7 +122,7 @@ export const WORKSHOP_PRODUCTS: WorkshopProduct[] = [
   },
   {
     id: "medical-reader",
-    label: "의료 영상 판독기",
+    label: "엑스레이 판독 AI",
     emoji: "🩻",
     color: 0x6faee7,
     description: "의료 영상에서 이상이 의심되는 부분을 빠르게 표시해 줘요.",

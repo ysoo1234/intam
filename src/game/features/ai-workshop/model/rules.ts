@@ -32,17 +32,20 @@ export function isWorkshopDeliveryCorrect(
   );
 }
 
-export function getWorkshopReward(
-  customerNumber: number,
-  starMisses: number,
-) {
-  const baseReward =
-    customerNumber >= AI_WORKSHOP_CONFIG.laterCustomerNumber
-      ? AI_WORKSHOP_CONFIG.laterCustomerReward
-      : AI_WORKSHOP_CONFIG.earlyCustomerReward;
-  const perfectBonus =
-    starMisses === 0 ? AI_WORKSHOP_CONFIG.perfectCraftingBonus : 0;
-  return { baseReward, perfectBonus, reward: baseReward + perfectBonus };
+/** The lowest and highest coins a customer can pay (both multiples of 10). */
+export function getWorkshopRewardRange(customerNumber: number) {
+  const rule = AI_WORKSHOP_CONFIG.reward;
+  const tier = Math.floor((Math.max(1, customerNumber) - 1) / rule.customersPerTier);
+  const min = rule.firstMin + tier * rule.increasePerTier;
+  return { min, max: min + rule.rangeSteps * rule.step };
+}
+
+/** Coins for a served customer: a lucky draw of 20, 30, 40 or 50 (for 1–3), and so on. */
+export function getWorkshopReward(customerNumber: number, random: () => number = Math.random) {
+  const rule = AI_WORKSHOP_CONFIG.reward;
+  const { min } = getWorkshopRewardRange(customerNumber);
+  const steps = Math.min(rule.rangeSteps, Math.floor(random() * (rule.rangeSteps + 1)));
+  return { reward: min + steps * rule.step };
 }
 
 export function getWorkshopStars(completedCustomers: number): 1 | 2 | 3 {

@@ -87,6 +87,11 @@ export class AirportHud {
     this.countdownText.setText(`${count}`);
   }
 
+  /** The tutorial counts down on its own, after the lesson. */
+  hideCountdown() {
+    this.countdownText.setVisible(false);
+  }
+
   completeCountdown() {
     this.countdownText.setText("출발!");
     this.scene.tweens.add({

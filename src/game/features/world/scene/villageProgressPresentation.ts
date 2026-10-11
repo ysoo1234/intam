@@ -8,21 +8,21 @@ import type { MapDefinition, Point } from "../model/mapDefinition";
 import type { VillageSceneryLayer } from "./villageScenery";
 
 const PROGRESS_DEPTH = 1_880;
-const STAR_TEXTURES = {
+export const VILLAGE_STAR_TEXTURES = {
   empty: "village-activity-star-empty",
   filled: "village-activity-star-filled",
 } as const;
 
 export function preloadVillageProgressPresentationAssets(scene: Phaser.Scene) {
-  if (!scene.textures.exists(STAR_TEXTURES.empty)) {
+  if (!scene.textures.exists(VILLAGE_STAR_TEXTURES.empty)) {
     scene.load.image(
-      STAR_TEXTURES.empty,
+      VILLAGE_STAR_TEXTURES.empty,
       GAME_ASSETS.ui.villageActivityStarEmpty,
     );
   }
-  if (!scene.textures.exists(STAR_TEXTURES.filled)) {
+  if (!scene.textures.exists(VILLAGE_STAR_TEXTURES.filled)) {
     scene.load.image(
-      STAR_TEXTURES.filled,
+      VILLAGE_STAR_TEXTURES.filled,
       GAME_ASSETS.ui.villageActivityStarFilled,
     );
   }
@@ -46,12 +46,12 @@ function createActivityStars(
     const filled = starIndex < stars;
     const size = starIndex === 1 ? 43 : 39;
     const shadow = scene.add
-      .image(starX, starY + 3, filled ? STAR_TEXTURES.filled : STAR_TEXTURES.empty)
+      .image(starX, starY + 3, filled ? VILLAGE_STAR_TEXTURES.filled : VILLAGE_STAR_TEXTURES.empty)
       .setDisplaySize(size, size)
       .setTint(0x173f43)
       .setAlpha(0.18);
     const star = scene.add
-      .image(starX, starY, filled ? STAR_TEXTURES.filled : STAR_TEXTURES.empty)
+      .image(starX, starY, filled ? VILLAGE_STAR_TEXTURES.filled : VILLAGE_STAR_TEXTURES.empty)
       .setDisplaySize(size, size);
     container.add([shadow, star]);
     if (filled) earnedStars.push(star);

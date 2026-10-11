@@ -4,26 +4,36 @@ import {
   type ControlKeys,
 } from "../../../core/input/controlKeys";
 import { getPointerWorldPoint } from "../../../core/input/pointerCoordinates";
-import {
-  getTextStyle,
-  TEXT_COLORS,
-  UI_MOTION,
-} from "../../../core/visual/theme";
 import { projectWorkshopPointToWalkableArea } from "./workshopPlayer";
+
+/**
+ * A tap on something Midi can use (a product, a shelf slot, the workbench,
+ * the customer): she walks to `point` and `act` runs as soon as `inReach`
+ * says she is close enough. Keyboard movement cancels it.
+ */
+export type WorkshopWalkGoal = Readonly<{
+  point: Readonly<{ x: number; y: number }>;
+  inReach: () => boolean;
+  act: () => void;
+}>;
 
 export type WorkshopControls = {
   keys: ControlKeys | undefined;
   cursors: Phaser.Types.Input.Keyboard.CursorKeys | undefined;
   joystick: Phaser.Math.Vector2;
   updateTouchDirection: () => void;
-  actionButton: Phaser.GameObjects.Container;
-  actionText: Phaser.GameObjects.Text;
+  /** Walk to a tapped thing and use it on arrival (replaces any earlier goal). */
+  walkTo: (goal: WorkshopWalkGoal) => void;
+  /** Forget the current goal (e.g. when the phase changes under it). */
+  cancelWalk: () => void;
 };
+
+/** A walk that stalls this close to its spot still uses the thing (Midi's body is ~50px wide). */
+const STALL_ACT_DISTANCE = 48;
 
 export function createWorkshopControls(
   scene: Phaser.Scene,
   onBack: () => void,
-  onAction: () => void,
   getPlayerPosition: () => Readonly<{ x: number; y: number }> | undefined,
 ): WorkshopControls {
   const keys = makeControlKeys(scene);
@@ -37,14 +47,32 @@ export function createWorkshopControls(
   let lastPlayerX = Number.NaN;
   let lastPlayerY = Number.NaN;
   let stalledFrames = 0;
+  let goal: WorkshopWalkGoal | undefined;
 
+  const resetTracking = () => {
+    lastPlayerX = Number.NaN;
+    lastPlayerY = Number.NaN;
+    stalledFrames = 0;
+  };
   const rememberTarget = (pointer: Phaser.Input.Pointer) => {
     const worldPoint = getPointerWorldPoint(scene, pointer, pointerWorldPoint);
     projectWorkshopPointToWalkableArea(worldPoint.x, worldPoint.y, target);
     hasTarget = true;
-    lastPlayerX = Number.NaN;
-    lastPlayerY = Number.NaN;
-    stalledFrames = 0;
+    goal = undefined;
+    resetTracking();
+  };
+  const walkTo = (next: WorkshopWalkGoal) => {
+    goal = next;
+    projectWorkshopPointToWalkableArea(next.point.x, next.point.y, target);
+    hasTarget = true;
+    pointerId = -1;
+    resetTracking();
+  };
+  const cancelWalk = () => {
+    goal = undefined;
+    hasTarget = false;
+    joystick.set(0, 0);
+    resetTracking();
   };
   const pressTouch = (pointer: Phaser.Input.Pointer) => {
     if (pointerId !== -1) return;
@@ -70,24 +98,29 @@ export function createWorkshopControls(
     );
     if (keyboardMoving) {
       hasTarget = false;
-      lastPlayerX = Number.NaN;
-      lastPlayerY = Number.NaN;
-      stalledFrames = 0;
+      goal = undefined;
+      resetTracking();
     }
     const player = getPlayerPosition();
     if (!hasTarget || !player) {
       joystick.set(0, 0);
       return;
     }
+    // Close enough to the tapped thing: use it now, no need to reach the exact spot.
+    if (goal?.inReach()) {
+      const reached = goal;
+      cancelWalk();
+      reached.act();
+      return;
+    }
     const dx = target.x - player.x;
     const dy = target.y - player.y;
     const distance = Math.hypot(dx, dy);
     if (distance <= 16) {
-      hasTarget = false;
-      lastPlayerX = Number.NaN;
-      lastPlayerY = Number.NaN;
-      stalledFrames = 0;
-      joystick.set(0, 0);
+      // Arrived at the spot itself: a goal acts now even if its own reach test is stricter.
+      const reached = goal;
+      cancelWalk();
+      reached?.act();
       return;
     }
     const playerTravel = Number.isFinite(lastPlayerX)
@@ -97,11 +130,11 @@ export function createWorkshopControls(
     lastPlayerX = player.x;
     lastPlayerY = player.y;
     if (stalledFrames >= 6) {
-      hasTarget = false;
-      lastPlayerX = Number.NaN;
-      lastPlayerY = Number.NaN;
-      stalledFrames = 0;
-      joystick.set(0, 0);
+      // Blocked on the way (a furniture edge under the shelf, say): close
+      // enough counts as there; farther away she gives up quietly.
+      const reached = goal;
+      cancelWalk();
+      if (reached && (reached.inReach() || distance <= STALL_ACT_DISTANCE)) reached.act();
       return;
     }
     joystick.set(dx / distance, dy / distance);
@@ -112,11 +145,7 @@ export function createWorkshopControls(
     scene.input.off("pointerup", releaseTouch);
     scene.input.off("pointerupoutside", releaseTouch);
     pointerId = -1;
-    hasTarget = false;
-    lastPlayerX = Number.NaN;
-    lastPlayerY = Number.NaN;
-    stalledFrames = 0;
-    joystick.set(0, 0);
+    cancelWalk();
   };
   scene.input.on("pointerdown", pressTouch);
   scene.input.on("pointermove", updateDraggedTarget);
@@ -124,67 +153,12 @@ export function createWorkshopControls(
   scene.input.on("pointerupoutside", releaseTouch);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, destroyTouchControls);
 
-  const actionSurface = scene.add
-    .image(0, 0, "workshop-action-button")
-    .setDisplaySize(90, 90);
-  const actionText = scene.add
-    .text(
-      0,
-      -1,
-      "집기",
-      getTextStyle("heading", {
-        color: TEXT_COLORS.primary,
-        fontSize: "18px",
-      }),
-    )
-    .setOrigin(0.5)
-    .setResolution(3);
-  const action = scene.add
-    .container(1188, 628, [actionSurface, actionText])
-    .setDepth(90)
-    .setSize(94, 94)
-    .setInteractive({ useHandCursor: true })
-    .setVisible(false);
-  let actionHovering = false;
-  action.on(
-    "pointerdown",
-    (
-      _pointer: Phaser.Input.Pointer,
-      _localX: number,
-      _localY: number,
-      event: Phaser.Types.Input.EventData,
-    ) => {
-      event.stopPropagation();
-      scene.tweens.killTweensOf(action);
-      scene.tweens.add({
-        targets: action,
-        scale: UI_MOTION.pressedScale,
-        duration: UI_MOTION.pressDurationMs,
-        yoyo: true,
-        ease: "Sine.easeOut",
-        onComplete: () => {
-          action.setScale(actionHovering ? UI_MOTION.hoverScale : 1);
-        },
-      });
-      onAction();
-    },
-  );
-  action.on("pointerover", () => {
-    actionHovering = true;
-    if (!scene.tweens.isTweening(action)) {
-      action.setScale(UI_MOTION.hoverScale);
-    }
-  });
-  action.on("pointerout", () => {
-    actionHovering = false;
-    if (!scene.tweens.isTweening(action)) action.setScale(1);
-  });
   return {
     keys,
     cursors,
     joystick,
     updateTouchDirection,
-    actionButton: action,
-    actionText,
+    walkTo,
+    cancelWalk,
   };
 }

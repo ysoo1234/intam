@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import type { EthicsVisitor } from "../model";
+import { drawEthicsBubble } from "./ethicsBubbleShape";
 import { ETHICS_DEPTH, ethicsTextStyle, getEthicsVisitorTexture } from "./ethicsReviewOffice";
 import { ETHICS_LAYOUT } from "./layout";
 
@@ -8,49 +9,30 @@ export const ETHICS_VISITOR_MOTION = { enterMs: 300, leaveMs: 240 } as const;
 export type EthicsReviewVisitorView = ReturnType<typeof createEthicsReviewVisitor>;
 
 /**
- * The student seen through the service window. Workshop customer cutouts stand
- * full-body in the painted corridor; the arched mask crops them at the sill, so
- * they can walk in from the hallway on the left and leave the same way.
+ * The student seen through the service window. They stand in the hallway behind
+ * the counter (the booth's front layer covers their lower body), walk in from
+ * the left and leave the same way.
  */
 export function createEthicsReviewVisitor(scene: Phaser.Scene) {
-  const window = ETHICS_LAYOUT.window;
   const spot = ETHICS_LAYOUT.visitor;
-  // Phaser 4 WebGL clips through a mask filter; Canvas keeps the geometry mask.
-  const shape = scene.make.graphics({ x: 0, y: 0 });
-  shape.fillStyle(0xffffff, 1);
-  shape.fillRoundedRect(window.x, window.y, window.width, window.height, {
-    tl: window.archRadius, tr: window.archRadius, bl: 6, br: 6,
-  });
-  const clipToWindow = (target: Phaser.GameObjects.Image | Phaser.GameObjects.Graphics | Phaser.GameObjects.Ellipse) => {
-    if (scene.game.renderer.type === Phaser.CANVAS) {
-      target.setMask(shape.createGeometryMask());
-      return;
-    }
-    target.enableFilters();
-    target.filters?.external.addMask(shape, false, scene.cameras.main, "world");
-  };
   // Origin sits on the character's feet so every cutout shares one floor line.
+  // The booth's front layer (frame, sill, counter) hides everything below the
+  // window, so the student simply stands behind the counter.
   const footOrigin = spot.canvasFootY / spot.canvasHeight;
   const image = scene.add.image(spot.x, spot.feetY, "__DEFAULT")
     .setOrigin(0.5, footOrigin).setDepth(ETHICS_DEPTH.visitor).setAlpha(0);
-  const shadow = scene.add.ellipse(spot.x, window.y + window.height - 6, 150, 18, 0x2f4f55, 0.16)
-    .setDepth(ETHICS_DEPTH.visitor - 1).setAlpha(0);
-  clipToWindow(image);
-  clipToWindow(shadow);
+  // Kept for the view contract; the counter hides the student's feet.
+  const shadow = scene.add.ellipse(spot.x, spot.feetY, 1, 1, 0x000000, 0).setVisible(false);
+  const glass = scene.add.graphics().setVisible(false);
   const fit = (textureKey: string) => {
     image.setTexture(textureKey);
     image.setScale(spot.height / spot.canvasHeight);
   };
-  // A faint glass highlight keeps the student reading as "behind the window".
-  const glass = scene.add.graphics().setDepth(ETHICS_DEPTH.visitor + 1);
-  clipToWindow(glass);
-  glass.fillStyle(0xffffff, 0.14);
-  glass.fillTriangle(window.x + 20, window.y, window.x + 150, window.y, window.x + 40, window.y + window.height);
 
   const bubbleBox = scene.add.graphics();
   const bubbleText = scene.add.text(0, 0, "", { ...ethicsTextStyle(20, "#315567"), wordWrap: { width: ETHICS_LAYOUT.visitorBubble.maxWidth } })
     .setOrigin(0, 0.5).setResolution(3);
-  const bubble = scene.add.container(ETHICS_LAYOUT.visitorBubble.x, ETHICS_LAYOUT.visitorBubble.y, [bubbleBox, bubbleText])
+  const bubble = scene.add.container(ETHICS_LAYOUT.visitorBubble.left, ETHICS_LAYOUT.visitorBubble.y, [bubbleBox, bubbleText])
     .setDepth(ETHICS_DEPTH.bubble).setVisible(false);
   let bubbleTimer: Phaser.Time.TimerEvent | undefined;
   let current: EthicsVisitor | undefined;
@@ -67,14 +49,13 @@ export function createEthicsReviewVisitor(scene: Phaser.Scene) {
     const width = bubbleText.width + 36;
     const height = Math.max(46, bubbleText.height + 18);
     bubbleText.setPosition(18 - width / 2, 0);
-    bubbleBox.clear();
-    bubbleBox.fillStyle(0x315567, 0.14).fillRoundedRect(-width / 2 + 3, -height / 2 + 5, width, height, 18);
-    bubbleBox.fillStyle(0xffffff, 1).fillRoundedRect(-width / 2, -height / 2, width, height, 18);
-    bubbleBox.lineStyle(2.5, 0x6fb0b2, 1).strokeRoundedRect(-width / 2, -height / 2, width, height, 18);
-    // Tail points back toward the window on the left.
-    bubbleBox.fillStyle(0xffffff, 1).fillTriangle(-width / 2 + 1, -8, -width / 2 + 1, 12, -width / 2 - 16, 6);
-    bubbleBox.lineStyle(2.5, 0x6fb0b2, 1).lineBetween(-width / 2 + 1, -8, -width / 2 - 16, 6);
-    bubbleBox.lineBetween(-width / 2 - 16, 6, -width / 2 + 1, 12);
+    // Grows to the right from a fixed left edge, so short lines stay close to the student.
+    bubble.setX(ETHICS_LAYOUT.visitorBubble.left + width / 2);
+    // Tail points back toward the window on the left, drawn as one outline with the bubble.
+    drawEthicsBubble(bubbleBox, {
+      width, height, radius: 15,
+      tail: { side: "left", from: -6, to: 8, tip: { x: -width / 2 - 16, y: 6 } },
+    }, { fill: 0xffffff, line: 0x6fb0b2 });
     bubble.setVisible(true).setScale(0.6).setAlpha(0);
     scene.tweens.add({ targets: bubble, scale: 1, alpha: 1, duration: 170, ease: "Back.easeOut" });
     bubbleTimer = scene.time.delayedCall(holdMs, () => {
@@ -87,7 +68,6 @@ export function createEthicsReviewVisitor(scene: Phaser.Scene) {
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     hideBubble();
     stopMotion();
-    shape.destroy();
   });
 
   return {

@@ -518,6 +518,128 @@ function trySlideAlongCurvedObstacle(
   return null;
 }
 
+/**
+ * Slide candidates when the straight step is blocked, in order of
+ * preference: shallow turns, the axis slides, then turns pointing a little
+ * backwards (only useful for climbing out of a pocket). 0 marks the axis
+ * slide along the dominant input component, 1 the minor one.
+ */
+const SLIDE_CANDIDATES: readonly (number | "major" | "minor")[] = [
+  "major", 30, -30, 45, -45, 60, -60, 75, -75, "minor",
+  105, -105, 120, -120, 135, -135,
+];
+const SLIDE_LOOKAHEAD_STEPS = 4;
+
+function countSlideClearance(
+  candidate: WorldPosition,
+  directionX: number,
+  directionY: number,
+  isBlocked: (x: number, y: number) => boolean,
+) {
+  let clearance = 0;
+  while (
+    clearance < SLIDE_LOOKAHEAD_STEPS &&
+    !isBlocked(
+      candidate.x + directionX * (clearance + 1),
+      candidate.y + directionY * (clearance + 1),
+    )
+  ) {
+    clearance += 1;
+  }
+  return clearance;
+}
+
+/**
+ * The painted walkable mask has bushes and kerbs at every angle, so a pure
+ * x-then-y slide wedges Midi in concave corners where neither axis is open,
+ * or walks her into a dead end she then cannot leave. Take the first
+ * candidate (see SLIDE_CANDIDATES) that stays open for the whole lookahead;
+ * if none does, the one that stays open longest.
+ */
+function findSlide(
+  current: WorldPosition,
+  stepX: number,
+  stepY: number,
+  isBlocked: (x: number, y: number) => boolean,
+) {
+  const length = Math.hypot(stepX, stepY);
+  if (length === 0) return null;
+  const baseAngle = Math.atan2(stepY, stepX);
+  const horizontalDominant = Math.abs(stepX) >= Math.abs(stepY);
+  let best: WorldPosition | null = null;
+  let bestClearance = -1;
+  for (const entry of SLIDE_CANDIDATES) {
+    let directionX: number;
+    let directionY: number;
+    if (typeof entry === "number") {
+      const angle = baseAngle + (entry * Math.PI) / 180;
+      directionX = Math.cos(angle) * length;
+      directionY = Math.sin(angle) * length;
+    } else if ((entry === "major") === horizontalDominant) {
+      directionX = stepX;
+      directionY = 0;
+    } else {
+      directionX = 0;
+      directionY = stepY;
+    }
+    if (directionX === 0 && directionY === 0) continue;
+    const candidate = {
+      x: current.x + directionX,
+      y: current.y + directionY,
+    };
+    if (isBlocked(candidate.x, candidate.y)) continue;
+    if (typeof entry === "number" && Math.abs(entry) > 90) {
+      // A backward turn is only for leaving a pocket she walked into: take
+      // it when the way forward opens up from there. Facing a flat wall it
+      // would not, and she should stand still rather than drift.
+      const twoBack = {
+        x: candidate.x + directionX,
+        y: candidate.y + directionY,
+      };
+      if (
+        hasForwardExit(candidate, stepX, stepY, isBlocked) ||
+        (!isBlocked(twoBack.x, twoBack.y) &&
+          hasForwardExit(twoBack, stepX, stepY, isBlocked))
+      ) {
+        return candidate;
+      }
+      continue;
+    }
+    const clearance = countSlideClearance(
+      candidate, directionX, directionY, isBlocked,
+    );
+    if (clearance === SLIDE_LOOKAHEAD_STEPS) return candidate;
+    if (clearance > bestClearance) {
+      best = candidate;
+      bestClearance = clearance;
+    }
+  }
+  return best;
+}
+
+const FORWARD_EXIT_DEGREES = [0, 30, -30, 45, -45] as const;
+
+function hasForwardExit(
+  from: WorldPosition,
+  stepX: number,
+  stepY: number,
+  isBlocked: (x: number, y: number) => boolean,
+) {
+  const length = Math.hypot(stepX, stepY);
+  const baseAngle = Math.atan2(stepY, stepX);
+  return FORWARD_EXIT_DEGREES.some((degrees) => {
+    const angle = baseAngle + (degrees * Math.PI) / 180;
+    const directionX = Math.cos(angle) * length;
+    const directionY = Math.sin(angle) * length;
+    const next = { x: from.x + directionX, y: from.y + directionY };
+    return (
+      !isBlocked(next.x, next.y) &&
+      countSlideClearance(next, directionX, directionY, isBlocked) ===
+        SLIDE_LOOKAHEAD_STEPS
+    );
+  });
+}
+
 export function recoverVillagePosition(
   current: WorldPosition,
   lastSafe: WorldPosition,
@@ -582,19 +704,8 @@ export function resolveVillageMovement(
       continue;
     }
 
-    const horizontal = { x: current.x + stepX, y: current.y };
-    const vertical = { x: current.x, y: current.y + stepY };
-    const horizontalOpen =
-      stepX !== 0 && !isBlocked(horizontal.x, horizontal.y);
-    const verticalOpen = stepY !== 0 && !isBlocked(vertical.x, vertical.y);
-
-    if (horizontalOpen && verticalOpen) {
-      current = Math.abs(stepX) >= Math.abs(stepY) ? horizontal : vertical;
-    } else if (horizontalOpen) {
-      current = horizontal;
-    } else if (verticalOpen) {
-      current = vertical;
-    }
+    const slide = findSlide(current, stepX, stepY, isBlocked);
+    if (slide) current = slide;
   }
 
   if (movementMemory && !usedCurvedSlide && movementMemory.obstacleKey) {

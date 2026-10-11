@@ -46,5 +46,6 @@ next-env.d.ts
 # Python helper caches (asset build scripts)
 __pycache__/
 
-# Unused source art and old build scripts, kept locally only (see assets-source/README.md)
-/assets-source/_archive/
+# Unused files (old sources, design explorations, retired code), kept locally only (see _unused/README.md)
+/_unused/
+/_to_delete/

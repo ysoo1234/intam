@@ -1,7 +1,7 @@
 import { ETHICS_REVIEW_CONFIG as CONFIG } from "./config";
 import type {
   EthicsDeliveryAction, EthicsReviewCase, EthicsReviewDecision,
-  EthicsReviewPhase, EthicsVerdict, EthicsVisitor,
+  EthicsReviewPhase, EthicsReviewStage, EthicsVerdict, EthicsVisitor,
 } from "./types";
 
 function shuffled<T>(items: readonly T[], random: () => number): T[] {
@@ -30,19 +30,26 @@ export function createReviewShift(
   return shuffled(selected, random);
 }
 
-export function getEthicsReviewPoints(correct: boolean, combo: number): number {
+/** The stage a shift is at after `correct` right stamps. */
+export function getEthicsReviewStage(correct: number): EthicsReviewStage {
+  let stage: EthicsReviewStage = 1;
+  for (const step of CONFIG.stages) if (correct >= step.minCorrect) stage = step.stage as EthicsReviewStage;
+  return stage;
+}
+export function getEthicsReviewPoints(correct: boolean, combo: number, stage: EthicsReviewStage = 1): number {
   if (!correct) return 0;
-  return CONFIG.scoring.correctDecision +
+  const base = CONFIG.stages.find(step => step.stage === stage)?.points ?? CONFIG.scoring.correctDecision;
+  return base +
     Math.min(Math.max(0, Math.floor(combo)), CONFIG.scoring.maxComboBonusSteps) * CONFIG.scoring.comboBonus;
 }
 
 export function evaluateReviewDecision(
-  item: EthicsReviewCase, selected: EthicsVerdict, combo = 0,
+  item: EthicsReviewCase, selected: EthicsVerdict, combo = 0, stage: EthicsReviewStage = 1,
 ): EthicsReviewDecision {
   const correct = item.verdict === selected;
   return {
     correct, selected, expected: item.verdict, explanation: item.explanation,
-    points: getEthicsReviewPoints(correct, combo),
+    points: getEthicsReviewPoints(correct, combo, stage),
   };
 }
 export function getNextEthicsReviewCombo(combo: number, correct: boolean): number {
@@ -63,11 +70,20 @@ export function getEthicsReviewStars(correct: number, processed: number): 1 | 2 
 export function canRequestEthicsAction(phase: EthicsReviewPhase, action: EthicsDeliveryAction) {
   return phase === "choosing" && (action === "approve" || action === "reject");
 }
-/** Visitors alternate deterministically so a seeded deck replays identically. */
+/** A fresh visiting order for one shift: every student once before anyone returns. */
+export function createEthicsVisitorOrder(count: number, random: () => number = Math.random): number[] {
+  return shuffled(Array.from({ length: Math.max(0, count) }, (_, index) => index), random);
+}
+/**
+ * The practice meets the first student in `order`; the shift then walks the
+ * rest of the order, so no one comes back until all the others have been.
+ */
 export function getEthicsVisitorForCase(
   visitors: readonly EthicsVisitor[], caseIndex: number, practice: boolean,
+  order: readonly number[] = [],
 ): EthicsVisitor {
   if (visitors.length === 0) throw new Error("Ethics Review needs at least one visitor.");
-  const index = practice ? 0 : (caseIndex + 1) % visitors.length;
+  const step = practice ? 0 : (caseIndex + 1) % visitors.length;
+  const index = order.length === visitors.length ? order[step] : step;
   return visitors[index];
 }

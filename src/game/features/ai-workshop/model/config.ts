@@ -3,10 +3,17 @@ export const AI_WORKSHOP_CONFIG = {
   sessionRequestLimit: 12,
   requiredStarHits: 3,
   maxWrongDeliveries: 3,
-  earlyCustomerReward: 100,
-  laterCustomerReward: 130,
-  laterCustomerNumber: 4,
-  perfectCraftingBonus: 50,
+  /**
+   * Coins per customer, picked at random in steps of 10: customers 1–3 pay
+   * 20–50, 4–6 pay 40–70, 7–9 pay 60–90, and so on (+20 every three).
+   */
+  reward: {
+    firstMin: 20,
+    rangeSteps: 3,
+    step: 10,
+    customersPerTier: 3,
+    increasePerTier: 20,
+  },
   starThresholds: {
     twoStars: 4,
     threeStars: 8,

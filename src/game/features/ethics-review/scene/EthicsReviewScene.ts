@@ -6,8 +6,10 @@ import {
   createGameStatusHud, createVillageReturnButton, preloadGameChromeAssets, type GameStatusHud,
 } from "../../../core/visual/gameChrome";
 import { createGameStartOverlay, preloadGameStartOverlayAssets } from "../../../core/visual/gameStartOverlay";
+import { markTutorialSeen, shouldPlayTutorial } from "../../../core/navigation/tutorialProgressStorage";
+import { isCoachCardOpen, playCoachCountdown, preloadCoachAssets } from "../../../core/visual/coachGuide";
 import { preloadGameResultOverlayAssets } from "../../../core/visual/gameResultOverlay";
-import { ETHICS_REVIEW_CASES, ETHICS_VISITOR_LINES } from "../content";
+import { ETHICS_REVIEW_CASES, ETHICS_STAGE2_CASES, ETHICS_STAGE3_CASES, ETHICS_VISITOR_LINES } from "../content";
 import {
   createReviewShift, createEthicsDeliveryState, getEthicsDeliveryCase, getEthicsDeliveryVisitor,
   actEthicsDelivery, continueEthicsDelivery, tickEthicsDelivery, canRequestEthicsAction,
@@ -16,9 +18,7 @@ import {
 } from "../model";
 import { createEthicsReviewControls, type EthicsReviewControls } from "./ethicsReviewControls";
 import { createEthicsReviewPlayer, type EthicsReviewPlayer } from "./ethicsReviewPlayer";
-import {
-  createEthicsOffice, createEthicsRulebook, preloadEthicsReviewAssets, type EthicsRulebook,
-} from "./ethicsReviewOffice";
+import { createEthicsOffice, preloadEthicsReviewAssets } from "./ethicsReviewOffice";
 import { createEthicsReviewVisitor, ETHICS_VISITOR_MOTION, type EthicsReviewVisitorView } from "./ethicsReviewVisitor";
 import {
   createEthicsReviewForm, createEthicsReviewStations, ETHICS_FORM_MOTION, playEthicsFormArrival,
@@ -26,17 +26,16 @@ import {
 } from "./ethicsReviewView";
 import { ETHICS_STAMP_IMPACT_MS, playEthicsVerdictStamp } from "./ethicsReviewEffects";
 import { createEthicsResultOverlay } from "./ethicsReviewOverlays";
+import { createEthicsReviewTutorial, type EthicsReviewTutorial } from "./ethicsReviewTutorial";
 import { createEthicsStampAudio } from "./ethicsReviewAudio";
 
+/** Off until the desk can lay out attachments next to the form. */
+const ETHICS_ATTACHMENTS_ON_DESK = false;
+/** Start-overlay copy; the untimed practice case teaches the stamps. */
 const ETHICS_START = {
-  placeName: "미디의 윤리 심사소",
-  playDescription: "친구들이 가져온 AI 사용 확인서를 미디가 심사해요.",
-  steps: [
-    { icon: "ethics-form", iconSize: 96, title: "확인서를 읽어요", text: "창구로 온 친구의\nAI 사용 이야기를 살펴봐요." },
-    { icon: "ethics-stamp-approve", title: "도장을 골라요", text: "좋은 사용은 승인,\n위험한 사용은 거절!" },
-    { icon: "ethics-midi-front", title: "2분 동안 심사", text: "연속으로 맞히면 점수가\n더 올라가요. 틀려도 괜찮아요!" },
-  ],
-  controlsHint: "도장 터치  ·  ← A 승인  ·  → D 거절",
+  placeName: "윤리 심사소",
+  playDescription: "친구들이 가져온 AI 사용 확인서를\n미디가 심사해요.",
+  keyboardHint: "방향키로도 도장을 찍을 수 있어요",
 } as const;
 // The next form becomes stampable once it has landed on the desk.
 const ARRIVAL_INPUT_DELAY_MS = ETHICS_FORM_MOTION.arriveMs + 60;
@@ -50,7 +49,9 @@ export class EthicsReviewScene extends Phaser.Scene {
   private controls?: EthicsReviewControls;
   private form?: EthicsReviewFormView;
   private visitor?: EthicsReviewVisitorView;
-  private rulebook?: EthicsRulebook;
+  private tutorial?: EthicsReviewTutorial;
+  /** The practice case was chosen again from ?: it ends back on the start screen. */
+  private replayingPractice = false;
   private stations: EthicsReviewStations = [];
   private hud?: GameStatusHud;
   private audio?: ReturnType<typeof createEthicsStampAudio>;
@@ -72,13 +73,13 @@ export class EthicsReviewScene extends Phaser.Scene {
     preloadGameResultOverlayAssets(this);
     preloadGameStartOverlayAssets(this);
     preloadEthicsReviewAssets(this);
+    preloadCoachAssets(this);
   }
 
   create() {
     this.resetSceneState();
     configureSceneCamera(this, this.renderScale);
     createEthicsOffice(this);
-    this.rulebook = createEthicsRulebook(this);
     this.visitor = createEthicsReviewVisitor(this);
     this.player = createEthicsReviewPlayer(this);
     this.form = createEthicsReviewForm(this, () => this.handleContinue());
@@ -93,11 +94,14 @@ export class EthicsReviewScene extends Phaser.Scene {
     );
     this.input.keyboard?.on("keydown", this.warmAudio, this);
     this.input.on("pointerdown", this.warmAudio, this);
-    createGameStartOverlay(this, ETHICS_START, () => this.startShift());
+    createGameStartOverlay(this, ETHICS_START, (withTutorial) => this.startShift(withTutorial), {
+      help: { question: "튜토리얼을 다시 볼까요?" },
+    });
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.started = false;
       this.leaving = true;
       this.arrivalTimer?.remove(false);
+      this.tutorial?.destroy();
       this.controls?.cancelMovement();
       this.input.keyboard?.off("keydown", this.warmAudio, this);
       this.input.off("pointerdown", this.warmAudio, this);
@@ -106,6 +110,12 @@ export class EthicsReviewScene extends Phaser.Scene {
 
   update() {
     if (!this.started || this.leaving || !this.state || !this.player) return;
+    // The clock waits for the "이제 진짜 심사 시작!" card and the 3-2-1.
+    if (isCoachCardOpen(this)) {
+      this.lastTickAt = performance.now();
+      this.player.update();
+      return;
+    }
     this.advanceClock();
     if (this.state.phase === "result") return;
     this.player.update();
@@ -122,7 +132,7 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.controls = undefined;
     this.form = undefined;
     this.visitor = undefined;
-    this.rulebook = undefined;
+    this.tutorial = undefined;
     this.stations = [];
     this.hud = undefined;
     this.audio = undefined;
@@ -147,9 +157,14 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.controls?.requestAction(action);
   }
 
-  private startShift() {
+  /** `withTutorial` is set by the ? button; otherwise first plays get the practice case. */
+  private startShift(withTutorial?: boolean) {
     if (this.leaving || !this.player) return;
+    const practice = withTutorial ?? shouldPlayTutorial("ethics-review");
+    this.replayingPractice = withTutorial === true;
     this.warmAudio();
+    this.tutorial?.destroy();
+    this.tutorial = undefined;
     this.result?.destroy(true);
     this.result = undefined;
     this.stamp?.destroy(true);
@@ -157,17 +172,30 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.arrivalTimer?.remove(false);
     this.presentGeneration += 1;
     this.arrived = true;
-    this.state = createEthicsDeliveryState(createReviewShift(ETHICS_REVIEW_CASES, ETHICS_REVIEW_CASES.length));
+    this.state = createEthicsDeliveryState(
+      createReviewShift(ETHICS_REVIEW_CASES, ETHICS_REVIEW_CASES.length), practice, undefined,
+      // Stages 2–3 switch on with the two-panel desk, which can show attachments.
+      ETHICS_ATTACHMENTS_ON_DESK ? {
+        2: createReviewShift(ETHICS_STAGE2_CASES, ETHICS_STAGE2_CASES.length),
+        3: createReviewShift(ETHICS_STAGE3_CASES, ETHICS_STAGE3_CASES.length),
+      } : undefined,
+    );
     this.started = true;
     this.lastTickAt = performance.now();
     this.hudKey = "";
     this.uiKey = "";
     this.player.reset();
     this.visitor?.reset();
-    this.form?.hint.setVisible(true);
     this.controls?.cancelMovement();
     this.presentCase(true);
     this.updateView();
+    if (practice) {
+      // The practice form has landed: Midi explains the two stamps, then the
+      // arrows point at them until the first stamp is pressed.
+      this.tutorial = createEthicsReviewTutorial(this, this.stations);
+      this.inputReadyAt = Number.POSITIVE_INFINITY;
+      this.tutorial.start(() => { this.inputReadyAt = performance.now(); this.uiKey = ""; });
+    }
   }
 
   private advanceClock() {
@@ -212,14 +240,31 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.stamp = undefined;
     this.controls?.cancelMovement();
     this.player?.hideBubble();
-    setEthicsReviewFormCase(this.form, item, visitor);
-    this.rulebook?.setActive(item.category);
+    setEthicsReviewFormCase(this.form, item);
     this.visitor.enter(visitor);
     this.audio?.bell();
     this.player?.greet();
     playEthicsFormArrival(this, this.form, animate);
     this.inputReadyAt = performance.now() + (animate ? ARRIVAL_INPUT_DELAY_MS : 0);
     this.uiKey = "";
+  }
+
+  /** After the practice: the student leaves, 3-2-1, and the clock starts. */
+  private startRealShift() {
+    if (!this.started || this.leaving || !this.state) return;
+    markTutorialSeen("ethics-review");
+    if (this.replayingPractice) {
+      this.scene.restart();
+      return;
+    }
+    this.state = continueEthicsDelivery(this.state);
+    this.visitor?.hideBubble();
+    this.sendOffAndPresentNext();
+    this.updateView();
+    playCoachCountdown(this, () => {
+      this.lastTickAt = performance.now();
+      this.uiKey = "";
+    });
   }
 
   private handleContinue() {
@@ -230,6 +275,11 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.state = continueEthicsDelivery(this.state);
     this.lastTickAt = performance.now();
     this.visitor?.hideBubble();
+    if (wasCorrect) markTutorialSeen("ethics-review");
+    if (wasCorrect && this.replayingPractice) {
+      this.scene.restart();
+      return;
+    }
     if (wasCorrect) this.sendOffAndPresentNext();
     else this.presentCase(true);
     this.updateView();
@@ -237,6 +287,7 @@ export class EthicsReviewScene extends Phaser.Scene {
 
   private handleAction(action: EthicsDeliveryAction) {
     if (!this.started || this.leaving || !this.state || !this.player || !this.form || !this.visitor) return;
+    if (isCoachCardOpen(this)) { this.controls?.cancelMovement(); return; }
     this.advanceClock();
     if (this.state.phase !== "choosing") { this.controls?.cancelMovement(); return; }
     const previous = this.state;
@@ -248,12 +299,20 @@ export class EthicsReviewScene extends Phaser.Scene {
     // Practice waits for the reader; the timed shift advances on its own clock.
     this.inputReadyAt = performance.now() + ETHICS_STAMP_IMPACT_MS + 500;
     this.player.react(decision.correct);
+    this.tutorial?.notify("stamped");
     this.stamp = playEthicsVerdictStamp(this, decision, this.stations, this.form, () => {
       this.audio?.play(decision.correct);
       if (celebrate) this.audio?.cheer();
-      this.visitor?.react(decision.correct);
-      this.visitor?.say(pickVisitorLine(decision.correct, decision.selected, state.caseIndex), decision.correct ? 1_000 : 1_800);
+      // Only a good use, approved, makes the student beam; a rightly rejected
+      // mistake gets a sheepish look and an apology.
+      this.visitor?.react(decision.correct && decision.expected === "approve");
+      const line = pickVisitorLine(decision.correct, decision.selected, state.caseIndex);
+      if (line) this.visitor?.say(line, decision.correct ? 1_200 : 1_800);
       if (!decision.correct) this.player?.say(decision.explanation);
+      // A right practice stamp: the "이제 진짜 심사 시작!" card, then 3-2-1.
+      if (state.practice && decision.correct) {
+        this.time.delayedCall(1_100, () => this.tutorial?.finish(() => this.startRealShift()));
+      }
     }, { combo: state.combo, celebrate });
     this.uiKey = "";
     this.updateView();
@@ -296,7 +355,6 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.arrivalTimer?.remove(false);
     this.stamp?.destroy(true);
     this.stamp = undefined;
-    this.form?.hint.setVisible(false);
     this.form?.continueButton.setVisible(false);
     this.visitor?.hideBubble();
     this.player?.hideBubble();
@@ -323,8 +381,6 @@ export class EthicsReviewScene extends Phaser.Scene {
 }
 
 function pickVisitorLine(correct: boolean, selected: EthicsDeliveryAction, index: number) {
-  const lines = correct
-    ? (index % 2 === 0 ? ETHICS_VISITOR_LINES.correct : ETHICS_VISITOR_LINES[selected])
-    : ETHICS_VISITOR_LINES.wrong;
-  return lines[index % lines.length];
+  const lines: readonly string[] = ETHICS_VISITOR_LINES[`${selected}${correct ? "Right" : "Wrong"}` as const];
+  return lines.length > 0 ? lines[index % lines.length] : undefined;
 }

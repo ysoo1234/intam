@@ -5,8 +5,6 @@ export const GAME_ASSETS = {
     gameStartPanel: "/assets/ui/game-start-panel-v1.webp",
     gameStartButton: "/assets/ui/game-start-button-v1.webp",
     gameResultPanel: "/assets/ui/game-result-panel-v1.webp",
-    gameResultRetryButton: "/assets/ui/game-result-retry-button-v1.webp",
-    gameResultReturnButton: "/assets/ui/game-result-return-button-v1.webp",
     villageEntryButton: "/assets/ui/village-entry-button-v1.webp",
     /** Tutorial arrow, drawn pointing right. */
     coachArrow: "/assets/ui/coach-arrow-v1.webp",
@@ -32,11 +30,7 @@ export const GAME_ASSETS = {
     ethicsOffice: "/assets/world/village-ethics-office.webp",
     // Starlight gate: an open tablet whose screen shows the portal.
     aiWorldGate: "/assets/world/village-tablet-gate-v4.webp",
-    aiWorldPortalNight:
-      "/assets/world/village-ai-world-portal-night-v4.webp",
     fountain: "/assets/world/village-fountain.webp",
-    fountainWaterFrames:
-      "/assets/world/village-fountain-water-frames-v1.webp",
   },
   characters: {
     // The player in the village and workshop: textbook Midi (v2) at 2x of the
@@ -86,7 +80,12 @@ export const GAME_ASSETS = {
     workshop: "/assets/shop/ai-workshop-interior-v6.webp",
     workbench: "/assets/shop/ai-workbench-foreground-v2.webp",
     craftingMachine: "/assets/shop/workshop-crafting-machine-v1.webp",
-    craftingPanel: "/assets/shop/workshop-crafting-panel-v2.webp",
+    craftingPanel: "/assets/shop/workshop-crafting-panel-v3.webp",
+    /** The big amber 멈춤 button on the crafting panel, up and pressed. */
+    stopButton: "/assets/shop/workshop-stop-button-normal-v1.webp",
+    stopButtonPressed: "/assets/shop/workshop-stop-button-pressed-v1.webp",
+    // The AI coin that flies into the 수입 counter.
+    coin: "/assets/shop/workshop-coin-v1.webp",
     actionButton: "/assets/shop/workshop-action-button-v4.webp",
     craftingDustCenter: "/assets/shop/workshop-dust-center-v1.webp",
     craftingDustDiagonal: "/assets/shop/workshop-dust-diagonal-v1.webp",
@@ -100,7 +99,7 @@ export const GAME_ASSETS = {
     itemPanel4: "/assets/shop/workshop-item-panel-4.webp",
     itemPanel5: "/assets/shop/workshop-item-panel-5.webp",
     customerNameplate: "/assets/shop/workshop-customer-nameplate-v4.webp",
-    dialogueBubble: "/assets/shop/workshop-dialogue-bubble-v2.webp",
+    // v3: the v2 bubble with its tail leaning left, toward the customer.
     products: {
       "ai-speaker": "/assets/shop/products-v2/ai-speaker.webp",
       "call-translator": "/assets/shop/products-v2/call-translator.webp",
@@ -130,12 +129,55 @@ export const GAME_ASSETS = {
       "performance-interpreter":
         "/assets/shop/products-v2/performance-interpreter.webp",
     },
+    /** What the shelf shows: each product as a white-line blueprint card. */
+    blueprints: {
+      "ai-speaker": "/assets/shop/blueprints-v1/ai-speaker.webp",
+      "call-translator": "/assets/shop/blueprints-v1/call-translator.webp",
+      "photo-translator": "/assets/shop/blueprints-v1/photo-translator.webp",
+      "plant-camera": "/assets/shop/blueprints-v1/plant-camera.webp",
+      "face-lock": "/assets/shop/blueprints-v1/face-lock.webp",
+      "spell-checker": "/assets/shop/blueprints-v1/spell-checker.webp",
+      "smart-fridge": "/assets/shop/blueprints-v1/smart-fridge.webp",
+      "robot-vacuum": "/assets/shop/blueprints-v1/robot-vacuum.webp",
+      "pet-care-robot": "/assets/shop/blueprints-v1/pet-care-robot.webp",
+      "security-camera": "/assets/shop/blueprints-v1/security-camera.webp",
+      "smart-air-purifier": "/assets/shop/blueprints-v1/smart-air-purifier.webp",
+      "smart-washer": "/assets/shop/blueprints-v1/smart-washer.webp",
+      "study-helper": "/assets/shop/blueprints-v1/study-helper.webp",
+      "nutrition-kiosk": "/assets/shop/blueprints-v1/nutrition-kiosk.webp",
+      "medical-reader": "/assets/shop/blueprints-v1/medical-reader.webp",
+      "smart-band": "/assets/shop/blueprints-v1/smart-band.webp",
+      "ai-wheelchair": "/assets/shop/blueprints-v1/ai-wheelchair.webp",
+      "road-safety-cctv": "/assets/shop/blueprints-v1/road-safety-cctv.webp",
+      "autonomous-car": "/assets/shop/blueprints-v1/autonomous-car.webp",
+      "delivery-robot": "/assets/shop/blueprints-v1/delivery-robot.webp",
+      "drone-taxi": "/assets/shop/blueprints-v1/drone-taxi.webp",
+      "crop-drone": "/assets/shop/blueprints-v1/crop-drone.webp",
+      "harvest-robot": "/assets/shop/blueprints-v1/harvest-robot.webp",
+      "greenhouse-computer": "/assets/shop/blueprints-v1/greenhouse-computer.webp",
+      "smart-watering": "/assets/shop/blueprints-v1/smart-watering.webp",
+      "performance-interpreter": "/assets/shop/blueprints-v1/performance-interpreter.webp",
+    },
+  },
+  ending: {
+    // The school library where the adventure began (textbook prologue), seen through the door home.
+    library: "/assets/ending/story-library-v1.webp",
+    // Workshop customers who gather to wave goodbye (happy faces).
+    customers: [
+      "/assets/customers/v3-game/elderly-home-alone-happy.webp",
+      "/assets/customers/v3-game/cafeteria-student-happy.webp",
+      "/assets/customers/v3-game/greenhouse-farmer-happy.webp",
+      "/assets/customers/v3-game/courier-happy.webp",
+      "/assets/customers/v3-game/pet-owner-happy.webp",
+      "/assets/customers/v3-game/diary-student-happy.webp",
+      "/assets/customers/v3-game/exercising-elderly-happy.webp",
+      "/assets/customers/v3-game/novice-driver-happy.webp",
+    ],
   },
   airport: {
     sky: "/assets/airport/bg_sky.webp",
     city: "/assets/airport/bg_city.webp",
     ground: "/assets/airport/bg_ground.webp",
-    quizCard: "/assets/airport/data-flight-quiz-card-v1.webp",
     data: {
       doc: "/assets/airport/data_doc.webp",
       image: "/assets/airport/data_image.webp",
@@ -166,23 +208,34 @@ export const GAME_ASSETS = {
   },
   ethicsReview: {
     // Office scene: the inspection booth with its service window and desk.
-    booth: "/assets/ethics-review/inspection-booth-v2.webp",
-    form: "/assets/ethics-review/inspection-form-v2.webp",
-    // Students at the window reuse the workshop's storybook customer art so
-    // both village activities share one cast and one drawing style.
+    // Two panels: the service window on the left, the desk seen from above on the right.
+    booth: "/assets/ethics-review/ethics-booth-panel-v8.webp",
+    // The same booth art with the window opening cut out, drawn in front of the student.
+    boothFront: "/assets/ethics-review/ethics-booth-front-v8.webp",
+    desk: "/assets/ethics-review/ethics-desk-panel-v9.webp",
+    form: "/assets/ethics-review/inspection-form-v4.webp",
+    // 24 review students, drawn like the workshop customers: 454 x 680 canvas,
+    // feet centred at (227, 641), heights stepped by school grade.
     visitors: Object.fromEntries(
-      [
-        "school-prep-student", "diary-student", "science-homework-student",
-        "cafeteria-student", "wrong-answer-student", "foreign-call-student",
-      ].map((id) => [id, {
-        waiting: `/assets/customers/v3-game/${id}-worried.webp`,
-        happy: `/assets/customers/v3-game/${id}-happy.webp`,
-      }]),
+      Array.from({ length: 24 }, (_, index) => `ethics-student-${String(index + 1).padStart(2, "0")}`)
+        .map((id) => [id, {
+          waiting: `/assets/ethics-review/students/${id}-worried.webp`,
+          happy: `/assets/ethics-review/students/${id}-happy.webp`,
+        }]),
     ) as Readonly<Record<string, Readonly<{ waiting: string; happy: string }>>>,
-    stampApprove: "/assets/ethics-review/stamp-tool-approve-v1.webp",
-    stampReject: "/assets/ethics-review/stamp-tool-reject-v1.webp",
+    stampApprove: "/assets/ethics-review/stamp-tool-approve-v3.webp",
+    stampReject: "/assets/ethics-review/stamp-tool-reject-v3.webp",
     // Textbook Midi (v2), all at the front frames' scale so they swap cleanly.
     midiFront: "/assets/characters/midi-v2/front-idle.webp",
+    // Midi stands at the window with its back to us.
+    midiBack: "/assets/ethics-review/midi-back-v1.webp",
+    // Little effects drawn in Midi's style: sparkles for a right stamp, sweat drops for a wrong one.
+    midiEffects: {
+      sparkle: "/assets/ethics-review/midi-effect-sparkle-1.webp",
+      sparkleSmall: "/assets/ethics-review/midi-effect-sparkle-3.webp",
+      sweat: "/assets/ethics-review/midi-effect-sweat-1.webp",
+      sweatSmall: "/assets/ethics-review/midi-effect-sweat-2.webp",
+    },
     midiLeft: "/assets/characters/midi-v2/pose-side-left.webp",
     midiRight: "/assets/characters/midi-v2/pose-side-right.webp",
     midiHappy: "/assets/characters/midi-v2/front-happy.webp",

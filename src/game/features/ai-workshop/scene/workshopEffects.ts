@@ -15,7 +15,7 @@ export function animateWorkshopCustomerArtworkJoy(
 ) {
   if (!customerArt) return;
   if (scene.textures.exists(happyTexture)) {
-    customerArt.setTexture(happyTexture).setFlipX(true);
+    customerArt.setTexture(happyTexture).setFlipX(false);
     const visualTransform = applyWorkshopCustomerVisualTransform(
       customerArt,
       requestId,
@@ -130,32 +130,65 @@ export function createWorkshopSparkBurst(
   }
 }
 
+/** A drawn gold coin (rim, face, a "₩"-free shine), made once per game. */
+/** The AI coin artwork (loaded with the workshop's assets). */
+export const WORKSHOP_COIN_TEXTURE = "workshop-coin";
+const COIN_SIZE = 36;
+
+/**
+ * Coins hop out of the hand-over in a small fountain, hang for a moment,
+ * then fly one after another into the 수입 counter. Each landing makes the
+ * counter bounce and gives a soft gold pop; no spinning, no trails.
+ */
 export function createWorkshopCoinBurst(
   scene: Phaser.Scene,
   x: number,
   y: number,
+  counter?: Phaser.GameObjects.Text,
+  /** One coin flies for every 10 earned. */
+  count = 6,
 ) {
-  for (let index = 0; index < 12; index += 1) {
-    const coin = scene.add
-      .text(x, y, "●", {
-        color: "#ffd45f",
-        fontFamily: FONT_FAMILY,
-        fontSize: "24px",
-        stroke: "#a65c28",
-        strokeThickness: 5,
-      })
-      .setOrigin(0.5)
-      .setDepth(75);
+  if (!scene.textures.exists(WORKSHOP_COIN_TEXTURE)) return;
+  const bounds = counter?.getBounds();
+  const target = bounds ? { x: bounds.x + 26, y: bounds.centerY } : { x: 940, y: 46 };
+  const reducedMotion =
+    typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  const baseScale = COIN_SIZE / scene.textures.get(WORKSHOP_COIN_TEXTURE).getSourceImage().width;
+  let landed = 0;
+
+  for (let index = 0; index < count; index += 1) {
+    const coin = scene.add.image(x, y, WORKSHOP_COIN_TEXTURE).setDepth(75).setScale(0);
+    // 1) Hop out in a fan: left to right, the middle ones a little higher.
+    const spread = (index - (count - 1) / 2) * Math.min(30, 200 / Math.max(1, count));
+    const peakX = x + spread + Phaser.Math.Between(-6, 6);
+    const peakY = y - 74 - Math.max(0, 1 - Math.abs(spread) / 110) * 26 + Phaser.Math.Between(-6, 6);
+    const hopDelay = index * 45;
     scene.tweens.add({
-      targets: coin,
-      x: 920 + Phaser.Math.Between(-35, 35),
-      y: 52 + Phaser.Math.Between(-12, 12),
-      scale: 0.45,
-      angle: 360,
-      duration: 650 + index * 40,
-      delay: index * 35,
-      ease: "Cubic.easeIn",
-      onComplete: () => coin.destroy(),
+      targets: coin, x: peakX, y: peakY, scale: baseScale, angle: Phaser.Math.Between(-12, 12),
+      delay: hopDelay, duration: 320, ease: "Back.easeOut",
+    });
+    // A tiny settle while they hang in the air.
+    if (!reducedMotion) {
+      scene.tweens.add({
+        targets: coin, y: peakY + 6, delay: hopDelay + 320, duration: 180, yoyo: true, ease: "Sine.easeInOut",
+      });
+    }
+    // 2) Fly into the counter, one after another.
+    scene.tweens.add({
+      targets: coin, x: target.x, y: target.y, scale: baseScale * 0.55, angle: 0,
+      delay: 620 + index * Math.min(85, 520 / Math.max(1, count)), duration: 460, ease: "Cubic.easeIn",
+      onComplete: () => {
+        coin.destroy();
+        landed += 1;
+        const pop = scene.add.circle(target.x, target.y, 12, 0xffe27a, 0.85)
+          .setDepth(76).setBlendMode(Phaser.BlendModes.ADD);
+        scene.tweens.add({ targets: pop, scale: 2.4, alpha: 0, duration: 260, onComplete: () => pop.destroy() });
+        if (counter?.active) {
+          scene.tweens.killTweensOf(counter);
+          counter.setScale(1);
+          scene.tweens.add({ targets: counter, scale: landed === count ? 1.22 : 1.1, duration: 90, yoyo: true, ease: "Sine.easeOut" });
+        }
+      },
     });
   }
 }

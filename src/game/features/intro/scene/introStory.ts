@@ -1,7 +1,8 @@
 import Phaser from "phaser";
 import { DISPLAY_FONT_FAMILY } from "../../../core/visual/fonts";
-import { WORLD_EXIT_REQUIRED_STARS } from "../../../core/navigation";
+import type { VillagePreview } from "../../../core/scenes/villagePreview";
 import { FONT_FAMILY } from "../../../core/visual/theme";
+import { createGemLights, GEM_SPOTS, GEM_TINTS } from "./introGemLights";
 import { MIDI_POSE, type MidiMood, type MidiPose, type MidiSpeechPace, type MidiTalker } from "./introMidiTalker";
 
 /**
@@ -13,43 +14,37 @@ import { MIDI_POSE, type MidiMood, type MidiPose, type MidiSpeechPace, type Midi
  */
 export const INTRO_STORY_STORAGE_KEY = "intam:intro-story-seen:v1";
 export const INTRO_STORY_TEXTURES = { village: "intro-story-village", frame: "intro-story-frame" } as const;
+/** The village painted live for the door (see VillagePreview). */
+const LIVE_VILLAGE_TEXTURE = "intro-story-village-live";
+// Midi's face frames are 320 px tall with a 311 px body ending at the frame's pivot.
+const FACE_FRAME_BODY_RATIO = 311 / 320;
+/**
+ * Midi's flight into the door, then the zoom until the village fills the screen
+ * (the door and its frame grow with the village, so nothing but village shows
+ * inside the frame), then the frame opens out past the screen's corners.
+ */
+const DOOR_DIVE = { flyMs: 720, zoomMs: 950, openMs: 260, openCover: 1.55 } as const;
 // Soft light textures drawn once on a canvas (real blur, not hard outlines).
-const LIGHT = { dot: "intro-story-dot", glow: "intro-story-glow" } as const;
+const LIGHT = { dot: "intro-story-dot", glow: "intro-story-glow", sparkle: "intro-story-sparkle" } as const;
 
 const STORY_DEPTH = { portal: 6, light: 6.5, chip: 9, flash: 10, panel: 20, skip: 21 } as const;
 // Door into the village, opened over the gem board. The opening matches the
 // ring of the generated frame (story-portal-frame-v1: ring centre 819,479 and
 // semi-axes 742 x 389 on a 1639 x 960 canvas), so the mask edge hides under it.
-const PORTAL = { x: 640, y: 330, width: 740, height: 388 } as const;
+// The title fades when the story starts, so the board rises by BOARD_LIFT and
+// the dialogue panel fits under it beside Midi, who never moves.
+const BOARD_LIFT = 70;
+const PORTAL = { x: 640, y: 280, width: 740, height: 388 } as const;
 const PORTAL_FRAME = { ringWidth: 1_484, originX: 819 / 1_639, originY: 479 / 960 } as const;
 // The 16:9 village snapshot covers the whole opening.
 const VILLAGE_VIEW = { width: 740, height: 416 } as const;
 // Kept clear of the bottom edge so it doesn't feel pinned to it on wide windows.
-const PANEL = { left: 214, right: 1196, y: 606, height: 104 } as const;
+// Just under the lifted board (its frame then ends near y 537), level with
+// Midi's body where she stood on the first screen.
+const PANEL = { left: 214, right: 1196, y: 592, height: 92 } as const;
 const SKIP = { x: 1172, y: 42, width: 132, height: 42 } as const;
-// During the story Midi stands lower, beside the dialogue panel.
-const STORY_MIDI = { x: 118, y: 684 } as const;
 // The story reads a little quicker than the intro bubble.
-const STORY_PACE: MidiSpeechPace = { letterMs: 45, spaceMs: 35, lineBreakMs: 120, mouthMs: 95 };
-
-// Gem centres on the board artwork, as a fraction of the board's width and
-// height measured from its centre (board art is 1448 x 1086).
-const GEM_SPOTS = [
-  [-0.007, -0.249], [-0.177, -0.142], [0.166, -0.142],
-  [-0.007, -0.036], [-0.177, 0.075], [0.166, 0.075],
-  [-0.007, 0.185], [-0.177, 0.292], [0.166, 0.292],
-] as const;
-// Spots on the village snapshot as a fraction of its size (0..1 from the top left).
-const VILLAGE_SPOTS = {
-  // Top of each roof, where the name label points.
-  workshop: { x: 0.202, y: 0.515 },
-  airport: { x: 0.195, y: 0.035 },
-  ethics: { x: 0.805, y: 0.54 },
-  // Top of the graduation-path gate (raised so the label clears the frame's
-  // top gem), and its swirling opening.
-  gateTop: { x: 0.78, y: 0 },
-  gateOpening: { x: 0.83, y: 0.245, width: 0.075, height: 0.27 },
-} as const;
+const STORY_PACE: MidiSpeechPace = { letterMs: 41, spaceMs: 32, lineBreakMs: 110, mouthMs: 95 };
 
 const MOODS: readonly MidiMood[] = ["idle", "happy", "surprised", "worried"];
 const isMood = (value: MidiMood | MidiPose): value is MidiMood => (MOODS as readonly string[]).includes(value);
@@ -100,6 +95,27 @@ function ensureLightTextures(scene: Phaser.Scene) {
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, 48, 48);
   });
+  // A four-point sparkle (thin cross with a bright core).
+  make(LIGHT.sparkle, 96, 96, (ctx) => {
+    const c = 48;
+    const arm = (len: number, width: number, alpha: number) => {
+      const g = ctx.createLinearGradient(c - len, c, c + len, c);
+      g.addColorStop(0, "rgba(255,255,255,0)");
+      g.addColorStop(0.5, `rgba(255,255,255,${alpha})`);
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.fillRect(c - len, c - width / 2, len * 2, width);
+    };
+    arm(46, 6, 1);
+    ctx.save(); ctx.translate(c, c); ctx.rotate(Math.PI / 2); ctx.translate(-c, -c); arm(46, 6, 1); ctx.restore();
+    ctx.save(); ctx.translate(c, c); ctx.rotate(Math.PI / 4); ctx.translate(-c, -c); arm(22, 3, 0.7); ctx.restore();
+    ctx.save(); ctx.translate(c, c); ctx.rotate(-Math.PI / 4); ctx.translate(-c, -c); arm(22, 3, 0.7); ctx.restore();
+    const core = ctx.createRadialGradient(c, c, 0, c, c, 12);
+    core.addColorStop(0, "rgba(255,255,255,1)");
+    core.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = core;
+    ctx.fillRect(0, 0, 96, 96);
+  });
   make(LIGHT.glow, 256, 256, (ctx) => {
     const gradient = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
     gradient.addColorStop(0, "rgba(255,255,255,1)");
@@ -117,6 +133,11 @@ export type IntroStoryOptions = Readonly<{
   mascot: Phaser.GameObjects.Container;
   talker: MidiTalker;
   reducedMotion: boolean;
+  /** Midi's frame height on this screen (her face frames are 320 px with a 311 px body). */
+  mascotFrameHeight: number;
+  /** Paints the real village for the door; without it the saved snapshot is shown. */
+  villagePreview?: VillagePreview;
+  renderScale: number;
   /** Called once Midi has flown through the door; start the village from here. */
   onFinish: () => void;
 }>;
@@ -126,10 +147,6 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
   const calm = options.reducedMotion;
   const motion = (ms: number) => (calm ? 0 : ms);
   ensureLightTextures(scene);
-  const villagePoint = (spot: Readonly<{ x: number; y: number }>) => ({
-    x: PORTAL.x + (spot.x - 0.5) * VILLAGE_VIEW.width,
-    y: PORTAL.y + (spot.y - 0.5) * VILLAGE_VIEW.height,
-  });
   const extras: Phaser.GameObjects.GameObject[] = [];
   const track = <T extends Phaser.GameObjects.GameObject>(object: T) => {
     extras.push(object);
@@ -138,12 +155,13 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
   const particles = (x: number, y: number, config: Phaser.Types.GameObjects.Particles.ParticleEmitterConfig) =>
     track(scene.add.particles(x, y, LIGHT.dot, { blendMode: Phaser.BlendModes.ADD, ...config })).setDepth(STORY_DEPTH.light);
 
-  // Midi steps down beside the dialogue panel.
-  scene.tweens.add({ targets: mascot, x: STORY_MIDI.x, y: STORY_MIDI.y, duration: motion(420), ease: "Sine.easeInOut" });
+  // Midi stays exactly where she was; the board rises into the title's place.
+  const boardY = board.y - BOARD_LIFT;
+  scene.tweens.add({ targets: board, y: boardY, duration: motion(420), ease: "Sine.easeInOut" });
 
   // --- Light gathering in the middle of the board ------------------------------
   // Centre of the gem cluster, where the gems' light gathers.
-  const gather = { x: board.x, y: board.y + board.displayHeight * 0.02 };
+  const gather = { x: board.x, y: boardY + board.displayHeight * 0.02 };
   const core = track(scene.add.image(gather.x, gather.y, LIGHT.glow))
     .setDepth(STORY_DEPTH.light).setBlendMode(Phaser.BlendModes.ADD).setScale(0).setAlpha(0);
 
@@ -151,7 +169,12 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
   const maskShape = scene.make.graphics({ x: PORTAL.x, y: PORTAL.y });
   maskShape.fillStyle(0xffffff, 1).fillEllipse(0, 0, PORTAL.width, PORTAL.height);
   maskShape.setScale(0);
-  const village = track(scene.add.image(PORTAL.x, PORTAL.y, INTRO_STORY_TEXTURES.village))
+  // The real village, drawn now from its own layout (so it always matches the
+  // village scene); the saved snapshot is only a fallback.
+  const villageTexture = options.villagePreview?.paint(scene, LIVE_VILLAGE_TEXTURE, options.renderScale)
+    ? LIVE_VILLAGE_TEXTURE
+    : INTRO_STORY_TEXTURES.village;
+  const village = track(scene.add.image(PORTAL.x, PORTAL.y, villageTexture))
     .setDisplaySize(VILLAGE_VIEW.width, VILLAGE_VIEW.height)
     .setDepth(STORY_DEPTH.portal)
     .setVisible(false);
@@ -182,7 +205,11 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
     // Born exactly on the rim, so nothing floats over the village itself.
     emitZone: { type: "edge", source: new Phaser.Geom.Ellipse(0, 0, PORTAL.width, PORTAL.height), quantity: 90 },
   });
-  const gemShines: Phaser.GameObjects.Image[] = [];
+  const gemShines: Phaser.GameObjects.GameObject[] = [];
+  const gemLights = createGemLights(scene, {
+    board, boardY, depth: STORY_DEPTH.light - 0.2, calm, track, sparkleKey: LIGHT.sparkle,
+  });
+  gemShines.push(...gemLights.objects);
   let portalOpen = false;
   const openPortal = (instant = false) => {
     if (portalOpen) return;
@@ -200,6 +227,7 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
       scene.tweens.add({ targets: ring, alpha: { from: 1, to: 0.86 }, delay: ms, duration: 1_100, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
     }
     // The gem lights and the board dissolve into the door.
+    gemLights.stop();
     scene.tweens.killTweensOf(gemShines);
     scene.tweens.add({ targets: gemShines, alpha: 0, duration: instant ? 0 : motion(300) });
     scene.tweens.killTweensOf(board);
@@ -207,38 +235,6 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
       targets: board, alpha: 0, scaleX: board.scaleX * 0.94, scaleY: board.scaleY * 0.94,
       duration: instant ? 0 : motion(520), ease: "Sine.easeIn",
     });
-  };
-
-  // --- Name labels --------------------------------------------------------------
-  const chip = (text: string, anchor: Readonly<{ x: number; y: number }>, delay: number, accent: number) => {
-    const label = scene.add
-      .text(0, 0, text, { fontFamily: FONT_FAMILY, fontSize: "19px", fontStyle: "bold", color: "#2f3d68" })
-      .setOrigin(0.5).setResolution(3);
-    const width = label.width + 34;
-    const height = 40;
-    const plate = scene.add.graphics();
-    plate.fillStyle(0x2b3f86, 0.2).fillRoundedRect(-width / 2 + 2, -height / 2 + 4, width, height, 16);
-    plate.fillStyle(0xfffaf0, 1).fillRoundedRect(-width / 2, -height / 2, width, height, 16);
-    plate.lineStyle(3, accent, 1).strokeRoundedRect(-width / 2, -height / 2, width, height, 16);
-    plate.fillStyle(0xfffaf0, 1).fillTriangle(-9, height / 2 - 1.5, 9, height / 2 - 1.5, 0, height / 2 + 12);
-    plate.lineStyle(3, accent, 1).lineBetween(-9, height / 2 - 1, 0, height / 2 + 12);
-    plate.lineBetween(0, height / 2 + 12, 9, height / 2 - 1);
-    // The pointer tip lands on the anchor (the roof top).
-    const restY = anchor.y - height / 2 - 12;
-    const group = track(scene.add.container(anchor.x, restY + 10, [plate, label]))
-      .setDepth(STORY_DEPTH.chip).setAlpha(0).setScale(0.7);
-    scene.tweens.add({ targets: group, alpha: 1, scale: 1, y: restY, delay, duration: motion(320), ease: "Back.easeOut" });
-    if (!calm) {
-      scene.time.delayedCall(delay, () => {
-        const burst = particles(anchor.x, restY, {
-          emitting: false, lifespan: 600, speed: { min: 40, max: 120 }, scale: { start: 0.5, end: 0 },
-          alpha: { start: 1, end: 0 }, tint: [0xffffff, 0xfff2a8],
-        });
-        burst.explode(12);
-      });
-      scene.tweens.add({ targets: group, y: restY - 5, delay: delay + 340, duration: 950, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-    }
-    return group;
   };
 
   // --- Dialogue panel ---------------------------------------------------------------
@@ -249,9 +245,9 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
   panelPlate.fillStyle(0xffffff, 0.97).fillRoundedRect(-panelWidth / 2, -PANEL.height / 2, panelWidth, PANEL.height, 24);
   panelPlate.lineStyle(3, 0xc9c2ec, 1).strokeRoundedRect(-panelWidth / 2, -PANEL.height / 2, panelWidth, PANEL.height, 24);
   // Little tail toward Midi on the left.
-  panelPlate.fillStyle(0xffffff, 1).fillTriangle(-panelWidth / 2 + 1.5, 4, -panelWidth / 2 + 1.5, 28, -panelWidth / 2 - 16, 22);
-  panelPlate.lineStyle(3, 0xc9c2ec, 1).lineBetween(-panelWidth / 2, 4, -panelWidth / 2 - 16, 22);
-  panelPlate.lineBetween(-panelWidth / 2 - 16, 22, -panelWidth / 2, 28);
+  panelPlate.fillStyle(0xffffff, 1).fillTriangle(-panelWidth / 2 + 1.5, -14, -panelWidth / 2 + 1.5, 10, -panelWidth / 2 - 16, 4);
+  panelPlate.lineStyle(3, 0xc9c2ec, 1).lineBetween(-panelWidth / 2, -14, -panelWidth / 2 - 16, 4);
+  panelPlate.lineBetween(-panelWidth / 2 - 16, 4, -panelWidth / 2, 10);
   const nameTag = scene.add.graphics();
   nameTag.fillStyle(0x4b8fe0, 1).fillRoundedRect(-panelWidth / 2 + 26, -PANEL.height / 2 - 16, 82, 32, 16);
   const nameText = scene.add
@@ -267,7 +263,15 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
   const nextArrow = scene.add.graphics();
   nextArrow.fillStyle(0x4b8fe0, 1).fillTriangle(-9, -5, 9, -5, 0, 6);
   nextArrow.setPosition(panelWidth / 2 - 34, PANEL.height / 2 - 24).setVisible(false);
-  const panel = track(scene.add.container(panelX, PANEL.y, [panelPlate, nameTag, nameText, lineText, nextArrow]))
+  // How to go on, next to the arrow (the village later shows the arrow alone).
+  const nextHint = scene.add
+    .text(panelWidth / 2 - 52, PANEL.height / 2 - 24, "화면 터치 또는 Space", {
+      fontFamily: FONT_FAMILY, fontSize: "15px", fontStyle: "bold", color: "#7a86b8",
+    })
+    .setOrigin(1, 0.5)
+    .setResolution(3)
+    .setVisible(false);
+  const panel = track(scene.add.container(panelX, PANEL.y, [panelPlate, nameTag, nameText, lineText, nextHint, nextArrow]))
     .setDepth(STORY_DEPTH.panel).setAlpha(0);
   scene.tweens.add({ targets: panel, alpha: 1, y: { from: PANEL.y + 24, to: PANEL.y }, duration: motion(320), ease: "Cubic.easeOut" });
   if (!calm) {
@@ -296,16 +300,8 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
   // --- Beats ----------------------------------------------------------------------------
   const boardPoint = (spot: readonly [number, number]) => ({
     x: board.x + spot[0] * board.displayWidth,
-    y: board.y + spot[1] * board.displayHeight,
+    y: boardY + spot[1] * board.displayHeight,
   });
-  const chips: Phaser.GameObjects.Container[] = [];
-  const clearChips = () => {
-    for (const item of chips.splice(0)) {
-      scene.tweens.killTweensOf(item);
-      scene.tweens.add({ targets: item, alpha: 0, scale: 0.85, duration: motion(200) });
-    }
-  };
-  let gateMotes: Phaser.GameObjects.Particles.ParticleEmitter | undefined;
   const beats: Beat[] = [
     {
       // Each gem lights up in turn and sends its light to the middle of the board.
@@ -315,46 +311,60 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
       lineDelayMs: 450,
       enter: () => {
         talker.setMood("surprised");
+        // The collected gems power up one by one (they are already bright:
+        // each beats, flashes in its own shape and keeps a glowing rim).
         GEM_SPOTS.forEach((spot, index) => {
           const gem = boardPoint(spot);
-          const delay = motion(250 + index * 150);
-          const shine = track(scene.add.image(gem.x, gem.y, LIGHT.glow))
-            .setDepth(STORY_DEPTH.light).setBlendMode(Phaser.BlendModes.ADD).setScale(0).setAlpha(0);
-          gemShines.push(shine);
-          scene.tweens.add({ targets: shine, scale: 0.55, alpha: 0.9, delay, duration: motion(260), ease: "Sine.easeOut" });
-          scene.tweens.add({ targets: shine, alpha: 0.35, scale: 0.4, delay: delay + motion(260), duration: motion(500) });
+          // After the board has finished rising, so the gem copies sit on it.
+          const delay = motion(480 + index * 150);
+          const tint = GEM_TINTS[index % GEM_TINTS.length];
+          gemLights.light(index, delay);
           if (calm) return;
-          // A small orb of light floats from the gem into the centre.
-          scene.time.delayedCall(delay + 300, () => {
-            const orb = track(scene.add.image(gem.x, gem.y, LIGHT.dot))
-              .setDepth(STORY_DEPTH.light).setBlendMode(Phaser.BlendModes.ADD).setScale(0.9);
-            const trail = particles(0, 0, {
-              follow: orb, lifespan: 420, speed: 8, scale: { start: 0.45, end: 0 }, alpha: { start: 0.8, end: 0 },
-              frequency: 22, tint: [0xffffff, 0xbdeeff],
+          scene.time.delayedCall(delay, () => {
+            const burst = particles(gem.x, gem.y, {
+              emitting: false, lifespan: { min: 380, max: 700 }, speed: { min: 40, max: 130 },
+              scale: { start: 0.32, end: 0 }, alpha: { start: 1, end: 0 }, tint: [0xffffff, tint],
             });
+            burst.explode(6);
+          });
+        });
+        // Once all nine are on, they beat together and their light gathers
+        // in the middle of the board.
+        // Right after the last gem lights, so there is no pause that looks like the end.
+        const allOnMs = motion(480 + GEM_SPOTS.length * 150 + 200);
+        gemLights.beatAll(allOnMs);
+        if (calm) return;
+        GEM_SPOTS.forEach((spot, index) => {
+          const gem = boardPoint(spot);
+          scene.time.delayedCall(allOnMs + 120, () => {
+            if (portalOpen) return;
+            const orb = track(scene.add.image(gem.x, gem.y, LIGHT.dot))
+              .setDepth(STORY_DEPTH.light).setBlendMode(Phaser.BlendModes.ADD).setScale(0.2).setTint(GEM_TINTS[index]);
+            const trail = particles(0, 0, {
+              follow: orb, lifespan: 380, speed: 6, scale: { start: 0.32, end: 0 }, alpha: { start: 0.8, end: 0 },
+              frequency: 24, tint: [0xffffff, GEM_TINTS[index]],
+            });
+            scene.tweens.add({ targets: orb, scale: 0.75, duration: 180, ease: "Sine.easeOut" });
             scene.tweens.add({
-              targets: orb, x: gather.x, y: gather.y, scale: 0.5, duration: 700, ease: "Sine.easeIn",
+              targets: orb, x: gather.x, y: gather.y, duration: 620, delay: 80, ease: "Sine.easeIn",
               onComplete: () => {
                 orb.setVisible(false);
                 trail.stop();
                 // Late orbs (after a quick tap) must not relight the core over the open door.
                 if (portalOpen) return;
-                scene.tweens.add({ targets: core, scale: `+=${0.09}`, alpha: Math.min(1, 0.25 + index * 0.09), duration: 160 });
+                scene.tweens.add({ targets: core, scale: `+=${0.06}`, alpha: Math.min(0.8, 0.2 + index * 0.07), duration: 160 });
               },
             });
           });
         });
-        if (!calm) {
-          scene.tweens.add({ targets: core, scale: { from: 0.4, to: 0.5 }, alpha: { from: 0.2, to: 0.3 }, delay: 400, duration: 300 });
-        }
       },
     },
     {
       // The gathered light bursts, and the board opens into a door.
-      // Arms up for the open door.
+      // A big happy smile for the open door (no arms-up pose).
       talk: "happy",
-      after: MIDI_POSE.cheer,
-      line: "마법판의 힘으로 배움마을로 갈 수 있는 문이 열렸어!",
+      after: "happy",
+      line: "보석의 힘으로 배움마을로 갈 수 있는 문이 열렸어!",
       lineDelayMs: 1_000,
       enter: () => {
         scene.tweens.killTweensOf(core);
@@ -375,59 +385,6 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
           });
           burst.explode(46);
         });
-      },
-    },
-    {
-      // The three buildings, one by one.
-      talk: "idle",
-      after: "idle",
-      line: "AI 제작소, 데이터 비행장, 윤리 심사소에서 AI 월드에서 배운 것을 직접 해 볼 수 있어.",
-      lineDelayMs: 250,
-      enter: () => {
-        openPortal(true);
-        const places = [
-          ["AI 제작소", VILLAGE_SPOTS.workshop, 0xe0795a],
-          ["데이터 비행장", VILLAGE_SPOTS.airport, 0x4b8fe0],
-          ["윤리 심사소", VILLAGE_SPOTS.ethics, 0xd9a23a],
-        ] as const;
-        places.forEach(([name, spot, accent], index) => {
-          chips.push(chip(name, villagePoint(spot), motion(150 + index * 520), accent));
-        });
-      },
-    },
-    {
-      // The graduation-path gate starts to sparkle.
-      talk: "happy",
-      after: "idle",
-      line: `세 장소에서 별 ${WORLD_EXIT_REQUIRED_STARS}개를 모으면 별빛 졸업길이 열려!`,
-      lineDelayMs: 250,
-      enter: () => {
-        openPortal(true);
-        clearChips();
-        const opening = VILLAGE_SPOTS.gateOpening;
-        const center = villagePoint(opening);
-        if (!calm) {
-          gateMotes = particles(center.x, center.y, {
-            lifespan: { min: 900, max: 1_500 },
-            speedY: { min: -70, max: -30 },
-            speedX: { min: -12, max: 12 },
-            scale: { start: 0.6, end: 0 },
-            alpha: { start: 1, end: 0 },
-            tint: [0xfff2a8, 0xffffff, 0xd9ccff],
-            frequency: 40,
-            emitZone: {
-              type: "random",
-              // Anywhere inside the gate's swirling opening.
-              source: {
-                getRandomPoint: (point: Phaser.Types.Math.Vector2Like) => {
-                  point.x = (Math.random() - 0.5) * opening.width * VILLAGE_VIEW.width;
-                  point.y = (Math.random() - 0.5) * opening.height * VILLAGE_VIEW.height;
-                },
-              },
-            },
-          });
-        }
-        chips.push(chip("별빛 졸업길", villagePoint(VILLAGE_SPOTS.gateTop), motion(500), 0xe9a735));
       },
     },
     {
@@ -464,6 +421,7 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
     const beat = beats[beatIndex];
     lineReady = false;
     nextArrow.setVisible(false);
+    nextHint.setVisible(false);
     lineText.setText("");
     beat.enter();
     scene.time.delayedCall(motion(beat.lineDelayMs), () => {
@@ -473,6 +431,7 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
         else talker.setPose(beat.after);
         lineReady = true;
         nextArrow.setVisible(true);
+        nextHint.setVisible(true);
       }, STORY_PACE, beat.talk);
     });
   };
@@ -492,26 +451,61 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
     talker.setPose(MIDI_POSE.fly);
     removeInput();
     openPortal(true);
-    gateMotes?.stop();
     skip.disableInteractive();
-    scene.tweens.add({ targets: [panel, skip, ...chips], alpha: 0, duration: motion(220) });
-    // Midi flies into the door with a trail of light, then the door swallows the screen.
+    scene.tweens.add({ targets: [panel, skip], alpha: 0, duration: motion(220) });
+    // Midi flies into the door and lands where she starts in the village, already
+    // at the village's size inside the door; then the village grows until it
+    // fills the screen exactly as the village scene draws it (Midi grows with
+    // it), so the switch to the village is invisible.
     scene.tweens.killTweensOf(mascot);
-    if (!calm) {
-      particles(0, 0, {
-        follow: mascot, followOffset: { x: 0, y: -60 }, lifespan: 500, speed: 10,
-        scale: { start: 0.7, end: 0 }, alpha: { start: 0.9, end: 0 }, frequency: 18, tint: [0xffffff, 0xbdeeff],
-      }).setDepth(STORY_DEPTH.chip);
-    }
-    scene.tweens.add({
-      targets: mascot, x: PORTAL.x, y: PORTAL.y + 60, scale: 0.3, alpha: 0,
-      duration: motion(760), ease: "Cubic.easeIn",
+    scene.tweens.killTweensOf(village);
+    rimMotes.stop();
+    const preview = options.villagePreview;
+    const mapSize = preview?.size ?? { width: 1280, height: 720 };
+    const screen = { x: 640, y: 360 };
+    // The village's picture as it sits in the door right now.
+    const view = { x: village.x, y: village.y, kx: village.displayWidth / mapSize.width, ky: village.displayHeight / mapSize.height };
+    const inDoor = (point: Readonly<{ x: number; y: number }>) => ({
+      x: view.x + (point.x - mapSize.width / 2) * view.kx,
+      y: view.y + (point.y - mapSize.height / 2) * view.ky,
     });
-    scene.tweens.add({ targets: maskShape, scale: 2.7, delay: motion(560), duration: motion(760), ease: "Cubic.easeIn" });
-    scene.tweens.add({ targets: ring, scale: ringScale * 2.7, alpha: 0, delay: motion(560), duration: motion(760), ease: "Cubic.easeIn" });
-    scene.tweens.add({ targets: village, scale: villageScale * 1.8, delay: motion(560), duration: motion(760), ease: "Cubic.easeIn" });
-    scene.time.delayedCall(motion(940), () => scene.cameras.main.fadeOut(motion(320) || 1, 255, 245, 220));
-    scene.time.delayedCall(motion(1_300), () => options.onFinish());
+    const shadow = mascot.list[0] as Phaser.GameObjects.Ellipse | undefined;
+    if (shadow) scene.tweens.add({ targets: shadow, alpha: 0, duration: motion(300) });
+    // Where (and how big) Midi stands in the village once it fills the screen.
+    const bodyHeight = options.mascotFrameHeight * FACE_FRAME_BODY_RATIO;
+    const landing = preview
+      ? {
+        x: preview.spawn.x,
+        y: preview.spawn.y + preview.midiBody.bottomBelowSpawn,
+        scale: preview.midiBody.height / bodyHeight,
+      }
+      : { x: screen.x, y: screen.y + 120, scale: 0.6 };
+    const landingInDoor = inDoor(landing);
+    scene.tweens.add({
+      targets: mascot, x: landingInDoor.x, y: landingInDoor.y, scale: landing.scale * view.kx,
+      duration: motion(DOOR_DIVE.flyMs), ease: "Sine.easeInOut",
+      onComplete: () => {
+        // She arrives facing front, as she stands in the village.
+        talker.setPose(undefined);
+        talker.setMood("idle");
+      },
+    });
+    const zoom = { delay: motion(DOOR_DIVE.flyMs), duration: motion(DOOR_DIVE.zoomMs), ease: "Cubic.easeInOut" };
+    const fullScale = { x: village.scaleX / view.kx, y: village.scaleY / view.ky };
+    scene.tweens.add({ targets: village, x: screen.x, y: screen.y, scaleX: fullScale.x, scaleY: fullScale.y, ...zoom });
+    // The door grows exactly as much as the village, so the opening always shows
+    // village (never the empty background), with the frame still around it.
+    const grow = fullScale.x / village.scaleX;
+    scene.tweens.killTweensOf(ring);
+    scene.tweens.add({ targets: maskShape, x: screen.x, y: screen.y, scale: maskShape.scale * grow, ...zoom });
+    scene.tweens.add({ targets: ring, x: screen.x, y: screen.y, scale: ring.scaleX * grow, alpha: 1, ...zoom });
+    // Now the village fills the screen: the frame opens out past the corners and fades.
+    const open = { delay: zoom.delay + zoom.duration, duration: motion(DOOR_DIVE.openMs), ease: "Sine.easeOut" };
+    scene.tweens.add({ targets: maskShape, scale: maskShape.scale * grow * DOOR_DIVE.openCover, ...open });
+    scene.tweens.add({ targets: ring, scale: ring.scaleX * grow * DOOR_DIVE.openCover, alpha: 0, ...open });
+    // Same easing and timing as the village, so she stays on her spot in it.
+    scene.tweens.add({ targets: mascot, x: landing.x, y: landing.y, scale: landing.scale, ...zoom });
+    scene.time.delayedCall(motion(DOOR_DIVE.flyMs + DOOR_DIVE.zoomMs + DOOR_DIVE.openMs) + 30, () => options.onFinish());
   };
 
   const onPointer = () => advance();

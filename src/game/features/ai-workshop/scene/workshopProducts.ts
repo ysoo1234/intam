@@ -32,11 +32,26 @@ export function getWorkshopProductTextureKey(productId: string) {
   return `workshop-product-${productId}`;
 }
 
+export function getWorkshopBlueprintTextureKey(productId: string) {
+  return `workshop-blueprint-${productId}`;
+}
+
+/**
+ * The shelf and the workbench show a product as its blueprint; it becomes
+ * the finished product when crafting is done.
+ */
+export type WorkshopProductLook = "blueprint" | "finished";
+
 export function createWorkshopProductArt(
   scene: Phaser.Scene,
   product: WorkshopProduct,
   size: number,
+  look: WorkshopProductLook = "finished",
 ) {
+  const blueprintKey = getWorkshopBlueprintTextureKey(product.id);
+  if (look === "blueprint" && scene.textures.exists(blueprintKey)) {
+    return scene.add.image(0, -2, blueprintKey).setDisplaySize(size, size);
+  }
   const textureKey = getWorkshopProductTextureKey(product.id);
   if (scene.textures.exists(textureKey)) {
     return scene.add.image(0, -2, textureKey).setDisplaySize(size, size);
@@ -279,7 +294,7 @@ export function createWorkshopProductVisual(
   const artSize = options.artSize ?? 74;
   const showLabel = options.showLabel ?? true;
   const labelWidth = options.labelWidth ?? 112;
-  const productArt = createWorkshopProductArt(scene, product, artSize).setY(0);
+  const productArt = createWorkshopProductArt(scene, product, artSize, "blueprint").setY(0);
   const labelFontSize = 13;
   const label = scene.add
     .text(0, options.labelOffsetY ?? 76, product.label, {
@@ -333,9 +348,11 @@ function createWorkshopCarriedIcon(
   product: WorkshopProduct,
   x: number,
   y: number,
+  look: WorkshopProductLook,
 ) {
   const container = scene.add.container(x, y);
-  container.add(createWorkshopProductArt(scene, product, 110));
+  // A blueprint card is smaller in Midi's hands than a finished product.
+  container.add(createWorkshopProductArt(scene, product, look === "blueprint" ? 78 : 110, look));
   return container;
 }
 
@@ -344,6 +361,7 @@ export function rebuildWorkshopCarriedVisuals(
   player: Phaser.GameObjects.Container | undefined,
   products: readonly WorkshopProduct[],
   previousVisuals: readonly Phaser.GameObjects.Container[],
+  look: WorkshopProductLook = "blueprint",
 ) {
   previousVisuals.forEach((visual) => visual.destroy(true));
   if (!player) return [];
@@ -353,6 +371,7 @@ export function rebuildWorkshopCarriedVisuals(
       product,
       player.x + (index - (products.length - 1) / 2) * 72,
       player.y - 92,
+      look,
     )
       .setDepth(34)
       .setData("carried", true),

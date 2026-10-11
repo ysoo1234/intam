@@ -27,10 +27,9 @@ import {
 } from "../model";
 import { AI_WORKSHOP_LAYOUT } from "./layout";
 import { startWorkshopDialogue } from "./workshopDialogue";
-import { createWorkshopControls } from "./workshopControls";
-import { applyWorkshopCustomerRequestVisual } from "./workshopCustomerVisual";
+import { createWorkshopControls, type WorkshopControls } from "./workshopControls";
+import { applyWorkshopCustomerRequestVisual, WORKSHOP_CUSTOMER_HEAD_TOP_KEY } from "./workshopCustomerVisual";
 import { animateWorkshopCustomerArtworkJoy, createCustomerJoyEffect, createWorkshopCoinBurst, createWorkshopSparkBurst } from "./workshopEffects";
-import { createWorkshopCraftingAnimation } from "./workshopCraftingView";
 import {
   preloadWorkshopSceneAssets,
   unloadWorkshopSceneAssets,
@@ -39,7 +38,12 @@ import { createWorkshopItemPanel, createWorkshopProductChoices, hideWorkshopItem
 import { updateWorkshopPlayer, updateWorkshopPlayerPerspective } from "./workshopPlayer";
 import { createWorkshopResultOverlay } from "./workshopResult";
 import { WorkshopStarCatch } from "./workshopStarCatch";
-import { findNearestWorkshopProduct, findNearestWorkshopProductOrigin, renderWorkshopHud, updateWorkshopInteractionPrompt, vibrateDevice } from "./workshopStatus";
+import {
+  findNearestWorkshopProduct, findNearestWorkshopProductOrigin, isWorkshopPlayerAtCustomer,
+  isWorkshopPlayerAtWorkbench, renderWorkshopHud, vibrateDevice,
+} from "./workshopStatus";
+import { createWorkshopTapTargets, type WorkshopTapTargets } from "./workshopTapTargets";
+import { playWorkshopProductReveal } from "./workshopProductReveal";
 import { createWorkshopBackground, createWorkshopCustomer, createWorkshopHud, createWorkshopPlayer, setWorkshopCustomerRole, syncWorkshopDialoguePanel } from "./workshopView";
 export class AiWorkshopScene extends Phaser.Scene {
   private keys?: ControlKeys;
@@ -52,7 +56,7 @@ export class AiWorkshopScene extends Phaser.Scene {
   private customerArt?: Phaser.GameObjects.Image;
   private customerEmoji?: Phaser.GameObjects.Text;
   private customerRoleText?: Phaser.GameObjects.Text;
-  private dialoguePanel?: Phaser.GameObjects.Image;
+  private dialoguePanel?: Phaser.GameObjects.Graphics;
   private dialogueText?: Phaser.GameObjects.Text;
   private typingTimer?: Phaser.Time.TimerEvent;
   private hangingProducts: WorkshopProductChoice[] = [];
@@ -74,16 +78,15 @@ export class AiWorkshopScene extends Phaser.Scene {
   private mistakeText?: Phaser.GameObjects.Text;
   private customerCountText?: Phaser.GameObjects.Text;
   private promptText?: Phaser.GameObjects.Text;
-  private actionText?: Phaser.GameObjects.Text;
-  private actionButton?: Phaser.GameObjects.Container;
+  /** Touch is the main control: tap a thing, Midi walks there and uses it. */
+  private controls?: WorkshopControls;
+  private tapTargets?: WorkshopTapTargets;
   private workbenchGlow?: Phaser.GameObjects.Rectangle;
   private workbenchSprite?: Phaser.GameObjects.Image;
   private joystick = new Phaser.Math.Vector2();
   private updateTouchDirection?: () => void;
   private actionQueued = false;
   private starCatch?: WorkshopStarCatch;
-  private craftingAnimationContainer?: Phaser.GameObjects.Container;
-  private craftingSparkTimer?: Phaser.Time.TimerEvent;
   private finished = false;
   private earnedStars?: 1 | 2 | 3;
   /** Set while the first customer is taught step by step (first play only). */
@@ -102,6 +105,9 @@ export class AiWorkshopScene extends Phaser.Scene {
     preloadWorkshopSceneAssets(this);
     Object.entries(GAME_ASSETS.shop.products).forEach(([productId, asset]) => {
       this.load.image(`workshop-product-${productId}`, asset);
+    });
+    Object.entries(GAME_ASSETS.shop.blueprints).forEach(([productId, asset]) => {
+      this.load.image(`workshop-blueprint-${productId}`, asset);
     });
     this.sessionRequests = Phaser.Utils.Array.Shuffle([
       ...WORKSHOP_REQUESTS,
@@ -127,6 +133,9 @@ export class AiWorkshopScene extends Phaser.Scene {
       [
         ...Object.keys(GAME_ASSETS.shop.products).map(
           (productId) => `workshop-product-${productId}`,
+        ),
+        ...Object.keys(GAME_ASSETS.shop.blueprints).map(
+          (productId) => `workshop-blueprint-${productId}`,
         ),
       ].forEach((key) => this.textures.remove(key));
       this.sessionRequests.forEach((request) => {
@@ -162,29 +171,45 @@ export class AiWorkshopScene extends Phaser.Scene {
       playerSprite: this.playerSprite,
     } = createWorkshopPlayer(this));
     updateWorkshopPlayerPerspective(this.player, this.carriedVisuals);
+    this.controls = createWorkshopControls(
+      this,
+      () => this.returnToWorld(),
+      () => this.player,
+    );
     ({
       keys: this.keys,
       cursors: this.cursors,
       joystick: this.joystick,
       updateTouchDirection: this.updateTouchDirection,
-      actionButton: this.actionButton,
-      actionText: this.actionText,
-    } = createWorkshopControls(
-      this,
-      () => this.returnToWorld(),
-      () => {
-        this.actionQueued = true;
-      },
-      () => this.player,
-    ));
+    } = this.controls);
+    this.tapTargets = createWorkshopTapTargets(this, this.customerContainer, {
+      controls: this.controls,
+      getPhase: () => this.phase,
+      getPlayer: () => this.player,
+      getHanging: () => this.hangingProducts,
+      getCarriedOrigins: () => this.carriedOrigins,
+      getCarriedVisuals: () => this.carriedVisuals,
+      hasCarried: () => this.carriedProducts.length > 0,
+      isFinished: () => this.finished,
+      pickProduct: (choice) => this.pickProduct(choice),
+      returnCarried: (index) => this.returnCarriedProduct(index),
+      useWorkbench: () => this.useWorkbench(),
+      needProductsFirst: () => this.promptText?.setText("먼저 상품을 골라서 가져와 주세요"),
+      deliver: () => this.completeCustomer(),
+    });
     createGameStartOverlay(this, AI_WORKSHOP_START, (withTutorial) => this.handleStart(withTutorial), {
-      help: { question: "튜토리얼을 보고 시작할까요?" },
+      help: { question: "튜토리얼을 다시 볼까요?" },
     });
     this.cameras.main.fadeIn(320, 255, 244, 210);
   }
 
-  /** `withTutorial` is set by the ? button; otherwise first plays get the tutorial. */
+  /**
+   * `withTutorial` is set by the ? button; otherwise first plays get the
+   * tutorial. A tutorial watched again from ? ends back on the start screen;
+   * the first-play tutorial goes straight on into the game.
+   */
   private handleStart(withTutorial?: boolean) {
+    const replaying = withTutorial === true;
     const playTutorial = withTutorial ?? shouldPlayTutorial("ai-workshop");
     if (!playTutorial) {
       playCoachCountdown(this, () => this.beginRealGame());
@@ -192,10 +217,19 @@ export class AiWorkshopScene extends Phaser.Scene {
     }
     this.tutorial = createWorkshopTutorial(
       this,
-      () => ({ order: this.currentOrder, carried: this.carriedProducts, hanging: this.hangingProducts }),
+      () => ({
+        order: this.currentOrder,
+        carried: this.carriedProducts,
+        hanging: this.hangingProducts,
+        crafting: this.phase === "crafting",
+      }),
       () => this.openShelfForOrder(),
       () => {
         markTutorialSeen("ai-workshop");
+        if (replaying) {
+          this.scene.restart();
+          return;
+        }
         this.resetForRealGame();
         playCoachCountdown(this, () => this.beginRealGame());
       },
@@ -251,8 +285,6 @@ export class AiWorkshopScene extends Phaser.Scene {
     this.wrongDeliveries = 0;
     this.remainingMs = AI_WORKSHOP_CONFIG.gameDurationMs;
     this.starCatch?.resetCounts();
-    this.craftingAnimationContainer = undefined;
-    this.craftingSparkTimer = undefined;
     this.joystick.set(0, 0);
     this.actionQueued = false;
     this.finished = false;
@@ -338,8 +370,8 @@ export class AiWorkshopScene extends Phaser.Scene {
       order,
       this.customerNumber,
     );
+    this.hangingProducts.forEach((choice) => this.tapTargets?.makeProductTappable(choice));
     this.promptText?.setText("");
-    this.actionText?.setText("집기");
     this.tutorial?.notify("choosing");
   }
 
@@ -354,14 +386,74 @@ export class AiWorkshopScene extends Phaser.Scene {
     this.carriedOrigins = [];
     this.carriedVisuals.forEach((visual) => visual.destroy(true));
     this.carriedVisuals = [];
+    this.tapTargets?.syncSlots();
   }
 
   private updateCarriedVisuals() {
     this.carriedVisuals = rebuildWorkshopCarriedVisuals(
       this, this.player, this.carriedProducts, this.carriedVisuals,
+      // Blueprints until crafting is done; then the finished products.
+      this.phase === "delivery" ? "finished" : "blueprint",
     );
+    this.tapTargets?.syncSlots();
   }
 
+  /** Puts carried product `index` back on its shelf slot. */
+  private returnCarriedProduct(index: number) {
+    const product = this.carriedProducts.splice(index, 1)[0];
+    const origin = this.carriedOrigins.splice(index, 1)[0];
+    if (!product || !origin) return;
+    const choice = returnWorkshopProductToPanel(this, product, origin);
+    this.tapTargets?.makeProductTappable(choice);
+    this.hangingProducts.push(choice);
+    this.updateCarriedVisuals();
+    this.promptText?.setText("상품을 원래 칸에 다시 놓았어요");
+  }
+
+  /** Takes a product off the shelf (or swaps it for the one carried when the hands are full). */
+  private pickProduct(choice: WorkshopProductChoice) {
+    const order = this.currentOrder;
+    if (!order || !this.player) return;
+    const handsFull = this.carriedProducts.length >= order.products.length;
+    const returnedProduct = handsFull ? this.carriedProducts[0] : undefined;
+    const returnedOrigin = handsFull ? this.carriedOrigins[0] : undefined;
+    choice.container.destroy(true);
+    this.hangingProducts = this.hangingProducts.filter((entry) => entry !== choice);
+    if (handsFull) {
+      this.carriedProducts = [choice.product];
+      this.carriedOrigins = [choice.origin];
+      if (returnedProduct && returnedOrigin) {
+        const returned = returnWorkshopProductToPanel(this, returnedProduct, returnedOrigin);
+        this.tapTargets?.makeProductTappable(returned);
+        this.hangingProducts.push(returned);
+      }
+    } else {
+      this.carriedProducts.push(choice.product);
+      this.carriedOrigins.push(choice.origin);
+    }
+    this.updateCarriedVisuals();
+    createWorkshopSparkBurst(this, this.player.x, this.player.y - 65, choice.product.color);
+    this.promptText?.setText(
+      handsFull
+        ? "상품을 바꿨어요! 작업대로 가져가거나 다시 바꿀 수 있어요"
+        : this.carriedProducts.length < order.products.length
+          ? "상품을 하나 더 골라 주세요"
+          : "작업대로 가져가거나 다른 상품을 눌러 바꿀 수 있어요",
+    );
+    this.tutorial?.notify("picked");
+  }
+
+  private useWorkbench() {
+    const order = this.currentOrder;
+    if (!order) return;
+    if (this.carriedProducts.length < order.products.length) {
+      this.promptText?.setText("먼저 상품을 골라서 가져와 주세요");
+      return;
+    }
+    this.checkProductsAtWorkbench();
+  }
+
+  /** Space / Enter: the same actions, on whatever is nearest. */
   private interact() {
     if (this.finished) return;
     if (this.phase === "crafting") {
@@ -371,102 +463,21 @@ export class AiWorkshopScene extends Phaser.Scene {
     if (!this.player || !this.currentOrder) return;
 
     if (this.phase === "choosing") {
-      const returnTarget = findNearestWorkshopProductOrigin(
-        this.player,
-        this.carriedOrigins,
-      );
+      const returnTarget = findNearestWorkshopProductOrigin(this.player, this.carriedOrigins);
       if (returnTarget) {
-        const product = this.carriedProducts.splice(returnTarget.index, 1)[0];
-        const origin = this.carriedOrigins.splice(returnTarget.index, 1)[0];
-        if (product && origin) {
-          this.hangingProducts.push(
-            returnWorkshopProductToPanel(this, product, origin),
-          );
-          this.updateCarriedVisuals();
-          this.promptText?.setText("상품을 원래 칸에 다시 놓았어요");
-        }
+        this.returnCarriedProduct(returnTarget.index);
         return;
       }
-      const nearbyProduct = findNearestWorkshopProduct(
-        this.player,
-        this.hangingProducts,
-      );
+      const nearbyProduct = findNearestWorkshopProduct(this.player, this.hangingProducts);
       if (nearbyProduct) {
-        if (
-          this.carriedProducts.length >= this.currentOrder.products.length
-        ) {
-          const returnedProduct = this.carriedProducts[0];
-          const returnedOrigin = this.carriedOrigins[0];
-          nearbyProduct.container.destroy(true);
-          this.hangingProducts = this.hangingProducts.filter(
-            (entry) => entry !== nearbyProduct,
-          );
-          this.carriedProducts = [nearbyProduct.product];
-          this.carriedOrigins = [nearbyProduct.origin];
-          if (returnedProduct && returnedOrigin)
-            this.hangingProducts.push(
-              returnWorkshopProductToPanel(
-                this,
-                returnedProduct,
-                returnedOrigin,
-              ),
-            );
-          this.updateCarriedVisuals();
-          createWorkshopSparkBurst(this, 
-            this.player.x,
-            this.player.y - 65,
-            nearbyProduct.product.color,
-          );
-          this.promptText?.setText(
-            "상품을 바꿨어요! 작업대로 가져가거나 다시 바꿀 수 있어요",
-          );
-          this.tutorial?.notify("picked");
-          return;
-        }
-        this.carriedProducts.push(nearbyProduct.product);
-        this.carriedOrigins.push(nearbyProduct.origin);
-        nearbyProduct.container.destroy(true);
-        this.hangingProducts = this.hangingProducts.filter(
-          (entry) => entry !== nearbyProduct,
-        );
-        this.updateCarriedVisuals();
-        createWorkshopSparkBurst(this, this.player.x, this.player.y - 65, nearbyProduct.product.color);
-        this.promptText?.setText(
-          this.carriedProducts.length < this.currentOrder.products.length
-            ? "상품을 하나 더 골라 주세요"
-            : "작업대로 가져가거나 다른 상품 앞에서 바꿀 수 있어요",
-        );
-        this.tutorial?.notify("picked");
+        this.pickProduct(nearbyProduct);
         return;
       }
-
-      const atWorkbench =
-        Phaser.Math.Distance.Between(
-          this.player.x,
-          this.player.y,
-          AI_WORKSHOP_LAYOUT.workbench.x,
-          AI_WORKSHOP_LAYOUT.workbench.interactionY,
-        ) < 150;
-      if (
-        atWorkbench &&
-        this.carriedProducts.length < this.currentOrder.products.length
-      ) {
-        this.promptText?.setText("먼저 상품을 골라서 가져와 주세요");
-        return;
-      }
-      if (atWorkbench) this.checkProductsAtWorkbench();
+      if (isWorkshopPlayerAtWorkbench(this.player)) this.useWorkbench();
       return;
     }
 
-    if (
-      this.phase === "delivery" &&
-      Phaser.Math.Distance.Between(
-        this.player.x,
-        this.player.y,
-        AI_WORKSHOP_LAYOUT.customerInteraction.x,
-        AI_WORKSHOP_LAYOUT.customerInteraction.y,
-      ) < AI_WORKSHOP_LAYOUT.customerInteraction.radius
-    ) {
+    if (this.phase === "delivery" && isWorkshopPlayerAtCustomer(this.player)) {
       this.completeCustomer();
     }
   }
@@ -522,77 +533,56 @@ export class AiWorkshopScene extends Phaser.Scene {
     const order = this.currentOrder;
     if (!order) return;
     this.phase = "crafting";
-    this.starCatch?.start(order, this.customerNumber);
-    this.actionText?.setText("멈춤!");
-    this.createWorkbenchCraftingAnimation();
+    this.controls?.cancelWalk();
+    this.starCatch?.start(order, this.customerNumber, () => {
+      this.actionQueued = true;
+    });
     this.tutorial?.notify("crafting");
-  }
-
-  private createWorkbenchCraftingAnimation() {
-    this.clearWorkbenchCraftingAnimation();
-    const product = this.currentOrder?.products[0];
-    if (!product) return;
-    const animation = createWorkshopCraftingAnimation(
-      this,
-      product,
-      () => this.phase === "crafting",
-    );
-    this.craftingAnimationContainer = animation.container;
-    this.craftingSparkTimer = animation.timer;
-  }
-
-  private clearWorkbenchCraftingAnimation() {
-    this.craftingSparkTimer?.remove(false);
-    this.craftingSparkTimer = undefined;
-    this.craftingAnimationContainer?.destroy(true);
-    this.craftingAnimationContainer = undefined;
   }
 
   private completeCrafting() {
     const order = this.currentOrder;
     if (!order || this.finished) return;
-    this.phase = "delivery";
-    this.clearWorkbenchCraftingAnimation();
+    // The finished product is shown off first, then lands in Midi's hands.
+    this.phase = "transition";
     this.starCatch?.destroy();
-    this.carriedProducts = [...order.products];
+    this.carriedProducts = [];
     this.carriedOrigins = [];
     this.updateCarriedVisuals();
-    this.actionText?.setText("전달");
-    this.promptText?.setText("완성됐어요! 손님에게 가져다주세요");
-    createWorkshopSparkBurst(this, 
-      AI_WORKSHOP_LAYOUT.workbench.x,
-      AI_WORKSHOP_LAYOUT.workbench.interactionY,
-      COLORS.mint,
-    );
+    this.promptText?.setText("");
     this.workbenchGlow?.setFillStyle(COLORS.yellow, 0.42);
-    this.time.delayedCall(500, () =>
-      this.workbenchGlow?.setFillStyle(0xffd978, 0.08),
-    );
-    this.tutorial?.notify("delivery");
+    playWorkshopProductReveal(this, order.products[0], () => ({
+      x: this.player?.x ?? AI_WORKSHOP_LAYOUT.workbench.x, y: (this.player?.y ?? 600) - 92,
+    }), () => {
+      this.workbenchGlow?.setFillStyle(0xffd978, 0.08);
+      if (this.finished) return;
+      this.phase = "delivery";
+      this.carriedProducts = [...order.products];
+      this.updateCarriedVisuals();
+      if (this.player) createWorkshopSparkBurst(this, this.player.x, this.player.y - 92, COLORS.yellow);
+      this.promptText?.setText("완성됐어요! 손님을 눌러 가져다주세요");
+      this.tutorial?.notify("delivery");
+    });
   }
 
   private completeCustomer() {
     const order = this.currentOrder;
     if (!order || this.phase !== "delivery") return;
-    this.phase = "transition";
-    const { perfectBonus, reward } = getWorkshopReward(
-      this.customerNumber,
-      this.starCatch?.misses ?? 0,
-    );
+    // Midi can walk around while the customer pays and leaves.
+    this.phase = "settling";
+    const { reward } = getWorkshopReward(this.customerNumber);
     this.coins += reward;
     this.completedCustomers += 1;
     this.clearCarriedProducts();
     this.updateHud();
     const thanks = `${order.requests[0].thanks} ${reward}코인 받아 주세요!`;
     this.typeDialogue(thanks);
-    this.promptText?.setText(
-      perfectBonus > 0
-        ? `완벽 제작 보너스! +${reward}코인`
-        : `손님 해결! +${reward}코인`,
-    );
-    createWorkshopCoinBurst(this, 
+    this.promptText?.setText(`손님 해결! +${reward}코인`);
+    createWorkshopCoinBurst(this,
       AI_WORKSHOP_LAYOUT.customerStage.x + 145,
       AI_WORKSHOP_LAYOUT.customerStage.y - 118,
+      this.coinText,
+      Math.max(1, Math.round(reward / 10)),
     );
     createCustomerJoyEffect(this, this.customerContainer);
     animateWorkshopCustomerArtworkJoy(
@@ -641,7 +631,6 @@ export class AiWorkshopScene extends Phaser.Scene {
     this.typingTimer?.remove(false);
     this.clearHangingProducts();
     this.clearCarriedProducts();
-    this.clearWorkbenchCraftingAnimation();
     this.starCatch?.destroy();
     this.customerContainer?.setVisible(false);
     syncWorkshopDialoguePanel(this.dialoguePanel, this.dialogueText?.setText(""));
@@ -673,20 +662,6 @@ export class AiWorkshopScene extends Phaser.Scene {
     });
   }
 
-  private updateInteractionPrompt() {
-    updateWorkshopInteractionPrompt({
-      player: this.player,
-      actionButton: this.actionButton,
-      actionText: this.actionText,
-      phase: this.phase,
-      finished: this.finished,
-      currentOrder: this.currentOrder,
-      carriedProductCount: this.carriedProducts.length,
-      hangingProducts: this.hangingProducts,
-      carriedOrigins: this.carriedOrigins,
-    });
-  }
-
   private returnToWorld() {
     this.cameras.main.fadeOut(220, 255, 245, 220);
     this.time.delayedCall(220, () =>
@@ -703,8 +678,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     this.updateTouchDirection?.();
     this.updatePlayer(safeDelta);
     if (this.phase === "crafting") this.starCatch?.update(safeDelta);
-    this.updateInteractionPrompt();
-    syncWorkshopDialoguePanel(this.dialoguePanel, this.dialogueText);
+    syncWorkshopDialoguePanel(this.dialoguePanel, this.dialogueText, this.customerArt?.getData(WORKSHOP_CUSTOMER_HEAD_TOP_KEY));
 
     if (this.keys && (
       Phaser.Input.Keyboard.JustDown(this.keys.action) || Phaser.Input.Keyboard.JustDown(this.keys.enter)

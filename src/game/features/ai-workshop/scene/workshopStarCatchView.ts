@@ -21,15 +21,23 @@ export const WORKSHOP_STAR_CATCH_TUNING = {
   productY: -55,
   productSize: 104,
   trackX: 0,
-  trackY: 75,
+  // The dark track on the v3 panel art: 76 px under the centre, 38 px tall.
+  trackY: 76,
   trackHalfWidth: 275,
-  targetHeight: 34,
+  targetHeight: 37,
   targetRadius: 12,
   markerWidth: 10,
   markerHeight: 52,
-  statusX: 0,
-  statusY: 171,
-  statusFontSize: 22,
+  /** The big 멈춤 button on the panel's bottom plate. */
+  // The panel art's bottom plate overlaps the body: on screen it spans
+  // 115..217 px under the panel centre (art rows 625..818 of 818), so the
+  // button sits at its middle, 166.
+  stopX: 0,
+  stopY: 166,
+  // Drawn over the whole plate, so the plate itself is the button.
+  stopWidth: 230,
+  stopHeight: 79,
+  stopFontSize: 25,
 } as const;
 
 export const WORKSHOP_STAR_CATCH_TRACK_Y = WORKSHOP_STAR_CATCH_TUNING.trackY;
@@ -39,8 +47,25 @@ export const WORKSHOP_STAR_CATCH_HALF_WIDTH =
 export type WorkshopStarCatchView = {
   container: Phaser.GameObjects.Container;
   marker: Phaser.GameObjects.Graphics;
+  /** The title row: "상품 제작 중 · 성공 n / N". */
   statusText: Phaser.GameObjects.Text;
+  /** The blueprint turns into the real product (a pop and a sparkle). */
+  revealProduct: () => void;
 };
+
+/**
+ * After how many successes the blueprint turns into the real product: two
+ * thirds of the way (2 of 3), so the last stop finishes something the player
+ * can already see, never on the very last stop.
+ */
+export function getWorkshopProductRevealHit(required: number) {
+  return Math.min(required - 1, Math.max(1, Math.round((required * 2) / 3)));
+}
+
+/** The title row text for `hits` successes out of `required`. */
+export function formatWorkshopStarCatchStatus(hits: number, required: number) {
+  return `상품 제작 중  ·  성공 ${hits} / ${required}`;
+}
 
 export function randomizeWorkshopStarZone() {
   return Phaser.Math.Between(
@@ -303,17 +328,25 @@ export function createWorkshopStarCatchView(
   starX: number,
   starZoneCenter: number,
   starZoneWidth: number,
+  /** A tap on the 멈춤 button stops the star (Space does too). */
+  onStop: () => void,
 ): WorkshopStarCatchView {
   const tuning = WORKSHOP_STAR_CATCH_TUNING;
   const container = scene.add
     .container(tuning.centerX, tuning.centerY)
     .setDepth(70);
-  const shade = scene.add.rectangle(0, 0, 1_280, 720, 0x173f43, 0.42);
+  // The shade swallows floor taps (Midi must not wander off during crafting).
+  const shade = scene.add
+    .rectangle(0, 0, 1_280, 720, 0x173f43, 0.42)
+    .setInteractive();
+  shade.on("pointerdown", (
+    _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
+  ) => event.stopPropagation());
   const panel = scene.add
     .image(tuning.panelX, tuning.panelY, "workshop-crafting-panel")
     .setDisplaySize(tuning.panelWidth, tuning.panelHeight);
   const title = scene.add
-    .text(tuning.titleX, tuning.titleY, "상품 제작 중", {
+    .text(tuning.titleX, tuning.titleY, formatWorkshopStarCatchStatus(0, order.requiredStarHits), {
       color: "#173f43",
       fontFamily: FONT_FAMILY,
       fontSize: `${tuning.titleFontSize}px`,
@@ -323,13 +356,19 @@ export function createWorkshopStarCatchView(
     .setResolution(3);
   const product = order.products[0];
   const productArt = product
-    ? createWorkshopProductArt(scene, product, tuning.productSize).setPosition(
+    ? createWorkshopProductArt(scene, product, tuning.productSize, "blueprint").setPosition(
         tuning.productX,
         tuning.productY,
       )
     : scene.add
         .image(tuning.productX, tuning.productY, "workshop-crafting-panel")
         .setVisible(false);
+  // The finished product waits, hidden, right where the blueprint floats.
+  const finishedArt = product
+    ? createWorkshopProductArt(scene, product, tuning.productSize, "finished")
+        .setPosition(tuning.productX, tuning.productY)
+        .setAlpha(0)
+    : undefined;
   const craftingPuff = createCraftingPuffVisuals(scene);
   const { backPuffs, frontPuffs, tools } = craftingPuff;
   const zone = scene.add.graphics().setName("star-zone");
@@ -352,35 +391,55 @@ export function createWorkshopStarCatchView(
     tuning.markerWidth / 2,
   );
   marker.setPosition(tuning.trackX + starX, tuning.trackY);
-  const statusText = scene.add
-    .text(
-      tuning.statusX,
-      tuning.statusY,
-      `성공 횟수 0 / ${order.requiredStarHits}`,
-      {
-        color: "#1f5962",
-        fontFamily: FONT_FAMILY,
-        fontSize: `${tuning.statusFontSize}px`,
-        fontStyle: "bold",
-      },
-    )
+  // The amber 멈춤 button sits on the panel's bottom edge; pressing swaps in
+  // the pressed art (same size, so nothing behind it shows). A tap anywhere
+  // on the panel stops too (and Space).
+  const stopSurface = scene.add.image(0, 0, "workshop-stop-button").setDisplaySize(tuning.stopWidth, tuning.stopHeight);
+  const stopLabel: Phaser.GameObjects.Text = scene.add
+    .text(0, -3, "멈춤!", {
+      fontFamily: FONT_FAMILY, fontSize: `${tuning.stopFontSize}px`, fontStyle: "bold", color: "#ffffff",
+      stroke: "#c06a24", strokeThickness: 4,
+    })
     .setOrigin(0.5)
     .setResolution(3);
+  const drawStop = (pressed: boolean) => {
+    stopSurface.setTexture(pressed ? "workshop-stop-button-pressed" : "workshop-stop-button")
+      .setDisplaySize(tuning.stopWidth, tuning.stopHeight);
+    stopLabel.setY(pressed ? 1 : -3);
+  };
+  const stopButton = scene.add
+    .container(tuning.stopX, tuning.stopY, [stopSurface, stopLabel])
+    .setSize(tuning.stopWidth, tuning.stopHeight)
+    .setInteractive({ useHandCursor: true });
+  const press = (event: Phaser.Types.Input.EventData) => {
+    event.stopPropagation();
+    drawStop(true);
+    scene.time.delayedCall(140, () => drawStop(false));
+    onStop();
+  };
+  stopButton.on("pointerdown", (
+    _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
+  ) => press(event));
+  // The whole crafting panel works as the button too.
+  panel.setInteractive({ useHandCursor: true }).on("pointerdown", (
+    _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
+  ) => press(event));
   container.add([
     shade,
     panel,
     ...backPuffs,
     productArt,
+    ...(finishedArt ? [finishedArt] : []),
     ...tools,
     ...frontPuffs,
     title,
     zone,
     marker,
-    statusText,
+    stopButton,
   ]);
   animateCraftingPuffVisuals(scene, craftingPuff);
   scene.tweens.add({
-    targets: productArt,
+    targets: finishedArt ? [productArt, finishedArt] : productArt,
     y: { from: tuning.productY - 3, to: tuning.productY + 3 },
     angle: { from: -1, to: 1 },
     duration: 420,
@@ -396,5 +455,21 @@ export function createWorkshopStarCatchView(
     duration: 300,
     ease: "Back.easeOut",
   });
-  return { container, marker, statusText };
+  let revealed = false;
+  const revealProduct = () => {
+    if (revealed || !finishedArt) return;
+    revealed = true;
+    scene.tweens.add({ targets: productArt, alpha: 0, duration: 260, ease: "Sine.easeIn" });
+    const rest = { x: finishedArt.scaleX, y: finishedArt.scaleY };
+    finishedArt.setScale(rest.x * 0.7, rest.y * 0.7);
+    scene.tweens.add({
+      targets: finishedArt,
+      alpha: 1,
+      scaleX: rest.x,
+      scaleY: rest.y,
+      duration: 380,
+      ease: "Back.easeOut",
+    });
+  };
+  return { container, marker, statusText: title, revealProduct };
 }

@@ -3,16 +3,18 @@ import type { SceneKey } from "./core/scenes/sceneKeys";
 import { SCENE_KEYS } from "./core/scenes/sceneKeys";
 import { AirportScene } from "./features/data-flight/scene";
 import { AiWorkshopScene } from "./features/ai-workshop/scene";
+import { EndingScene } from "./features/ending/scene";
 import { EthicsReviewScene } from "./features/ethics-review/scene";
 import { IntroScene } from "./features/intro/scene";
-import { WorldScene } from "./features/world/scene";
+import { WORLD_VILLAGE_PREVIEW, WorldScene } from "./features/world/scene";
 
 export type GameSceneId =
   | "intro"
   | "world"
   | "ai-workshop"
   | "data-flight"
-  | "ethics-review";
+  | "ethics-review"
+  | "ending";
 
 export type SceneAssetScope =
   | "intro"
@@ -22,7 +24,8 @@ export type SceneAssetScope =
   | "ai-workshop"
   | "ai-workshop-customers"
   | "data-flight"
-  | "ethics-review";
+  | "ethics-review"
+  | "ending";
 
 export type SceneFactoryContext = Readonly<{
   onReady: () => void;
@@ -96,7 +99,8 @@ export const GAME_SCENE_REGISTRY = defineSceneRegistry([
     sceneKey: SCENE_KEYS.intro,
     assetScopes: ["intro", "world", "player"],
     create: ({ onReady, renderScale }) =>
-      new IntroScene(onReady, renderScale),
+      // The intro's magic door shows the real village (painted by the village feature).
+      new IntroScene(onReady, renderScale, WORLD_VILLAGE_PREVIEW),
   },
   {
     id: "world",
@@ -121,6 +125,14 @@ export const GAME_SCENE_REGISTRY = defineSceneRegistry([
     sceneKey: SCENE_KEYS.ethicsReview,
     assetScopes: ["ethics-review", "player"],
     create: ({ renderScale }) => new EthicsReviewScene(renderScale),
+  },
+  {
+    id: "ending",
+    sceneKey: SCENE_KEYS.ending,
+    assetScopes: ["ending", "world", "intro", "player"],
+    create: ({ renderScale }) =>
+      // The ending plays over the real village (painted by the village feature).
+      new EndingScene(renderScale, WORLD_VILLAGE_PREVIEW),
   },
 ]);
 

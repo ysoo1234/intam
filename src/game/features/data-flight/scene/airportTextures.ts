@@ -5,7 +5,6 @@ export function preloadAirportAssets(scene: Phaser.Scene) {
   scene.load.image("airport-sky", GAME_ASSETS.airport.sky);
   scene.load.image("airport-city", GAME_ASSETS.airport.city);
   scene.load.image("airport-ground", GAME_ASSETS.airport.ground);
-  scene.load.image("airport-quiz-card", GAME_ASSETS.airport.quizCard);
   scene.load.image("airport-midi", GAME_ASSETS.characters.player.fly);
   scene.load.image("airport-midi-1", GAME_ASSETS.characters.player.fly);
   scene.load.image("airport-midi-fever", GAME_ASSETS.characters.player.flyFever);
@@ -65,7 +64,6 @@ export function releaseAirportTextures(scene: Phaser.Scene) {
     "airport-sky",
     "airport-city",
     "airport-ground",
-    "airport-quiz-card",
     "airport-midi",
     "airport-midi-1",
     "airport-midi-fever",
