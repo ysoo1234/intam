@@ -114,7 +114,14 @@ export const WORLD_VILLAGE_PREVIEW: VillagePreview = {
   },
   addLivePortal: (scene, depth) => {
     const gate = WORLD_MAP.scenery.find((entry) => entry.id === "ai-world-gate");
-    // Exactly the screen hole: the gate's frame is part of the flat picture below.
-    if (gate) createAiWorldPortalView(scene, gate, 1.0)?.setDepth(depth);
+    if (!gate) return;
+    // Like in the village: the swirl runs a little past the screen hole and the
+    // gate is drawn again over it, so its frame hides the edges (no gaps).
+    createAiWorldPortalView(scene, gate)?.setDepth(depth);
+    scene.add
+      .image(gate.position.x, gate.position.y, gate.assetKey)
+      .setDisplaySize(gate.displaySize.width, gate.displaySize.height)
+      .setFlipX(gate.flipX === true)
+      .setDepth(depth + 0.01);
   },
 };
