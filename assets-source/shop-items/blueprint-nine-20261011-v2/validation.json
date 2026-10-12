@@ -1,0 +1,89 @@
+{
+  "width": 1700,
+  "height": 1700,
+  "cardSize": 500,
+  "gutter": 50,
+  "cards": [
+    {
+      "card": 1,
+      "marginsPercent": {
+        "left": 20.2,
+        "right": 26.4,
+        "top": 36.2,
+        "bottom": 19.2
+      }
+    },
+    {
+      "card": 2,
+      "marginsPercent": {
+        "left": 21.2,
+        "right": 27.4,
+        "top": 27.4,
+        "bottom": 19
+      }
+    },
+    {
+      "card": 3,
+      "marginsPercent": {
+        "left": 20.8,
+        "right": 25,
+        "top": 31,
+        "bottom": 19
+      }
+    },
+    {
+      "card": 4,
+      "marginsPercent": {
+        "left": 20,
+        "right": 23.4,
+        "top": 28.6,
+        "bottom": 17.2
+      }
+    },
+    {
+      "card": 5,
+      "marginsPercent": {
+        "left": 20.6,
+        "right": 22.2,
+        "top": 28.6,
+        "bottom": 16.6
+      }
+    },
+    {
+      "card": 6,
+      "marginsPercent": {
+        "left": 20.6,
+        "right": 22,
+        "top": 27,
+        "bottom": 17
+      }
+    },
+    {
+      "card": 7,
+      "marginsPercent": {
+        "left": 19.8,
+        "right": 21.6,
+        "top": 30,
+        "bottom": 19.8
+      }
+    },
+    {
+      "card": 8,
+      "marginsPercent": {
+        "left": 20.4,
+        "right": 24,
+        "top": 25.4,
+        "bottom": 19.6
+      }
+    },
+    {
+      "card": 9,
+      "marginsPercent": {
+        "left": 20.6,
+        "right": 21,
+        "top": 29,
+        "bottom": 19.8
+      }
+    }
+  ]
+}

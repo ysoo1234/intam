@@ -1,5 +1,4 @@
 import Phaser from "phaser";
-import { GAME_ASSETS } from "../../../assets";
 import type {
   CollisionDefinition,
   MapDefinition,
@@ -36,17 +35,20 @@ const FOUNTAIN_LIGHT = [
 const FOUNTAIN_SPLASHES = [[0.284, 0.703], [0.706, 0.703]] as const;
 /** How long one ripple ring takes to spread out and fade (seconds). */
 const FOUNTAIN_RIPPLE_LIFE = 1.7;
-// What the starlight gate shows: the ending's school library, seen as through water.
-const AI_WORLD_PORTAL_TEXTURE = "village-ai-world-portal-library";
-const AI_WORLD_PORTAL_CANVAS = "village-ai-world-portal-water";
-/** The whirlpool: how fast it turns (radians a second) and how tightly the middle is twisted. */
-const SWIRL = { speed: 0.07, twist: 1.9 } as const;
-/** Light veils drifting inside the portal: orbit speed, distance, size, colour. */
-const VEILS = [
-  { speed: 0.23, offset: 0, orbit: 0.22, size: 0.42, color: "255, 255, 255", alpha: 0.32 },
-  { speed: -0.17, offset: 2.1, orbit: 0.28, size: 0.36, color: "150, 220, 255", alpha: 0.4 },
-  { speed: 0.11, offset: 4.2, orbit: 0.16, size: 0.5, color: "175, 240, 170", alpha: 0.32 },
-] as const;
+const AI_WORLD_PORTAL_CANVAS = "village-ai-world-portal-swirl";
+/**
+ * The portal's whirlpool: number of arms, how tightly they curl, how fast
+ * the pattern turns (radians a second of its phase; about 16 s per full turn),
+ * and its colours from the deep part of an arm to the light part.
+ */
+const PORTAL_SWIRL = {
+  arms: 3,
+  curl: 2.4,
+  speed: 1.2,
+  deep: [38, 118, 150],
+  light: [150, 222, 205],
+} as const;
+let portalCount = 0;
 // The starlight gate is an open tablet seen at an angle; its screen (cut out
 // of the artwork) shows the portal. Screen corners as fractions of
 // the gate image (v5, 640 x 608): top-left, bottom-left, bottom-right, top-right.
@@ -74,6 +76,7 @@ export function getAiWorldPortalScreen(scenery: SceneryDefinition) {
 function createAiWorldPortalMask(
   scene: Phaser.Scene,
   scenery: SceneryDefinition,
+  grow = 1.08,
 ) {
   const screen = getAiWorldPortalScreen(scenery);
   const maskShape = scene.make.graphics({ x: 0, y: 0 });
@@ -83,8 +86,8 @@ function createAiWorldPortalMask(
   const cy = screen.top + screen.height / 2;
   maskShape.fillPoints(
     screen.corners.map((corner) => new Phaser.Math.Vector2(
-      cx + (corner.x - cx) * 1.08,
-      cy + (corner.y - cy) * 1.08,
+      cx + (corner.x - cx) * grow,
+      cy + (corner.y - cy) * grow,
     )),
     true,
   );
@@ -286,187 +289,124 @@ function createFountainFlow(
 
 
 /**
- * The far side of the starlight gate: the school library from the ending,
- * blurred and rippling like a view through water, so it can only just be
- * made out. Drawn into a small canvas each frame: the blurred picture in thin
- * a slow, smooth whirlpool, a pale misty tint, and soft drifting light.
+ * The far side of the starlight gate: a calm whirlpool of deep teal and soft
+ * mint light. Three soft arms curl into the middle and turn slowly (about
+ * 16 s a turn), with a gentle glow at the centre and a few sparkles, so it
+ * reads clearly as a portal without being dizzy. Drawn into a small canvas
+ * about 25 times a second.
  */
 function createAiWorldPortal(
   scene: Phaser.Scene,
   scenery: SceneryDefinition,
 ): DepthFollower[] {
   if (scenery.id !== "ai-world-gate") return [];
-  const screen = getAiWorldPortalScreen(scenery);
-  const portalCenterX = screen.left + screen.width / 2;
-  const portalCenterY = screen.top + screen.height / 2;
-  const openingMask = createAiWorldPortalMask(scene, scenery);
-  if (!scene.textures.exists(AI_WORLD_PORTAL_TEXTURE)) return [];
+  const portal = createAiWorldPortalView(scene, scenery);
+  return portal ? [portal] : [];
+}
 
-  // Canvas a little larger than the screen, at 2x for crispness.
+/**
+ * The live portal for `scenery` (the gate). `grow` sizes its mask against the
+ * screen hole: a little larger in the village (the gate frame is drawn over
+ * it), exact when it is laid over a flat picture of the village (the ending).
+ */
+export function createAiWorldPortalView(
+  scene: Phaser.Scene,
+  scenery: SceneryDefinition,
+  grow = 1.08,
+) {
+  const screen = getAiWorldPortalScreen(scenery);
+  const openingMask = createAiWorldPortalMask(scene, scenery, grow);
   const scale = 2;
   const width = Math.ceil(screen.width * 1.2 * scale);
   const height = Math.ceil(screen.height * 1.2 * scale);
-  const key = `${AI_WORLD_PORTAL_CANVAS}-${scene.sys.settings.key}`;
-  if (scene.textures.exists(key)) scene.textures.remove(key);
+  portalCount += 1;
+  const key = `${AI_WORLD_PORTAL_CANVAS}-${portalCount}`;
   const canvas = scene.textures.createCanvas(key, width, height);
-  if (!canvas) return [];
+  if (!canvas) return undefined;
   const ctx = canvas.getContext();
 
-  // Blur by shrinking the library picture and drawing it back up (works in every browser).
-  const source = scene.textures.get(AI_WORLD_PORTAL_TEXTURE).getSourceImage() as CanvasImageSource & {
-    width: number; height: number;
-  };
-  // The middle of the library (shelves and windows); the screen is tall, so fit by height.
-  const cropH = source.height * 0.92;
-  const crop = { w: Math.min(source.width, cropH * (width / height)), h: cropH };
-  // Blur by shrinking the picture to a few pixels and growing it back in two
-  // steps (the second step smooths away the blocky look). Works in every browser.
-  const tiny = document.createElement("canvas");
-  tiny.width = 5;
-  tiny.height = Math.max(1, Math.round((5 * height) / width));
-  const mid = document.createElement("canvas");
-  mid.width = tiny.width * 4;
-  mid.height = tiny.height * 4;
-  const blurred = document.createElement("canvas");
-  blurred.width = width;
-  blurred.height = height;
-  const tinyCtx = tiny.getContext("2d");
-  const midCtx = mid.getContext("2d");
-  const blurCtx = blurred.getContext("2d");
-  if (!tinyCtx || !midCtx || !blurCtx) return [];
-  tinyCtx.drawImage(source, (source.width - crop.w) / 2, (source.height - crop.h) / 2, crop.w, crop.h, 0, 0, tiny.width, tiny.height);
-  midCtx.drawImage(tiny, 0, 0, mid.width, mid.height);
-  blurCtx.drawImage(mid, 0, 0, width, height);
-  const newSparkle = (now: number) => ({
-    x: 0.12 + Math.random() * 0.76,
-    y: 0.1 + Math.random() * 0.8,
-    size: 4 + Math.random() * 5,
-    born: now + Math.random() * 1.6,
-    duration: 0.9 + Math.random() * 1.4,
-  });
-  const sparkles = Array.from({ length: 6 }, () => newSparkle(scene.time.now / 1000 - Math.random() * 2));
-  // The swirl is worked out on a half-size copy (smooth anyway, and cheap).
+  // The whirlpool is worked out on a half-size canvas (soft anyway, and cheap).
   const sw = Math.max(8, Math.round(width / 2));
   const sh = Math.max(8, Math.round(height / 2));
   const swirlCanvas = document.createElement("canvas");
   swirlCanvas.width = sw;
   swirlCanvas.height = sh;
   const swirlCtx = swirlCanvas.getContext("2d");
-  const sourceSmall = document.createElement("canvas");
-  sourceSmall.width = sw;
-  sourceSmall.height = sh;
-  const sourceSmallCtx = sourceSmall.getContext("2d");
-  if (!swirlCtx || !sourceSmallCtx) return [];
-  // A slightly larger copy, so turning never shows an empty corner.
-  sourceSmallCtx.drawImage(blurred, -sw * 0.1, -sh * 0.1, sw * 1.2, sh * 1.2);
-  const from = sourceSmallCtx.getImageData(0, 0, sw, sh).data;
-  // Only the picture's light and shade are kept, painted from bright sky blue
-  // (darker parts) to fresh lime green (lighter parts), so no browns or muddy
-  // mixes appear in the swirl.
-  for (let i = 0; i < from.length; i += 4) {
-    const light = (from[i] * 0.3 + from[i + 1] * 0.59 + from[i + 2] * 0.11) / 255;
-    // Gentle contrast and soft, muted colours, so the swirl is calm to look at.
-    const k = Math.min(1, Math.max(0, (light - 0.15) / 0.85));
-    from[i] = 150 + (182 - 150) * k;
-    from[i + 1] = 196 + (210 - 196) * k;
-    from[i + 2] = 214 + (170 - 214) * k;
-  }
+  if (!swirlCtx) return undefined;
   const out = swirlCtx.createImageData(sw, sh);
   const scx = sw / 2;
   const scy = sh / 2;
   const maxR = Math.hypot(scx, scy);
-  // Each pixel's distance and angle from the centre, worked out once.
-  const radius = new Float32Array(sw * sh);
-  const baseAngle = new Float32Array(sw * sh);
+  // Each pixel's angle, its curl along the arm, and its distance, worked out once.
+  const angle = new Float32Array(sw * sh);
+  const curl = new Float32Array(sw * sh);
+  const near = new Float32Array(sw * sh);
   for (let y = 0; y < sh; y += 1) {
     for (let x = 0; x < sw; x += 1) {
-      const dx = x - scx;
-      const dy = y - scy;
-      radius[y * sw + x] = Math.hypot(dx, dy);
-      baseAngle[y * sw + x] = Math.atan2(dy, dx);
+      const i = y * sw + x;
+      const r = Math.hypot(x - scx, y - scy);
+      angle[i] = Math.atan2(y - scy, x - scx);
+      curl[i] = PORTAL_SWIRL.curl * Math.log(1 + r / 6);
+      near[i] = r / maxR;
     }
   }
+  const { deep, light } = PORTAL_SWIRL;
   const swirl = (t: number) => {
-    const turn = t * SWIRL.speed;
-    for (let i = 0; i < radius.length; i += 1) {
-      const r = radius[i];
-      const near = 1 - Math.min(1, r / maxR);
-      const angle = baseAngle[i] + turn * (0.4 + near) + SWIRL.twist * near * near;
-      let x = Math.round(scx + Math.cos(angle) * r);
-      let y = Math.round(scy + Math.sin(angle) * r);
-      x = x < 0 ? 0 : x >= sw ? sw - 1 : x;
-      y = y < 0 ? 0 : y >= sh ? sh - 1 : y;
-      const s4 = (y * sw + x) * 4;
+    const phase = t * PORTAL_SWIRL.speed;
+    const drift = t * 0.35;
+    for (let i = 0; i < angle.length; i += 1) {
+      // Soft arms, with a slow second wave so they never look mechanical.
+      const wave = Math.sin(PORTAL_SWIRL.arms * angle[i] + curl[i] - phase)
+        + 0.35 * Math.sin(2 * angle[i] - curl[i] * 0.6 + drift);
+      let k = 0.5 + 0.38 * wave;
+      // A soft glow in the middle and a darker rim, for depth.
+      const d = near[i];
+      k += 0.45 * Math.exp(-(d * d) / 0.035);
+      k -= 0.22 * d * d;
+      k = k < 0 ? 0 : k > 1 ? 1 : k;
       const o4 = i * 4;
-      out.data[o4] = from[s4];
-      out.data[o4 + 1] = from[s4 + 1];
-      out.data[o4 + 2] = from[s4 + 2];
+      out.data[o4] = deep[0] + (light[0] - deep[0]) * k;
+      out.data[o4 + 1] = deep[1] + (light[1] - deep[1]) * k;
+      out.data[o4 + 2] = deep[2] + (light[2] - deep[2]) * k;
       out.data[o4 + 3] = 255;
     }
     swirlCtx.putImageData(out, 0, 0);
   };
+
+  const newSparkle = (now: number) => ({
+    x: 0.15 + Math.random() * 0.7,
+    y: 0.12 + Math.random() * 0.76,
+    size: 3 + Math.random() * 4,
+    born: now + Math.random() * 2,
+    duration: 0.8 + Math.random() * 1.2,
+  });
+  const sparkles = Array.from({ length: 4 }, () => newSparkle(scene.time.now / 1000));
+
   const draw = (time: number) => {
     const t = time / 1000;
-    ctx.clearRect(0, 0, width, height);
-    // A slow whirlpool: every pixel is turned around the middle, more near
-    // the centre and less at the edge, so the blurred picture twists into a
-    // smooth spiral that keeps slowly turning.
     swirl(t);
+    ctx.clearRect(0, 0, width, height);
     ctx.drawImage(swirlCanvas, 0, 0, width, height);
-    // Bright, misty portal light: the picture shows through a pale cyan glow.
-    ctx.save();
-    ctx.globalCompositeOperation = "screen";
-    const tint = ctx.createLinearGradient(0, 0, 0, height);
-    // Bright like the textbook portal: clear sky blue at the top, fresh leaf green below.
-    tint.addColorStop(0, "rgba(190, 225, 240, 0.18)");
-    tint.addColorStop(1, "rgba(205, 230, 190, 0.18)");
-    ctx.fillStyle = tint;
-    ctx.fillRect(0, 0, width, height);
-    ctx.restore();
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    // A soft white glow around the rim, brightest at the edges, like the textbook's portal.
-    const cx = width / 2;
-    const cy = height / 2;
-    const rim = ctx.createRadialGradient(cx, cy, Math.min(width, height) * 0.28, cx, cy, Math.max(width, height) * 0.62);
-    rim.addColorStop(0, "rgba(255, 255, 255, 0)");
-    const breathe = 0.32 + 0.06 * Math.sin(t * 0.7) + 0.05 * Math.sin(t * 1.9 + 1.3);
-    rim.addColorStop(1, `rgba(235, 250, 255, ${breathe})`);
-    ctx.fillStyle = rim;
-    ctx.fillRect(0, 0, width, height);
-    // Soft veils of light drift around the middle at different speeds and
-    // distances, so the glow keeps changing shape like a slow nebula.
-    VEILS.forEach((veil) => {
-      const angle = t * veil.speed + veil.offset;
-      const wobble = 1 + 0.18 * Math.sin(t * veil.speed * 2.3 + veil.offset * 3);
-      const vx = cx + Math.cos(angle) * width * veil.orbit * wobble;
-      const vy = cy + Math.sin(angle * 0.8) * height * veil.orbit;
-      const radius = Math.max(width, height) * veil.size;
-      const glow = ctx.createRadialGradient(vx, vy, 0, vx, vy, radius);
-      glow.addColorStop(0, `rgba(${veil.color}, ${veil.alpha})`);
-      glow.addColorStop(1, `rgba(${veil.color}, 0)`);
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, width, height);
-    });
-    // Sparkles appear at random spots, twinkle once and fade, each on its own clock.
     sparkles.forEach((sparkle) => {
-      let life = (t - sparkle.born) / sparkle.duration;
-      if (life >= 1 || life < 0) {
+      const life = (t - sparkle.born) / sparkle.duration;
+      if (life >= 1) {
         Object.assign(sparkle, newSparkle(t));
-        life = 0;
+        return;
       }
+      if (life < 0) return;
       const shine = Math.sin(life * Math.PI) ** 2;
-      if (shine < 0.02) return;
       const arm = sparkle.size * (0.6 + shine);
       const sx = sparkle.x * width;
       const sy = sparkle.y * height;
       const core = ctx.createRadialGradient(sx, sy, 0, sx, sy, arm * 0.7);
-      core.addColorStop(0, `rgba(255, 255, 255, ${0.9 * shine})`);
+      core.addColorStop(0, `rgba(255, 255, 255, ${0.8 * shine})`);
       core.addColorStop(1, "rgba(255, 255, 255, 0)");
       ctx.fillStyle = core;
       ctx.fillRect(sx - arm, sy - arm, arm * 2, arm * 2);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${0.7 * shine})`;
-      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 * shine})`;
+      ctx.lineWidth = 1.1;
       ctx.beginPath();
       ctx.moveTo(sx - arm, sy);
       ctx.lineTo(sx + arm, sy);
@@ -480,23 +420,25 @@ function createAiWorldPortal(
   draw(scene.time.now);
 
   const portal = scene.add
-    .image(portalCenterX, portalCenterY, key)
+    .image(screen.left + screen.width / 2, screen.top + screen.height / 2, key)
     .setDisplaySize(width / scale, height / scale);
   applyAiWorldPortalMask(portal, openingMask, scene);
 
-  // About 30 updates a second is plenty for slow water.
   let last = 0;
   const onUpdate = (time: number) => {
-    if (time - last < 33) return;
+    if (time - last < 40) return;
     last = time;
     draw(time);
   };
   scene.events.on(Phaser.Scenes.Events.UPDATE, onUpdate);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+  // Stops drawing (and frees its canvas) when the portal goes, e.g. after the
+  // intro paints a still picture of the village.
+  portal.once(Phaser.GameObjects.Events.DESTROY, () => {
     scene.events.off(Phaser.Scenes.Events.UPDATE, onUpdate);
+    openingMask.destroy();
+    if (scene.textures.exists(key)) scene.textures.remove(key);
   });
-
-  return [portal];
+  return portal;
 }
 
 export function isPointWithinSceneryOcclusionArea(
@@ -545,12 +487,6 @@ export function preloadVillageScenery(
   assets.forEach(({ assetKey, url }) => {
     if (!scene.textures.exists(assetKey)) scene.load.image(assetKey, url);
   });
-  if (!scene.textures.exists(AI_WORLD_PORTAL_TEXTURE)) {
-    scene.load.image(
-      AI_WORLD_PORTAL_TEXTURE,
-      GAME_ASSETS.ending.library,
-    );
-  }
 }
 
 export function createVillageScenery(

@@ -1,0 +1,56 @@
+{
+  "mode": "Built-in image_gen",
+  "prompt": "Use case: identity-preserve, precise local edit. The attached image is the edit target. Return this SAME image with ONLY the head direction and eye gaze corrected in BOTH figures. Two full-body depictions of the identical student: mildly worried on the left, happy on the right. Rotate ONLY their heads from three-quarter up-and-sideways to front-facing with a subtly lowered chin and direct eye contact aimed slightly downward toward a person across a counter. Preserve facial identity, eye design, hair style, hair accessories, skin tone and original expressions. Left keeps the mild worried eyebrows AND original small closed-mouth smile (no sad frown); right keeps the happy open-mouth smile. CRITICAL: Preserve body pixels, clothing details, fabric patterns, colors, body pose, shoulder angle, hands, shoes, linework, shading, scale, placement, spacing and canvas composition exactly. Do not turn the bodies frontward; only the heads turn. Do not enlarge heads, change hairstyle, move figures, reframe, crop feet, or redesign any element. Canvas exactly 908 x 680. True transparent alpha background. One PNG, containing both original figures, no text or extra elements.",
+  "correction17": "Precise local correction to this edit target: In EACH of the two girls, REMOVE ONLY the extra yellow hair bow on the viewer's RIGHT side of her head, filling that tiny region with the existing dark brown hair/transparent background naturally. Keep the ONE existing yellow bow on the viewer's LEFT side of each head. Each girl must have exactly ONE yellow bow, not two. Preserve EVERYTHING ELSE unchanged: frontal faces, direct slightly downward gaze, mildly worried left expression with closed-mouth smile, happy right open-mouth smile, hair, bodies, red plaid pinafore, cream blouse, hands, shoes, size, positions, outlines and colors. True transparent background. Same canvas proportions. Do not add or alter anything else.",
+  "files": [
+    {
+      "id": "13",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-2690c8c3-da15-4540-8816-f74d7c5b93f3.png"
+    },
+    {
+      "id": "14",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-64608312-ffd6-46b0-b6bf-16c22bfd3734.png"
+    },
+    {
+      "id": "15",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-9705a799-24ec-48d7-a695-8bfb638e9e51.png"
+    },
+    {
+      "id": "16",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-72d04816-3653-41ce-bb89-50e32efbaaf2.png"
+    },
+    {
+      "id": "17",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-92a3bcb7-63f0-4b76-9cbf-165f41c74a07.png"
+    },
+    {
+      "id": "18",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-e66a95b7-9cbd-4955-9b24-234424688b2b.png"
+    },
+    {
+      "id": "19",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-10cd7529-bf7a-43e2-a89b-63c6914606e3.png"
+    },
+    {
+      "id": "20",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-ac588be6-21b7-4122-ac9e-a754d3b5d5e4.png"
+    },
+    {
+      "id": "21",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-c2aecf72-15c9-48e1-a22c-7f1e2b6e89ef.png"
+    },
+    {
+      "id": "22",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-1793253f-ab34-444f-865c-d1ec4f554462.png"
+    },
+    {
+      "id": "23",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-4ee1a8cc-f45c-466a-9c1f-2170c5ee3886.png"
+    },
+    {
+      "id": "24",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-86d8c3ac-b452-4055-9b9b-0ccdb57f4b7a.png"
+    }
+  ],
+  "output": "C:/Users/dkssu/Desktop/dev/intam/assets-source/ethics-review/ethics-students-13-24-20261011-forward-v1"
+}

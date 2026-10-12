@@ -64,7 +64,7 @@ export class EthicsReviewScene extends Phaser.Scene {
   private arrived = true;
   private inputReadyAt = 0;
   private lastTickAt = 0;
-  private earnedStars?: 1 | 2 | 3;
+  private earnedStars?: 0 | 1 | 2 | 3;
 
   constructor(private readonly renderScale: number) { super(SCENE_KEYS.ethicsReview); }
 
@@ -359,8 +359,8 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.visitor?.hideBubble();
     this.player?.hideBubble();
     setEthicsStationState(this.stations, false);
-    const stars = getEthicsReviewStars(this.state.completedCount, this.state.processedCount);
-    if (!this.earnedStars || stars > this.earnedStars) this.earnedStars = stars;
+    const stars = getEthicsReviewStars(this.state.score);
+    if (this.earnedStars === undefined || stars > this.earnedStars) this.earnedStars = stars;
     this.result = createEthicsResultOverlay(this, {
       stars, score: this.state.score, completedCount: this.state.completedCount,
       processedCount: this.state.processedCount, bestCombo: this.state.bestCombo,

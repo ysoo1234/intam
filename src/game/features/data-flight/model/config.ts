@@ -32,8 +32,9 @@ export const DATA_FLIGHT_CONFIG = {
   feverDataScore: 30,
   correctAnswerScore: 150,
   starThresholds: {
-    twoStars: 1_800,
-    threeStars: 3_200,
+    oneStar: 2_000,
+    twoStars: 4_000,
+    threeStars: 6_000,
   },
   dataSpeed: 355,
   questionChoiceSpeed: 390,

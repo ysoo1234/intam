@@ -78,6 +78,7 @@ export class EndingScene extends Phaser.Scene {
   private storyRun = 0;
   private atCertificate = false;
   private finished?: FinishedCertificate;
+  private finale?: ReturnType<typeof showEndingFinale>;
 
   constructor(
     private readonly renderScale: number,
@@ -116,7 +117,7 @@ export class EndingScene extends Phaser.Scene {
     // A repeat visit through the gate goes straight to the last screen
     // (the story and the photo were already done; ?ending replays in full).
     if (fromGate && hasSeenEnding()) {
-      showEndingFinale(this, {
+      this.finale = showEndingFinale(this, {
         calm: this.calm,
         fromVillage: true,
         onReturn: () => this.returnToVillage(),
@@ -374,7 +375,7 @@ export class EndingScene extends Phaser.Scene {
     const white = await portal.rushThrough();
     if (!this.sys.isActive()) return;
     markEndingSeen();
-    showEndingFinale(this, {
+    this.finale = showEndingFinale(this, {
       calm: this.calm,
       onReturn: () => this.returnToVillage(),
       onShowPhoto: () => this.reviewCertificate(),
@@ -392,6 +393,7 @@ export class EndingScene extends Phaser.Scene {
   private reviewCertificate() {
     if (this.reviewing) return;
     this.reviewing = true;
+    this.finale?.setButtonsVisible(false);
     showEndingCertificate(this, {
       calm: this.calm,
       stars: this.stars,
@@ -402,6 +404,7 @@ export class EndingScene extends Phaser.Scene {
       onDone: (finished) => {
         this.finished = finished;
         this.reviewing = false;
+        this.finale?.setButtonsVisible(true);
       },
     });
   }

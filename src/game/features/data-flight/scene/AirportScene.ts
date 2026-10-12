@@ -86,7 +86,7 @@ export class AirportScene extends Phaser.Scene {
   private controls?: AirportControls;
   private failurePending = false;
   private finished = false;
-  private earnedStars?: 1 | 2 | 3;
+  private earnedStars?: 0 | 1 | 2 | 3;
   /** Set while the first-play lesson runs; the clock and hearts wait for it. */
   private tutorial?: AirportTutorial;
 

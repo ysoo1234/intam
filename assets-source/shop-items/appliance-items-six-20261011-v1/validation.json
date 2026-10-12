@@ -1,0 +1,53 @@
+{
+  "width": 1500,
+  "height": 1000,
+  "grid": "3x2",
+  "cellSize": 500,
+  "iconMaxSize": 375,
+  "emptyCells": [],
+  "alpha": true,
+  "cells": [
+    {
+      "item": 1,
+      "column": 1,
+      "row": 1,
+      "width": 284,
+      "height": 375
+    },
+    {
+      "item": 2,
+      "column": 2,
+      "row": 1,
+      "width": 375,
+      "height": 239
+    },
+    {
+      "item": 3,
+      "column": 3,
+      "row": 1,
+      "width": 344,
+      "height": 375
+    },
+    {
+      "item": 4,
+      "column": 1,
+      "row": 2,
+      "width": 375,
+      "height": 327
+    },
+    {
+      "item": 5,
+      "column": 2,
+      "row": 2,
+      "width": 213,
+      "height": 375
+    },
+    {
+      "item": 6,
+      "column": 3,
+      "row": 2,
+      "width": 321,
+      "height": 375
+    }
+  ]
+}

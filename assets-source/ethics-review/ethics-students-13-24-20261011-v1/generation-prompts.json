@@ -1,0 +1,97 @@
+{
+  "mode": "built-in image_gen",
+  "referenceImages": [
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-31dbf87d-5ee8-4dc5-9941-d01443cd3625.png",
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-4909ee3e-1570-4469-93a4-a18c79c4b390.png",
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-c68d0084-20d3-475e-9c03-305600217db7.png",
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-8e3b2fca-8f9e-481f-ba25-1853af9eb798.png",
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-d1f62e17-1043-4914-b5f0-1ec9d43349d8.png"
+  ],
+  "basePrompt": "Use case: illustration-story. Create ONE original elementary student expression-pair sprite for review window in a children's educational game. Reference 1 is APPROVED STYLE: match drawing language of faces, thin dark navy outline, soft painted hand-drawn shading, warm storybook colors, scale and proportions. Reference 2 robot is ONLY for thin line weight. References 3/4/5 show existing shop customers and previous 12 students: new student must be clearly distinct from everyone there, especially when viewed WAIST UP, by face shape/features, hair silhouette/shade and top. Retain warm hand-drawn textbook quality, never copy known textbook characters. Canvas 908x680 landscape with genuine transparent alpha, EXACTLY TWO full-body copies of same student side by side, centered in equal 454px halves. Both stand naturally relaxed, body and gaze slightly turned to viewer's RIGHT. Children about FIVE heads tall (head including hair roughly one fifth height), not chibi, never adult. Grades 3/4 younger, grades 5/6 somewhat taller. Small top margin, complete shoes on same baseline at bottom edge without clipping. LEFT face: politely and slightly shyly waiting for a form check, calm gentle uncertainty, closed mouth or tiny gentle smile; NOT sad, scared, distressed. RIGHT face: warm happy smile after a good answer. CRITICAL identical pose, body silhouette, clothing folds, hands, hairstyle, size, relative placement, props, line weight and shading in both halves; ONLY eyebrows/eyes/mouth expression changes. Empty-handed unless subject explicitly lists backpack. Do not add papers, books, phones, toys or bags. No text, labels, letters, numbers, divider, ground shadow, background or extra people. Never orange hoodie with spiky hair, never ponytail plus green/cream stripes.",
+  "characters": [
+    {
+      "id": "ethics-student-13",
+      "grade": 3,
+      "design": "GIRL grade 3, two HIGH PUFFS of warm auburn-brown tightly coiled hair, small rounded puff silhouettes with a clean visible center part and NO curly bangs (unlike dark-haired mint gym girl), small pink hair ties. Broad round face, dark warm skin, small wide nose, gently arched fine eyebrows, wide-set almond eyes, distinct from every existing girl. PINK STRIPED short-sleeve T-SHIRT with dusty rose and pale blush horizontal stripes, plum knee-length skirt, cream socks, rose canvas shoes. Empty hands lightly together. Youthful compact build, about five heads tall.",
+      "targetHeight": 628,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-ffeba593-b7bc-4de1-98d0-5eabea7b6459.png"
+    },
+    {
+      "id": "ethics-student-14",
+      "grade": 5,
+      "design": "BOY grade 5, very short SPIKY SANDY ASH-BLOND hair with one clear curved COWLICK above crown, closely trimmed sides; avoid dark-brown messy hero hair. Soft square face with defined rounded jaw, fair warm skin, narrower eyes, slightly prominent ears. COBALT BLUE baseball/varsity jacket with light gray sleeves, blue ribbed collar and plain snap buttons, no letters or badges; ivory tee, slate long trousers and blue/cream sneakers. Empty hands down relaxed. Older elementary child, five heads tall. No hoodie, no backpack, no cap.",
+      "targetHeight": 652,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-4cb2d78c-bd69-4fda-b6a8-8a3a993f5851.png"
+    },
+    {
+      "id": "ethics-student-15",
+      "grade": 6,
+      "design": "GIRL grade 6, short sleek PIXIE CUT in near-black with subtle cool plum-brown highlights, tapered nape and short diagonal fringe, ears visible; distinct from bob/puffs/buns. Slim angular heart-shaped face, medium olive skin, small straight nose, slightly thick straight eyebrows. OLIVE-GREEN buttoned SHIRT JACKET with two simple chest pockets over pale oatmeal shirt, charcoal straight long trousers and tan sneakers. Empty hands relaxed at sides. Clearly older elementary child not adult, five-head proportions.",
+      "targetHeight": 664,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-bea0c7f8-6bb8-46fd-960b-dae961413e2e.png"
+    },
+    {
+      "id": "ethics-student-16",
+      "grade": 4,
+      "design": "BOY grade 4, smooth MIDDLE-PARTED medium HONEY-BROWN hair forming symmetrical curtain bangs and rounded sides, no spikes or bowl fringe. Soft pear-shaped face, fuller cheeks and rounded chin, light tan skin, subtle small nose and softly down-curved outer eye corners. CREAM cable-knit crewneck SWEATER as the dominant top color, dusty blue long trousers, warm brown lace-up shoes. Both empty hands gently together low at waist. No backpack, no collar, no stripes.",
+      "targetHeight": 640,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-d82191c7-bc3b-439e-bc3b-0848ddf0df35.png"
+    },
+    {
+      "id": "ethics-student-17",
+      "grade": 5,
+      "design": "GIRL grade 5, long BLACK hair in HALF-UP style tied with a clearly visible small dusty gold BOW on upper back/side, smooth loose lower hair to shoulder blades, short curved fringe separated at middle. Soft oval face, medium brown skin, broad gentle nose and almond eyes, distinct from all other girls. RED-CHECKED PINAFORE dress with burgundy and muted red gingham squares over a plain WHITE long sleeve top, ivory socks and burgundy Mary Janes. Empty hands relaxed at sides. No pigtails, no ponytail, no backpack.",
+      "targetHeight": 652,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-da25cb16-6340-4e3b-8785-87a169607eb4.png"
+    },
+    {
+      "id": "ethics-student-18",
+      "grade": 3,
+      "design": "BOY grade 3 with distinctly ROUND chubby-cheeked face, small button nose, wide-set dark eyes, warm peach skin. Hair mostly concealed under a ribbed GOLDEN YELLOW BEANIE, only a little dark chocolate hair above ears. RUST ORANGE-BROWN fleece jacket with fuzzy soft texture and short STAND COLLAR, front zipper, absolutely NO HOOD; ivory undershirt, muted moss long trousers and cream/rust sneakers. Both empty hands hanging relaxed. Small sturdy younger child, five heads tall. No spikes, no backpack, no gloves.",
+      "targetHeight": 628,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-8f4e4cca-2590-4cdd-b4ec-e49af8f2c088.png"
+    },
+    {
+      "id": "ethics-student-19",
+      "grade": 4,
+      "design": "GIRL grade 4, very LONG WAVY warm COPPER hair past shoulders almost waist, loose soft S waves, side swept bangs, ROUND thin dark purple glasses. Slightly elongated freckled face, light warm skin, narrow straight nose, fine brows. Rich muted GRAPE PURPLE HOODIE with hood DOWN, deep slate blue long trousers and pale lavender sneakers. Empty hands gently together low at waist. Distinct from short wavy strawberry-blond raincoat girl and straight auburn headband girl; no accessories in hair, no backpack.",
+      "targetHeight": 640,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-d37fe924-6e50-49fa-989a-b79b4c80316d.png"
+    },
+    {
+      "id": "ethics-student-20",
+      "grade": 6,
+      "design": "BOY grade 6, TALL slim older elementary build, about five heads tall with longer legs and slightly smaller head. Very SHORT tight dark ESPRESSO CURLS close to scalp, not large copper curls. Long rounded rectangular face, deep warm brown skin, broad nose, defined straight brows. WHITE short sleeve SPORTS JERSEY with ONE NAVY horizontal stripe across upper chest, navy collar trim, no number/logo/text, navy athletic long pants and white/navy trainers. Empty hands at sides. No ball, no hat, no backpack.",
+      "targetHeight": 670,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-6d2f905c-b42e-47a9-935b-dc0f158461ff.png"
+    },
+    {
+      "id": "ethics-student-21",
+      "grade": 3,
+      "design": "GIRL grade 3, straight blunt FRINGE and TWO SHORT BRAIDS ending just below ears, cool DARK ASH-BROWN hair with tiny lilac elastics, no bow/ribbons/headband. Small heart-shaped face, pale warm skin, rounded cheeks, wide soft eyes and very small nose. LIGHT POWDER-BLUE OVERALL DRESS in soft denim with bib pocket and straps over a pale peach short sleeve tee, ivory socks and light blue Mary Janes. Empty hands lightly together. Distinct from low pigtail mint girl, single long braid teal girl and black bob child. No props.",
+      "targetHeight": 628,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-d2b67872-d5b3-4e59-b5c5-c7e4808d2f6b.png"
+    },
+    {
+      "id": "ethics-student-22",
+      "grade": 5,
+      "design": "BOY grade 5, WAVY MEDIUM-LENGTH muted CHESTNUT hair covering ear tops with gently curled ends and off-center part, soft waves not upright spikes/cowlick, no glasses. Broad soft oval face, medium tan skin, subtle freckles near cheeks, slightly broad rounded nose. DARK FOREST GREEN ZIP JACKET with low bomber collar, pale sand tee, warm gray long trousers and dark green/cream sneakers. Muted ochre BACKPACK worn on back, one hand gently holding strap, other arm down relaxed. Distinct from gray-star backpack student in face/hair/jacket.",
+      "targetHeight": 652,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-431e3002-c1d4-408b-8a53-1423b16577d3.png"
+    },
+    {
+      "id": "ethics-student-23",
+      "grade": 6,
+      "design": "GIRL grade 6, smooth straight DARK MAHOGANY hair in a LOW PONYTAIL tied at nape with a dusty plum SCRUNCHIE clearly visible, clean side part and no fringe, ponytail falls behind one shoulder. Soft diamond-shaped face with narrower chin, warm light olive skin, gently arched brows and almond eyes. BEIGE short TRENCH-STYLE JACKET ending at upper thigh with broad collar and simple belt tied loosely, ivory shirt, dark plum straight long trousers and taupe loafers. Empty hands relaxed at sides. Clearly older elementary pupil, not adult trench-coat traveler; no suitcase, bag, glasses or stripes.",
+      "targetHeight": 664,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-84d0615a-b5c8-481e-bd3f-8492877140b3.png"
+    },
+    {
+      "id": "ethics-student-24",
+      "grade": 4,
+      "design": "BOY grade 4, visible FRECKLES across nose and cheeks, softly rectangular face with round chin, pale warm skin, narrow gently smiling eyes. SHORT TOUSLED muted CINNAMON BROWN hair with irregular soft low tufts and short piecey fringe, no tall cowlick, no curls, no middle part. LIGHT LEMON-YELLOW CHECKED BUTTON SHIRT with fine warm tan checks, sleeves casually rolled, dark muted blue long trousers and tan/cream sneakers. Empty hands relaxed at sides. No vest, jacket, hat, backpack or props.",
+      "targetHeight": 640,
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-2e2192bc-cfda-4efe-bd11-75676b312285.png"
+    }
+  ]
+}

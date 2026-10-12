@@ -8,7 +8,7 @@ export type WorkshopResult = {
   timeCompleted: boolean;
   completedCustomers: number;
   coins: number;
-  stars: 1 | 2 | 3;
+  stars: 0 | 1 | 2 | 3;
   onRetry: () => void;
   onWorld: () => void;
 };

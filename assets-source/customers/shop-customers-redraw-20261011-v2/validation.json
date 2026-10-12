@@ -1,0 +1,65 @@
+{
+  "count": 3,
+  "files": [
+    {
+      "id": "school-prep-student",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 373837,
+      "halves": [
+        {
+          "left": 90,
+          "top": 16,
+          "width": 274,
+          "height": 664
+        },
+        {
+          "left": 544,
+          "top": 17,
+          "width": 274,
+          "height": 663
+        }
+      ]
+    },
+    {
+      "id": "foreign-call-student",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 376361,
+      "halves": [
+        {
+          "left": 98,
+          "top": 16,
+          "width": 259,
+          "height": 664
+        },
+        {
+          "left": 551,
+          "top": 16,
+          "width": 260,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "xray-doctor",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 405366,
+      "halves": [
+        {
+          "left": 111,
+          "top": 16,
+          "width": 232,
+          "height": 664
+        },
+        {
+          "left": 565,
+          "top": 16,
+          "width": 232,
+          "height": 664
+        }
+      ]
+    }
+  ]
+}

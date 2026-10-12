@@ -1,0 +1,32 @@
+{
+  "width": 1500,
+  "height": 500,
+  "grid": "3x1",
+  "cellSize": 500,
+  "iconMaxSize": 375,
+  "emptyCells": [],
+  "alpha": true,
+  "cells": [
+    {
+      "item": 1,
+      "column": 1,
+      "row": 1,
+      "width": 267,
+      "height": 375
+    },
+    {
+      "item": 2,
+      "column": 2,
+      "row": 1,
+      "width": 375,
+      "height": 344
+    },
+    {
+      "item": 3,
+      "column": 3,
+      "row": 1,
+      "width": 232,
+      "height": 375
+    }
+  ]
+}

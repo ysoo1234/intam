@@ -61,11 +61,11 @@ export function isEthicsComboCelebration(combo: number): boolean {
 export function getEthicsAccuracy(correct: number, processed: number): number {
   return processed <= 0 ? 0 : Math.min(1, Math.max(0, correct / processed));
 }
-export function getEthicsReviewStars(correct: number, processed: number): 1 | 2 | 3 {
-  const accuracy = getEthicsAccuracy(correct, processed);
+export function getEthicsReviewStars(score: number): 0 | 1 | 2 | 3 {
   const thresholds = CONFIG.starThresholds;
-  if (correct >= thresholds.threeStars && accuracy >= thresholds.threeStarAccuracy) return 3;
-  return correct >= thresholds.twoStars && accuracy >= thresholds.twoStarAccuracy ? 2 : 1;
+  if (score >= thresholds.threeStars) return 3;
+  if (score >= thresholds.twoStars) return 2;
+  return score >= thresholds.oneStar ? 1 : 0;
 }
 export function canRequestEthicsAction(phase: EthicsReviewPhase, action: EthicsDeliveryAction) {
   return phase === "choosing" && (action === "approve" || action === "reject");

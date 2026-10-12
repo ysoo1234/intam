@@ -167,4 +167,13 @@ export function showEndingFinale(
       scene.tweens.add({ targets: object, alpha: 1, delay: 1_000, duration: 400 });
     }
   }
+  return {
+    /** Hides the two buttons while the certificate is open over the screen, so only its own buttons show. */
+    setButtonsVisible(visible: boolean) {
+      for (const button of buttons) {
+        scene.tweens.killTweensOf(button);
+        button.setVisible(visible).setAlpha(1);
+      }
+    },
+  };
 }

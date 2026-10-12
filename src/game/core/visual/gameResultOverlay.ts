@@ -272,7 +272,9 @@ function createResultButton(
     event: Phaser.Types.Input.EventData,
   ) => event.stopPropagation();
   button.on("pointerdown", stopPointer);
+  let pressed = false;
   button.on("pointerover", () => {
+    if (pressed) return;
     scene.tweens.killTweensOf(button);
     scene.tweens.add({
       targets: button,
@@ -282,6 +284,8 @@ function createResultButton(
     });
   });
   button.on("pointerout", () => {
+    // On a touch screen "out" comes right after "up": it must not cancel the press.
+    if (pressed) return;
     scene.tweens.killTweensOf(button);
     scene.tweens.add({ targets: button, scale: 1, duration: 100 });
   });
@@ -294,6 +298,8 @@ function createResultButton(
       event: Phaser.Types.Input.EventData,
     ) => {
       event.stopPropagation();
+      if (pressed) return;
+      pressed = true;
       scene.tweens.killTweensOf(button);
       scene.tweens.add({
         targets: button,
@@ -301,8 +307,10 @@ function createResultButton(
         duration: UI_MOTION.pressDurationMs,
         yoyo: true,
         ease: "Sine.easeOut",
-        onComplete: onPress,
       });
+      // The action runs on its own timer, so nothing that stops the little
+      // press animation (a pointer leaving, a tap elsewhere) can swallow it.
+      scene.time.delayedCall(UI_MOTION.pressDurationMs * 2, onPress);
     },
   );
   return button;

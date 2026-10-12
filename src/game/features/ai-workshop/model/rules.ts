@@ -48,10 +48,11 @@ export function getWorkshopReward(customerNumber: number, random: () => number =
   return { reward: min + steps * rule.step };
 }
 
-export function getWorkshopStars(completedCustomers: number): 1 | 2 | 3 {
-  if (completedCustomers >= AI_WORKSHOP_CONFIG.starThresholds.threeStars) return 3;
-  if (completedCustomers >= AI_WORKSHOP_CONFIG.starThresholds.twoStars) return 2;
-  return 1;
+export function getWorkshopStars(coins: number): 0 | 1 | 2 | 3 {
+  const thresholds = AI_WORKSHOP_CONFIG.starThresholds;
+  if (coins >= thresholds.threeStars) return 3;
+  if (coins >= thresholds.twoStars) return 2;
+  return coins >= thresholds.oneStar ? 1 : 0;
 }
 
 export function getStarCatchDifficulty(

@@ -1,0 +1,55 @@
+{
+  "mode": "Built-in image_gen",
+  "prompt": "Use case: identity-preserve. Input image is the edit target, not merely a style reference. Edit this one image only and return one PNG at exactly 908 x 680 pixels with true transparent alpha background. It contains the same student twice: worried on the left and happy on the right. Change ONLY the head orientation and eyes in BOTH figures so the face is frontal, facing the viewer directly with the chin subtly lowered and gaze straight toward the viewer slightly downward, as if addressing a person across a counter. Both eyes should read as direct eye contact, never upward or sideways. Preserve identity, face design, hairstyle and accessories, clothing, palette, body pose, scale, exact positions and spacing, outlines, shading, and line style. Keep the worried left expression and happy right expression. Keep all pixels outside the head/face areas unchanged. Do not redraw or move the bodies. Preserve the entire original canvas and both full bodies including shoes. No text, no background, no extra elements. CRITICAL preservation: The left expression is mild worry conveyed by the eyebrows with the original small closed-mouth gentle smile; preserve that exact mouth/expression, do NOT turn it into a sad downturned frown. The body remains at the original slight three-quarter angle; ONLY rotate the head, never square the shoulders or torso. Exact source layout, no reframe, no increased head size.",
+  "files": [
+    {
+      "id": "01",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-ebcbe363-cf35-487f-b0d1-ff112cfc90f4.png"
+    },
+    {
+      "id": "02",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-8b78e399-a639-4d73-b4d1-b89760751a1c.png"
+    },
+    {
+      "id": "03",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-d51e29da-651a-465e-9bf0-93e37d77e709.png"
+    },
+    {
+      "id": "04",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-29ee9c4a-94ee-4607-8204-97c14bf97110.png"
+    },
+    {
+      "id": "05",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-8888fda6-572b-487f-81a6-adb3c1213a9b.png"
+    },
+    {
+      "id": "06",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-b20155b2-5ff4-4a1c-81e5-eea75eaa354f.png"
+    },
+    {
+      "id": "07",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-66ea6d5e-e22f-41d3-942d-95f0fa893655.png"
+    },
+    {
+      "id": "08",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-f75da1b4-22e5-451c-bc23-afacb25b23e1.png"
+    },
+    {
+      "id": "09",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-2ce2089f-38ab-4ece-933f-00427121e00e.png"
+    },
+    {
+      "id": "10",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-f1061036-77f8-49ac-a2a7-ad1a8c1b3c51.png"
+    },
+    {
+      "id": "11",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-62eee35f-0749-4472-b19c-e6215cd12829.png"
+    },
+    {
+      "id": "12",
+      "path": "C:\\Users\\dkssu\\.codex\\generated_images\\01a12a3e-a0a4-72d0-baee-58f741356de0\\exec-a4d4c1f5-8f1e-41e1-9048-d6f478e37247.png"
+    }
+  ],
+  "output": "C:/Users/dkssu/Desktop/dev/intam/assets-source/ethics-review/ethics-students-20261011-forward-v1"
+}

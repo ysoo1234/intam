@@ -88,7 +88,7 @@ export class AiWorkshopScene extends Phaser.Scene {
   private actionQueued = false;
   private starCatch?: WorkshopStarCatch;
   private finished = false;
-  private earnedStars?: 1 | 2 | 3;
+  private earnedStars?: 0 | 1 | 2 | 3;
   /** Set while the first customer is taught step by step (first play only). */
   private tutorial?: WorkshopTutorial;
   /** The clock runs only in the real game, not during the tutorial or countdown. */
@@ -626,7 +626,7 @@ export class AiWorkshopScene extends Phaser.Scene {
   private finishGame(timeCompleted: boolean) {
     if (this.finished) return;
     this.finished = true;
-    this.earnedStars = getWorkshopStars(this.completedCustomers);
+    this.earnedStars = getWorkshopStars(this.coins);
     this.phase = "finished";
     this.typingTimer?.remove(false);
     this.clearHangingProducts();

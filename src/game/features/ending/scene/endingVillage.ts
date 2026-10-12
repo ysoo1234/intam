@@ -57,6 +57,8 @@ export function createEndingVillage(
     .image(640, 360, painted ? ENDING_VILLAGE_TEXTURES.live : ENDING_VILLAGE_TEXTURES.snapshot)
     .setDisplaySize(1280, 720)
     .setDepth(ENDING_DEPTH.village);
+  // The gate's portal keeps turning in the ending too (the painted village is still).
+  if (painted) options.preview?.addLivePortal?.(scene, ENDING_DEPTH.village + 0.1);
   const veil = scene.add
     .rectangle(640, 360, 1280, 720, VILLAGE_DIM.color, 0)
     .setDepth(ENDING_DEPTH.dim);

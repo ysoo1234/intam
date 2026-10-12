@@ -14,9 +14,11 @@ export const AI_WORKSHOP_CONFIG = {
     customersPerTier: 3,
     increasePerTier: 20,
   },
+  // Stars by coins earned in one shift.
   starThresholds: {
-    twoStars: 4,
-    threeStars: 8,
+    oneStar: 100,
+    twoStars: 200,
+    threeStars: 300,
   },
 } as const;
 

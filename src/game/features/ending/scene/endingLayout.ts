@@ -59,5 +59,6 @@ export const ENDING_CINEMA_BAR = 52;
 
 /** The certificate on screen (its canvas is 1600 x 1130). */
 export const ENDING_CERTIFICATE_VIEW = { x: 640, y: 306, width: 800 } as const;
-export const ENDING_CERTIFICATE_CAPTION_Y = 622;
-export const ENDING_CERTIFICATE_BUTTONS_Y = 678;
+// Caption close under the certificate, buttons below it with room at the bottom.
+export const ENDING_CERTIFICATE_CAPTION_Y = 614;
+export const ENDING_CERTIFICATE_BUTTONS_Y = 662;

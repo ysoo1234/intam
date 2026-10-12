@@ -59,12 +59,11 @@ export function runEthicsDeliveryTests(load) {
   assert.equal(rules.isEthicsComboCelebration(4), false);
   assert.equal(rules.getEthicsAccuracy(0, 0), 0);
   assert.equal(rules.getEthicsAccuracy(12, 15), 0.8);
-  assert.equal(rules.getEthicsReviewStars(0, 0), 1);
-  assert.equal(rules.getEthicsReviewStars(5, 5), 1);
-  assert.equal(rules.getEthicsReviewStars(6, 10), 2);
-  assert.equal(rules.getEthicsReviewStars(12, 15), 3);
-  assert.equal(rules.getEthicsReviewStars(12, 16), 2);
-  assert.equal(rules.getEthicsReviewStars(50, 100), 1, "Random stamping must not earn extra stars.");
+  assert.equal(rules.getEthicsReviewStars(0), 0);
+  assert.equal(rules.getEthicsReviewStars(999), 0);
+  assert.equal(rules.getEthicsReviewStars(1_000), 1);
+  assert.equal(rules.getEthicsReviewStars(2_000), 2);
+  assert.equal(rules.getEthicsReviewStars(3_000), 3);
   for (const action of ["approve", "reject"]) {
     assert.equal(rules.canRequestEthicsAction("feedback", action), false);
     assert.equal(rules.canRequestEthicsAction("result", action), false);
@@ -157,7 +156,7 @@ export function runEthicsDeliveryTests(load) {
   assert.equal(current.bestCombo, 42);
   assert.equal(current.approvedCount + current.returnedCount, current.processedCount);
   assert.equal(current.mistakeCount + current.completedCount, current.processedCount);
-  assert.equal(rules.getEthicsReviewStars(current.completedCount, current.processedCount), 3);
+  assert.equal(rules.getEthicsReviewStars(current.score), 3);
   current = tick(current, current.remainingMs - 1);
   assert.equal(current.phase, "choosing");
   assert.equal(current.remainingMs, 1);

@@ -9,6 +9,7 @@ import {
   preloadVillageProgressPresentationAssets,
 } from "./villageProgressPresentation";
 import {
+  createAiWorldPortalView,
   createVillageScenery,
   getAiWorldPortalScreen,
   preloadVillageScenery,
@@ -110,5 +111,10 @@ export const WORLD_VILLAGE_PREVIEW: VillagePreview = {
       object.destroy();
     }
     return Boolean(texture);
+  },
+  addLivePortal: (scene, depth) => {
+    const gate = WORLD_MAP.scenery.find((entry) => entry.id === "ai-world-gate");
+    // Exactly the screen hole: the gate's frame is part of the flat picture below.
+    if (gate) createAiWorldPortalView(scene, gate, 1.0)?.setDepth(depth);
   },
 };

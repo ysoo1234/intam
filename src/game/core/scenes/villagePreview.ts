@@ -38,6 +38,11 @@ export type VillagePreview = Readonly<{
    * is not loaded, so the caller can fall back.
    */
   paint: (scene: Phaser.Scene, key: string, renderScale: number) => boolean;
+  /**
+   * Adds the starlight gate's moving portal on top of a painted village (a
+   * still picture can't move), in village map pixels at `depth`.
+   */
+  addLivePortal?: (scene: Phaser.Scene, depth: number) => void;
 }>;
 
 const DOOR_ARRIVAL_FLAG = "arrivedThroughDoor";

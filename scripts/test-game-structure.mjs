@@ -344,15 +344,15 @@ assert.match(worldScene, /isPlayerBehindBuilding\(WORLD_MAP\.collision, portal\.
 assert.equal(villageMap.match(/frontOf: "/g)?.length, 4, "Every village entrance names its building.");
 assert.match(villageScenery, /isPlayerBehindBuilding/, "Depth sorting compares Midi's feet with each building's ground outline.");
 assert.match(villageScenery, /updateVillageSceneryDepths/);
-assert.match(villageScenery, /AI_WORLD_PORTAL_TEXTURE/);
+assert.match(villageScenery, /AI_WORLD_PORTAL_CANVAS/);
 assert.match(villageScenery, /createAiWorldPortal/);
 assert.match(villageScenery, /depthBackdrops/);
-assert.match(villageScenery, /GAME_ASSETS\.ending\.library/, "The gate shows the ending's library, as through water.");
+assert.match(villageScenery, /export function createAiWorldPortalView/, "The ending can lay the live portal over its painted village.");
 assert.doesNotMatch(villageScenery, /AI_WORLD_PORTAL_ANIMATION/);
 assert.doesNotMatch(villageScenery, /AI_WORLD_PORTAL_FRAME_COUNT/);
 assert.match(villageScenery, /const AI_WORLD_PORTAL_SCREEN = \[/);
 assert.match(villageScenery, /screen\.corners\.map/);
-assert.match(villageScenery, /SWIRL\.twist/, "The library behind the gate turns in a slow, blurred whirlpool.");
+assert.match(villageScenery, /PORTAL_SWIRL\.arms/, "The gate shows a calm, turning whirlpool.");
 assert.match(villageScenery, /renderer\.type === Phaser\.CANVAS/);
 assert.match(villageScenery, /openingMask\.createGeometryMask\(\)/);
 assert.match(villageScenery, /target\.setMask/);
@@ -441,7 +441,7 @@ assert.match(
 assert.match(villageScenery, /function getAiWorldPortalScreen/);
 assert.match(
   villageScenery,
-  /const portalCenterY = screen\.top \+ screen\.height \/ 2/,
+  /screen\.top \+ screen\.height \/ 2/,
   "The AI-world portal swirl must be centred on the gate's screen.",
 );
 assert.match(

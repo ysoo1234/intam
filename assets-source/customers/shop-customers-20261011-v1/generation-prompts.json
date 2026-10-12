@@ -1,0 +1,142 @@
+{
+  "mode": "built-in image_gen",
+  "referenceImages": [
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-47aec07d-564f-4b7e-9d48-a3bae4201c8d.png",
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-c548d346-9c4b-49e8-9194-ebeb75602042.png",
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-ef915820-c92a-458f-83b0-ed23d0d6bac6.png",
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-49bfcfd7-9903-4437-a611-e17212445399.png"
+  ],
+  "basePrompt": "Use case: illustration-story. Create ONE production expression-pair sprite for a children's educational game. Reference 1 is the APPROVED STYLE and design sheet: match its faces, proportions, thin dark navy outline, soft painted shading, warm muted storybook palette and hand-drawn finish. References 2/3 support hand-drawn textbook quality only; do not copy their people. Reference 4 is thin line weight only, no robot elements. Canvas 908x680 px landscape, real transparent alpha. Exactly TWO full body copies of SAME character, centered in respective equal 454px halves. BOTH body and gaze turned slightly to viewer's RIGHT. Relaxed standing pose, full shoes visible aligned at bottom baseline, small top margin. LEFT expression: polite calm slightly sheepish asking for help with a small everyday inconvenience, gently concerned eyebrows, CLOSED mouth or very small gentle smile; NEVER sad, scared, distressed, or hands on face. RIGHT: warm happy smile because problem solved. CRITICAL: both copies have exactly identical pose, body, size, clothes, folds, hands, props, and line weight; ONLY eyebrows/eyes/mouth change, same face identity. Adult proportions match adults of sheet 1; child proportions about FIVE heads tall, not chibi. No text, letters, numbers, labels, divider, ground shadows, background, or extra objects. Hands relaxed at sides/in pockets/lightly together unless specified. ",
+  "characters": [
+    {
+      "id": "school-prep-student",
+      "design": "Approved sheet character 1; orange hoodie, blue cargo shorts, navy backpack worn, holding one strap, five-head child proportions, two expressions. Same common constraints.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-cb191bb0-7152-4b3f-917b-e4addd7422b8.png"
+    },
+    {
+      "id": "foreign-call-student",
+      "design": "Redraw sheet character 2 exactly: child girl chestnut side ponytail pink hair tie, cream sweater with green stripes, pink small cross-body bag, blue cuffed wide jeans and pink sneakers, hands lightly together.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-0cdd921e-2790-4fcd-b461-e0f7c5c24c43.png"
+    },
+    {
+      "id": "science-homework-student",
+      "design": "Redraw sheet character 3 exactly: boy with dark brown hair, yellow baseball cap, round glasses, cream hoodie blue hood and cuffs, olive cuffed pants, yellow sneakers, navy backpack, both hands holding its straps.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-b28b6b96-1ce6-493e-a365-180dbccac35c.png"
+    },
+    {
+      "id": "phone-parent",
+      "design": "Redraw sheet character 4 exactly: mother brown bob hairstyle, lilac cardigan over ivory blouse, tan midi pleated skirt, beige flats, ivory tote on shoulder, hand holding bag strap.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-07301572-e3a4-4121-b337-69d9904b4b12.png"
+    },
+    {
+      "id": "busy-cleaner",
+      "design": "Redraw sheet character 5 with same male face and short brown hair, light blue collared shirt rolled sleeves, navy apron, charcoal trousers, dark shoes. Remove handheld phone/tablet, empty hands relaxed at sides. Retain blank small apron badge no text.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-e7f7a114-4e56-4b8f-a5b4-e1cad3b4e20b.png"
+    },
+    {
+      "id": "elderly-home-alone",
+      "design": "Redraw sheet character 6 exactly: elderly woman soft gray hair in low bun, lavender cardigan over pink button blouse, taupe trousers, burgundy slip-on shoes. Hands lightly together, no objects.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-130e40f0-7bae-4b1c-af01-0022e7203df4.png"
+    },
+    {
+      "id": "xray-doctor",
+      "design": "Redraw sheet character 7 exactly: male doctor brown short hair and rectangular glasses, white coat, dark blue shirt, teal tie, gray trousers, brown shoes, stethoscope around neck and pens in coat pocket. Remove book/clipboard, hands relaxed empty at sides.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-0cb258a1-d577-4196-84e8-c95ee7cd0749.png"
+    },
+    {
+      "id": "wide-field-farmer",
+      "design": "Redraw sheet character 8 exactly: middle-aged male farmer dark hair and mustache, straw hat with blue band, cream rolled-sleeve shirt, blue overalls, light cream towel around neck, dark rubber boots yellow soles. Empty hands, one resting at hip other relaxed.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-a64a0e47-824e-43a5-b63e-b0bb3af9d022.png"
+    },
+    {
+      "id": "diary-student",
+      "design": "NEW distinct original child girl, rounded oval face and short straight black bob with small mustard hairclip, cozy dusty-rose cable knit sweater, deep teal trousers, cream sneakers. Empty hands lightly together.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-81a76fde-694e-4f13-89ba-9c44c82f7530.png"
+    },
+    {
+      "id": "wrong-answer-student",
+      "design": "NEW distinct original child boy, softly angular face freckles and sandy light brown side-parted hair, muted burgundy school-style jacket with cream trim over pale yellow shirt, navy trousers, brown sneakers. Empty hands relaxed.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-fe8473a8-24c7-4083-af12-e318d861eba8.png"
+    },
+    {
+      "id": "cafeteria-student",
+      "design": "NEW distinct original child girl, warm brown skin, round cheeks, dark curly hair in two small puff ponytails, mint gym jacket with white stripe and navy gym shorts, white socks and purple sneakers. Empty hands relaxed.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-98a5f1c1-1e7a-4a94-9092-1e7383dbeefd.png"
+    },
+    {
+      "id": "foreign-restaurant-traveler",
+      "design": "NEW distinct original adult female tourist, light skin, copper red wavy chin-length hair, long oval face and freckles, cream sun hat with coral band, pale turquoise blouse and rust cropped trousers, tan walking shoes, camera neck strap resting over clothes (strap only, NO handheld camera), empty hands relaxed.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-8691648c-fcc6-4176-83df-b2382b8276d9.png"
+    },
+    {
+      "id": "dinner-parent",
+      "design": "NEW distinct original adult father with broad soft face, dark swept-back hair and subtle beard stubble, moss green shirt sleeves rolled, ochre cooking apron, beige trousers and dark brown slippers. Empty hands relaxed.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-a9c0f267-3701-4175-86b3-449eb4c93c2d.png"
+    },
+    {
+      "id": "pet-owner",
+      "design": "NEW distinct original young adult woman with medium tan skin, almond eyes, long dark braid over left shoulder, sage light jacket, pale lilac tee, indigo jeans, coral sneakers. Only prop small dog's thin leash held naturally in one hand, loop and small clasp visible toward floor; no dog. Other arm relaxed.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-949ebdc8-f3f8-43c0-bd8e-c44ba653ff65.png"
+    },
+    {
+      "id": "stuffy-air-resident",
+      "design": "NEW distinct original adult man, broad build and soft square face, short wavy black hair, pale apricot comfy house top, muted turquoise loose house trousers, soft gray slippers. Both hands empty relaxed.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-c5d2758e-5fac-4f79-8e13-14a6777a005a.png"
+    },
+    {
+      "id": "frequent-laundry-person",
+      "design": "NEW distinct original adult woman, warm brown skin, dark curly hair gathered in high loose bun, rounded face, plum hoodie, soft blue jeans and cream canvas shoes. Only prop lightweight oval laundry basket with small pastel folded clothes, held low at waist in both hands. Identical basket in both expressions.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-2afa107d-2158-4367-9dc5-10bf70ea1ec6.png"
+    },
+    {
+      "id": "exercising-elderly",
+      "design": "NEW distinct original elderly man, slim face and white short hair, white eyebrows, gentle age lines, muted teal tracksuit with cream side stripes, white trainers, coral towel around neck. Empty hands relaxed.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-5501f3ee-71f4-4126-be63-22937b4c929e.png"
+    },
+    {
+      "id": "mobility-patient",
+      "design": "NEW distinct original adult woman, softly rectangular face, short silver-streaked dark pixie hair, pale sky blue hospital gown below knee under dusty rose cardigan, pale beige slip-on shoes. Only prop simple brown walking cane resting on floor and held in one hand, other hand relaxed. Comfortable dignified standing pose.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-1c5ddf20-abd8-4258-884a-85b027fa2179.png"
+    },
+    {
+      "id": "crosswalk-police",
+      "design": "NEW distinct original adult female traffic officer with oval tan face, dark hair in neat low bun under navy uniform cap, sky blue uniform shirt, navy trousers, charcoal shoes, fluorescent soft yellow safety vest with silver reflective stripes. Empty hands relaxed. No weapon, no baton, no signs, no text insignia.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-0f68dc78-4c23-4a90-b03a-8072e0b5a390.png"
+    },
+    {
+      "id": "novice-driver",
+      "design": "NEW distinct original young adult man with narrow face, short tousled auburn hair and round thin glasses, muted mustard jacket over cream shirt, slate trousers and maroon sneakers, small green/yellow geometric beginner-driver badge pinned to jacket, no letters/text. Empty hands in jacket pockets.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-22922d6f-7f09-45d5-ac93-aeddf551a45c.png"
+    },
+    {
+      "id": "courier",
+      "design": "NEW distinct original adult male delivery courier with medium brown skin, broad nose and friendly square face, short black hair under muted red cap, red and charcoal uniform jacket, khaki trousers and gray trainers. Only prop small plain kraft parcel box held comfortably at waist, no text or logo.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-61a05a18-dadf-45b2-a14d-4ce580b3c4f9.png"
+    },
+    {
+      "id": "long-distance-traveler",
+      "design": "NEW distinct original adult woman with pale skin, long narrow face, wavy ash-blond shoulder-length hair, warm beige trench coat over dusty blue top, dark plum trousers, brown ankle boots. Only prop compact burgundy rolling suitcase beside her, hand holding extended handle, other arm relaxed.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-aa3b9c2e-7406-4d69-91f6-b11a3a868307.png"
+    },
+    {
+      "id": "orchard-farmer",
+      "design": "NEW distinct original adult woman with sun-kissed skin and round freckled face, dark reddish brown hair in two low braids, pale yellow rolled-sleeve blouse, muted terracotta work apron over olive trousers, brown work shoes. Only prop shallow wicker basket of red apples held low in both hands.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-427358d0-034d-4354-9d26-dc0cf6e424f3.png"
+    },
+    {
+      "id": "greenhouse-farmer",
+      "design": "NEW distinct original adult man, lean angular face, light tan skin and curly chestnut hair, sage green work shirt, faded mauve trousers, cream gardening gloves worn on relaxed hands, forest green rubber boots. Empty hands, no tools, no hat.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-de6ed3a2-a3b3-455e-a897-92f69b4a6be7.png"
+    },
+    {
+      "id": "water-saving-farmer",
+      "design": "NEW distinct original adult man, stockier build, rounded tan face, neat dark beard, dark hair under faded olive cap, dusty blue rolled-sleeve work shirt, warm brown trousers, charcoal rubber boots. Only prop small muted teal watering can held low in one hand, other hand relaxed. No pouring water.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-0aa7a526-3586-4b44-8a48-faf727705ed9.png"
+    },
+    {
+      "id": "foreign-theatergoer",
+      "design": "NEW distinct original adult female visitor, dark brown skin, elegant oval face and short sculpted black curls, muted raspberry dress to mid-calf, soft cream cropped jacket, dark teal low shoes, tiny gold stud earrings. Only prop a small folded cream theater program with abstract decorative shapes and NO letters or readable text, held lightly at waist.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-22ad76b8-cac6-41cc-b294-36f33cf58dca.png"
+    }
+  ]
+}

@@ -1,0 +1,269 @@
+{
+  "count": 12,
+  "files": [
+    {
+      "id": "ethics-student-01",
+      "grade": 3,
+      "targetHeight": 628,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 394695,
+      "halves": [
+        {
+          "left": 102,
+          "top": 52,
+          "width": 251,
+          "height": 628
+        },
+        {
+          "left": 555,
+          "top": 52,
+          "width": 252,
+          "height": 628
+        }
+      ]
+    },
+    {
+      "id": "ethics-student-02",
+      "grade": 4,
+      "targetHeight": 640,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 422192,
+      "halves": [
+        {
+          "left": 116,
+          "top": 40,
+          "width": 222,
+          "height": 640
+        },
+        {
+          "left": 571,
+          "top": 40,
+          "width": 221,
+          "height": 640
+        }
+      ]
+    },
+    {
+      "id": "ethics-student-03",
+      "grade": 6,
+      "targetHeight": 664,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 403445,
+      "halves": [
+        {
+          "left": 114,
+          "top": 16,
+          "width": 226,
+          "height": 664
+        },
+        {
+          "left": 568,
+          "top": 17,
+          "width": 226,
+          "height": 663
+        }
+      ]
+    },
+    {
+      "id": "ethics-student-04",
+      "grade": 5,
+      "targetHeight": 652,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 415951,
+      "halves": [
+        {
+          "left": 117,
+          "top": 28,
+          "width": 221,
+          "height": 652
+        },
+        {
+          "left": 571,
+          "top": 28,
+          "width": 221,
+          "height": 652
+        }
+      ]
+    },
+    {
+      "id": "ethics-student-05",
+      "grade": 4,
+      "targetHeight": 640,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 392312,
+      "halves": [
+        {
+          "left": 103,
+          "top": 40,
+          "width": 249,
+          "height": 640
+        },
+        {
+          "left": 557,
+          "top": 41,
+          "width": 249,
+          "height": 639
+        }
+      ]
+    },
+    {
+      "id": "ethics-student-06",
+      "grade": 3,
+      "targetHeight": 628,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 408475,
+      "halves": [
+        {
+          "left": 104,
+          "top": 52,
+          "width": 246,
+          "height": 628
+        },
+        {
+          "left": 558,
+          "top": 52,
+          "width": 246,
+          "height": 628
+        }
+      ]
+    },
+    {
+      "id": "ethics-student-07",
+      "grade": 5,
+      "targetHeight": 652,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 411347,
+      "halves": [
+        {
+          "left": 103,
+          "top": 29,
+          "width": 249,
+          "height": 651
+        },
+        {
+          "left": 557,
+          "top": 28,
+          "width": 248,
+          "height": 652
+        }
+      ]
+    },
+    {
+      "id": "ethics-student-08",
+      "grade": 6,
+      "targetHeight": 664,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 423492,
+      "halves": [
+        {
+          "left": 116,
+          "top": 16,
+          "width": 222,
+          "height": 664
+        },
+        {
+          "left": 570,
+          "top": 16,
+          "width": 222,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "ethics-student-09",
+      "grade": 3,
+      "targetHeight": 628,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 413566,
+      "halves": [
+        {
+          "left": 114,
+          "top": 52,
+          "width": 227,
+          "height": 628
+        },
+        {
+          "left": 568,
+          "top": 52,
+          "width": 226,
+          "height": 628
+        }
+      ]
+    },
+    {
+      "id": "ethics-student-10",
+      "grade": 4,
+      "targetHeight": 640,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 410115,
+      "halves": [
+        {
+          "left": 109,
+          "top": 40,
+          "width": 236,
+          "height": 640
+        },
+        {
+          "left": 563,
+          "top": 40,
+          "width": 236,
+          "height": 640
+        }
+      ]
+    },
+    {
+      "id": "ethics-student-11",
+      "grade": 6,
+      "targetHeight": 664,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 414216,
+      "halves": [
+        {
+          "left": 119,
+          "top": 16,
+          "width": 217,
+          "height": 664
+        },
+        {
+          "left": 574,
+          "top": 16,
+          "width": 215,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "ethics-student-12",
+      "grade": 5,
+      "targetHeight": 652,
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 398238,
+      "halves": [
+        {
+          "left": 113,
+          "top": 28,
+          "width": 229,
+          "height": 652
+        },
+        {
+          "left": 567,
+          "top": 28,
+          "width": 229,
+          "height": 652
+        }
+      ]
+    }
+  ]
+}

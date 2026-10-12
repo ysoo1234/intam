@@ -1,0 +1,525 @@
+{
+  "count": 26,
+  "files": [
+    {
+      "id": "school-prep-student",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 370862,
+      "halves": [
+        {
+          "left": 89,
+          "top": 16,
+          "width": 277,
+          "height": 664
+        },
+        {
+          "left": 543,
+          "top": 16,
+          "width": 277,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "foreign-call-student",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 369173,
+      "halves": [
+        {
+          "left": 89,
+          "top": 17,
+          "width": 277,
+          "height": 663
+        },
+        {
+          "left": 542,
+          "top": 16,
+          "width": 278,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "science-homework-student",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 372326,
+      "halves": [
+        {
+          "left": 93,
+          "top": 16,
+          "width": 268,
+          "height": 664
+        },
+        {
+          "left": 548,
+          "top": 19,
+          "width": 267,
+          "height": 661
+        }
+      ]
+    },
+    {
+      "id": "phone-parent",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 387435,
+      "halves": [
+        {
+          "left": 108,
+          "top": 16,
+          "width": 239,
+          "height": 664
+        },
+        {
+          "left": 562,
+          "top": 17,
+          "width": 239,
+          "height": 663
+        }
+      ]
+    },
+    {
+      "id": "busy-cleaner",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 398870,
+      "halves": [
+        {
+          "left": 107,
+          "top": 16,
+          "width": 241,
+          "height": 664
+        },
+        {
+          "left": 561,
+          "top": 16,
+          "width": 241,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "elderly-home-alone",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 395011,
+      "halves": [
+        {
+          "left": 112,
+          "top": 16,
+          "width": 231,
+          "height": 664
+        },
+        {
+          "left": 567,
+          "top": 17,
+          "width": 229,
+          "height": 663
+        }
+      ]
+    },
+    {
+      "id": "xray-doctor",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 382005,
+      "halves": [
+        {
+          "left": 97,
+          "top": 17,
+          "width": 260,
+          "height": 663
+        },
+        {
+          "left": 551,
+          "top": 16,
+          "width": 260,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "wide-field-farmer",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 357869,
+      "halves": [
+        {
+          "left": 77,
+          "top": 16,
+          "width": 301,
+          "height": 664
+        },
+        {
+          "left": 531,
+          "top": 16,
+          "width": 301,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "diary-student",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 400874,
+      "halves": [
+        {
+          "left": 113,
+          "top": 16,
+          "width": 229,
+          "height": 664
+        },
+        {
+          "left": 567,
+          "top": 16,
+          "width": 229,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "wrong-answer-student",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 402568,
+      "halves": [
+        {
+          "left": 109,
+          "top": 17,
+          "width": 237,
+          "height": 663
+        },
+        {
+          "left": 563,
+          "top": 16,
+          "width": 236,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "cafeteria-student",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 420987,
+      "halves": [
+        {
+          "left": 103,
+          "top": 16,
+          "width": 248,
+          "height": 664
+        },
+        {
+          "left": 558,
+          "top": 16,
+          "width": 247,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "foreign-restaurant-traveler",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 431287,
+      "halves": [
+        {
+          "left": 128,
+          "top": 16,
+          "width": 198,
+          "height": 664
+        },
+        {
+          "left": 582,
+          "top": 17,
+          "width": 198,
+          "height": 663
+        }
+      ]
+    },
+    {
+      "id": "dinner-parent",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 392909,
+      "halves": [
+        {
+          "left": 100,
+          "top": 16,
+          "width": 254,
+          "height": 664
+        },
+        {
+          "left": 554,
+          "top": 16,
+          "width": 254,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "pet-owner",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 423072,
+      "halves": [
+        {
+          "left": 122,
+          "top": 16,
+          "width": 210,
+          "height": 664
+        },
+        {
+          "left": 576,
+          "top": 17,
+          "width": 210,
+          "height": 663
+        }
+      ]
+    },
+    {
+      "id": "stuffy-air-resident",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 382189,
+      "halves": [
+        {
+          "left": 96,
+          "top": 16,
+          "width": 262,
+          "height": 664
+        },
+        {
+          "left": 550,
+          "top": 16,
+          "width": 262,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "frequent-laundry-person",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 406449,
+      "halves": [
+        {
+          "left": 99,
+          "top": 16,
+          "width": 257,
+          "height": 664
+        },
+        {
+          "left": 553,
+          "top": 16,
+          "width": 257,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "exercising-elderly",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 408907,
+      "halves": [
+        {
+          "left": 110,
+          "top": 16,
+          "width": 234,
+          "height": 664
+        },
+        {
+          "left": 564,
+          "top": 17,
+          "width": 234,
+          "height": 663
+        }
+      ]
+    },
+    {
+      "id": "mobility-patient",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 406516,
+      "halves": [
+        {
+          "left": 112,
+          "top": 16,
+          "width": 230,
+          "height": 664
+        },
+        {
+          "left": 566,
+          "top": 16,
+          "width": 230,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "crosswalk-police",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 419638,
+      "halves": [
+        {
+          "left": 123,
+          "top": 16,
+          "width": 209,
+          "height": 664
+        },
+        {
+          "left": 577,
+          "top": 16,
+          "width": 209,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "novice-driver",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 426974,
+      "halves": [
+        {
+          "left": 111,
+          "top": 16,
+          "width": 232,
+          "height": 664
+        },
+        {
+          "left": 565,
+          "top": 16,
+          "width": 232,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "courier",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 400190,
+      "halves": [
+        {
+          "left": 95,
+          "top": 17,
+          "width": 264,
+          "height": 663
+        },
+        {
+          "left": 549,
+          "top": 16,
+          "width": 264,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "long-distance-traveler",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 362279,
+      "halves": [
+        {
+          "left": 87,
+          "top": 16,
+          "width": 280,
+          "height": 664
+        },
+        {
+          "left": 541,
+          "top": 16,
+          "width": 281,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "orchard-farmer",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 406705,
+      "halves": [
+        {
+          "left": 124,
+          "top": 16,
+          "width": 207,
+          "height": 664
+        },
+        {
+          "left": 578,
+          "top": 17,
+          "width": 207,
+          "height": 663
+        }
+      ]
+    },
+    {
+      "id": "greenhouse-farmer",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 413720,
+      "halves": [
+        {
+          "left": 106,
+          "top": 16,
+          "width": 242,
+          "height": 664
+        },
+        {
+          "left": 560,
+          "top": 16,
+          "width": 242,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "water-saving-farmer",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 349198,
+      "halves": [
+        {
+          "left": 79,
+          "top": 17,
+          "width": 296,
+          "height": 663
+        },
+        {
+          "left": 533,
+          "top": 16,
+          "width": 297,
+          "height": 664
+        }
+      ]
+    },
+    {
+      "id": "foreign-theatergoer",
+      "width": 908,
+      "height": 680,
+      "transparentPixels": 420596,
+      "halves": [
+        {
+          "left": 122,
+          "top": 16,
+          "width": 211,
+          "height": 664
+        },
+        {
+          "left": 576,
+          "top": 16,
+          "width": 211,
+          "height": 664
+        }
+      ]
+    }
+  ]
+}

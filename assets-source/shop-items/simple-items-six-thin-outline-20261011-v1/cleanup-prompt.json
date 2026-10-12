@@ -1,0 +1,4 @@
+{
+  "mode": "built-in image_gen",
+  "prompt": "Clean ONLY transparent-edge artifacts in this image. Preserve all six icons pixel-aligned, same 1536x1024 canvas, same positions, dimensions, colors, shading, symbols and current THIN navy outline widths. Remove the faint ragged grey/cyan fringe, stray specks and all residual glows outside the thin navy contours. The thin navy contour should be a clean antialiased edge against fully transparent alpha. Background between icons must be perfectly empty transparent, no matte color and no residual speckling. Do not thicken outlines, do not redraw or resize, do not modify the actual item designs or fill colors. This is a cleanup pass on transparency edges only."
+}

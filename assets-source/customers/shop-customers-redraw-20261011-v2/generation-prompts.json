@@ -1,0 +1,26 @@
+{
+  "mode": "built-in image_gen",
+  "referenceImages": [
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-813d633e-87d4-428c-ab10-f9b743c85b25.png",
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-c68d0084-20d3-475e-9c03-305600217db7.png",
+    "C:/Users/dkssu/AppData/Local/Temp/codex-clipboard-00026d5d-26d6-4d0d-b728-ac8000e501c8.png"
+  ],
+  "basePrompt": "Use case: illustration-story. Create one original children's educational game customer expression-pair sprite. Image 1 is the APPROVED STYLE ONLY: match its thin dark navy outlines, warm storybook colors, softly painted shading, friendly face language, full-body proportions and scale exactly. DO NOT COPY the identities/designs from image 1. Image 2 shows the existing cast: the new character MUST be clearly distinct from EVERYONE there in face, hair silhouette, clothing colors and design. Image 3 is ONLY the thin line weight reference, no robot elements. Output exactly 908x680 landscape with genuine transparent alpha background. Exactly two copies of ONE same new character side by side, each centered in an equal 454px-wide half. Full body, natural relaxed standing pose, body and eyes turned slightly to viewer's RIGHT in BOTH copies. Same scale as approved style; small top margin and complete feet resting on the same baseline at bottom edge without clipping. LEFT face: calm polite slightly sheepish customer asking help with a minor daily inconvenience, closed mouth or very small gentle smile, subtly raised inner eyebrows, never scared/sad/distressed. RIGHT face: warm happy smile, problem solved. CRITICAL clone the exact same pose, hairstyle, head shape, clothing, folds, hands, props, proportions, size, placement relative to half, line weight and shading in both copies: ONLY eyebrows/eyes/mouth expression changes. No text, lettering, numbers, divider, labels, ground shadow or background. Not chibi, not 3D, not thick cartoon outline.",
+  "characters": [
+    {
+      "id": "school-prep-student",
+      "design": "Original elementary-school BOY with a smooth neat BLACK bowl crop with gently rounded straight fringe and closely trimmed sides, NO spikes, NO messy brown hair. Slightly broad round face, smaller almond-shaped friendly dark eyes, small rounded nose, light warm skin, distinct from all boys in reference 2. Calm muted PERIWINKLE BLUE buttoned light school jacket over a pale cream collared top, warm charcoal full-length straight pants, cream sneakers with muted blue details. Small muted OCHRE backpack WORN on back with both shoulder straps visible, left hand loosely holding one strap, other hand down relaxed. No orange clothing, no hoodie, no shorts, no glasses, no cap. Clearly elementary age, about five heads tall. Exact matching body in both halves.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-d3d14a20-3b54-458f-a753-ccc1498a421a.png"
+    },
+    {
+      "id": "foreign-call-student",
+      "design": "Original elementary-school GIRL with straight deep BLACK shoulder-length blunt hair, full straight fringe and a narrow muted coral HAIR BAND, no ponytail, no braids. Soft slightly squared oval face, gently upturned almond eyes, small rounded nose, light-medium warm skin, distinct from the existing black-bob sweater girl: headband plus full fringe plus shoulder-length hair rather than side clip/side part. Pale BUTTER YELLOW cardigan over a muted LAVENDER simple knee-length dress, ivory socks and plum Mary Jane shoes. A small dark smartphone held naturally vertically in ONE hand at waist level, screen blank, other arm hanging loosely. Identical phone and hand position in both halves. No crossbody bag, no stripes, no green/cream top, no jeans. Clearly elementary age about five heads tall. Do not look at phone; gaze slightly right toward viewer's right.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-e4948d89-4f48-4be1-8a1f-10b3eea54dc1.png"
+    },
+    {
+      "id": "xray-doctor",
+      "design": "Original ADULT FEMALE hospital radiology doctor, medium warm tan skin, mature softly angular face, narrower almond-shaped dark eyes, small straight nose, gently defined jaw, clearly different from every existing woman. Smooth BLACK hair neatly pulled back into a compact HIGH BUN, no loose curls, no fringe, no brown messy hair, no glasses. White knee-length doctor's coat open over LIGHT BLUE V-neck scrub top and matching scrub pants, pale gray-blue comfortable hospital shoes. A muted burgundy stethoscope around neck and small clipped ID badge on coat chest pocket containing only a tiny abstract portrait and colored shapes, absolutely NO letters/numbers. Empty hands resting naturally at sides; do not add X-ray film, clipboard, book or props beyond specified stethoscope and badge. No tie. Calm competent woman, matching adult scale and proportions of approved sheet, not childlike. Both body and gaze slightly viewer-right. Identical pose in both halves.",
+      "sourcePath": "C:\\Users\\dkssu\\.codex\\generated_images\\01a128f0-80bc-7800-be7c-ed31e599be34\\exec-ac15454d-c102-4ff8-a554-142d147b9744.png"
+    }
+  ]
+}

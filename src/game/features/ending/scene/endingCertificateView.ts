@@ -29,7 +29,16 @@ const VIEW_LEFT = ENDING_CERTIFICATE_VIEW.x - ENDING_CERTIFICATE_VIEW.width / 2;
 const VIEW_TOP = ENDING_CERTIFICATE_VIEW.y - (CERTIFICATE_SIZE.height * VIEW_SCALE) / 2;
 const toScreen = (x: number, y: number) => ({ x: VIEW_LEFT + x * VIEW_SCALE, y: VIEW_TOP + y * VIEW_SCALE });
 
-type ButtonSpec = Readonly<{ label: string; variant?: EndingButtonVariant; width?: number; onPress: () => void }>;
+type ButtonSpec = Readonly<{
+  label: string;
+  variant?: EndingButtonVariant;
+  width?: number;
+  /** Set apart at the right (다음 ▶ / 닫기); the others stay centred as before. */
+  right?: boolean;
+  onPress: () => void;
+}>;
+/** Where a right-hand button sits: by the certificate's right edge. */
+const RIGHT_BUTTON_X = 1_120;
 
 /** The finished certificate, kept for "증명서 다시 보기" on the last screen. */
 export type FinishedCertificate = Readonly<{ canvas: HTMLCanvasElement; blob?: Blob }>;
@@ -95,7 +104,7 @@ export function showEndingCertificate(
 
   const caption = track(scene.add
     .text(640, ENDING_CERTIFICATE_CAPTION_Y, "", {
-      fontFamily: FONT_FAMILY, fontSize: "20px", fontStyle: "bold", color: "#fffaf0", align: "center",
+      fontFamily: FONT_FAMILY, fontSize: "18px", fontStyle: "bold", color: "#fffaf0", align: "center",
     })
     .setOrigin(0.5)
     .setResolution(3)
@@ -106,13 +115,20 @@ export function showEndingCertificate(
   const setButtons = (specs: readonly ButtonSpec[]) => {
     buttons.forEach((button) => button.destroy(true));
     const gap = 18;
-    const widths = specs.map((spec) => spec.width ?? 200);
-    const total = widths.reduce((sum, width) => sum + width, 0) + gap * (specs.length - 1);
+    const centred = specs.filter((spec) => !spec.right);
+    const widths = centred.map((spec) => spec.width ?? 200);
+    const total = widths.reduce((sum, width) => sum + width, 0) + gap * (centred.length - 1);
     let x = 640 - total / 2;
+    const placeX = (spec: ButtonSpec, width: number) => {
+      if (spec.right) return RIGHT_BUTTON_X;
+      const middle = x + width / 2;
+      x += width + gap;
+      return middle;
+    };
     buttons = specs.map((spec, index) => {
-      const width = widths[index];
+      const width = spec.width ?? 200;
       const button = addEndingArtButton(scene, {
-        x: x + width / 2,
+        x: placeX(spec, width),
         y: ENDING_CERTIFICATE_BUTTONS_Y,
         width,
         height: 56,
@@ -122,7 +138,6 @@ export function showEndingCertificate(
         depth: ENDING_DEPTH.certificateUi,
         onPress: spec.onPress,
       });
-      x += width + gap;
       button.setAlpha(0);
       scene.tweens.add({ targets: button, alpha: 1, delay: motion(index * 60), duration: motion(200) });
       return button;
@@ -168,7 +183,7 @@ export function showEndingCertificate(
     setButtons([
       { label: photo === "midi" ? "카메라로 찍기" : "다시 찍기", onPress: () => void startCamera() },
       { label: "저장하기", variant: "primary", onPress: () => void save() },
-      { label: options.closeLabel ?? "다음 ▶", variant: "primary", onPress: close },
+      { label: options.closeLabel ?? "다음 ▶", variant: "primary", width: 170, right: true, onPress: close },
     ]);
   };
 

@@ -16,8 +16,6 @@ export const ETHICS_REVIEW_CONFIG = {
   ],
   /** Combo milestones that earn a short on-screen celebration. */
   comboCelebrations: [3, 5, 8, 12] as readonly number[],
-  starThresholds: {
-    twoStars: 6, threeStars: 12,
-    twoStarAccuracy: 0.6, threeStarAccuracy: 0.8,
-  },
+  // Stars by score earned in one shift.
+  starThresholds: { oneStar: 1_000, twoStars: 2_000, threeStars: 3_000 },
 } as const;

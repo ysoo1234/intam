@@ -36,7 +36,7 @@ export const ENDING_CERTIFICATE = {
 export const ENDING_GEMS = [
   { name: "공공", color: "#5fc98a" },
   { name: "편리", color: "#62c3ea" },
-  { name: "생활", color: "#f2667a" },
+  { name: "생성", color: "#f2667a" },
   { name: "완성", color: "#f59b3a" },
   { name: "보호", color: "#b9c1cf" },
   { name: "약속", color: "#f4cf3e" },
