@@ -11,7 +11,7 @@ export type EthicsReviewVisitorView = ReturnType<typeof createEthicsReviewVisito
 /**
  * The student seen through the service window. They stand in the hallway behind
  * the counter (the booth's front layer covers their lower body), walk in from
- * the left and leave the same way.
+ * the left and leave to the right when approved, back to the left when returned.
  */
 export function createEthicsReviewVisitor(scene: Phaser.Scene) {
   const spot = ETHICS_LAYOUT.visitor;
@@ -88,11 +88,15 @@ export function createEthicsReviewVisitor(scene: Phaser.Scene) {
         yoyo: true, repeat: 1, ease: "Sine.easeInOut",
         onComplete: () => image.setY(spot.feetY) });
     },
-    /** The student leaves toward the hallway on the left. */
-    leave: () => {
+    /**
+     * The student walks on: an approved one passes through to the right, a
+     * returned one goes back the way they came, to the left.
+     */
+    leave: (direction: "left" | "right" = "left") => {
       hideBubble();
       stopMotion();
-      scene.tweens.add({ targets: [image, shadow], x: spot.x - 120, alpha: 0,
+      const step = direction === "right" ? 120 : -120;
+      scene.tweens.add({ targets: [image, shadow], x: spot.x + step, alpha: 0,
         duration: ETHICS_VISITOR_MOTION.leaveMs, ease: "Cubic.easeIn" });
       scene.tweens.add({ targets: image, y: spot.feetY + 8, duration: ETHICS_VISITOR_MOTION.leaveMs / 2,
         yoyo: true, ease: "Sine.easeInOut" });

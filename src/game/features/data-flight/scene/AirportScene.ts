@@ -41,6 +41,7 @@ import {
 } from "./airportControls";
 import { vibrateDevice } from "./airportFeedback";
 import { createAirportFeverFormation } from "./airportFeverFormation";
+import { playAirportSound } from "./airportSounds";
 import { AIRPORT_FEVER_COLORS, AirportHud } from "./airportHud";
 import { updateAirportPlayer } from "./airportPlayer";
 import { createAirportResultOverlay } from "./airportResult";
@@ -265,6 +266,7 @@ export class AirportScene extends Phaser.Scene {
     };
 
     this.questionOverlay = createAirportQuestionOverlay(this, question, readingMs);
+    playAirportSound(this, "question");
   }
 
   private releaseQuestionChoices() {
@@ -300,6 +302,7 @@ export class AirportScene extends Phaser.Scene {
     this.missionText = undefined;
     this.activeQuestion = undefined;
 
+    if (selected) playAirportSound(this, correct ? "correct" : "wrong");
     if (this.tutorial) {
       // The lesson explains the outcome itself; no hearts or fever here.
       if (!correct && selected) this.reactPlayer?.("ouch");
@@ -309,8 +312,7 @@ export class AirportScene extends Phaser.Scene {
 
     if (!selected) {
       showAirportNotice(this, "데이터를 놓쳤어요!", "다음 문제에 다시 도전해요.", 0xf5bd46);
-      this.nextDataAtMs =
-        this.elapsedMs + DATA_FLIGHT_CONFIG.questionMissDataDelayMs;
+      this.nextDataAtMs = this.elapsedMs + DATA_FLIGHT_CONFIG.questionMissDataDelayMs;
       this.nextObstacleAtMs =
         this.elapsedMs + DATA_FLIGHT_CONFIG.questionMissObstacleDelayMs;
       return;
@@ -467,11 +469,9 @@ export class AirportScene extends Phaser.Scene {
 
   private collectData(object: FlightObject) {
     const fever = isFeverActive(this.elapsedMs, this.feverUntilMs);
-    this.addScore(
-      getCollectedDataScore(fever),
-      getCollectedDifficultyPoints(),
-    );
+    this.addScore(getCollectedDataScore(fever), getCollectedDifficultyPoints());
     this.collected += 1;
+    playAirportSound(this, fever ? "feverCollect" : "collect");
     createAirportBurst(
       this,
       object.container.x,
@@ -494,6 +494,7 @@ export class AirportScene extends Phaser.Scene {
 
   private hitObstacle(object: FlightObject) {
     this.reactPlayer?.("ouch");
+    playAirportSound(this, "bump");
     if (this.tutorial) {
       // A bump in the lesson stings but costs nothing.
       this.cameras.main.shake(170, 0.006);
@@ -503,8 +504,7 @@ export class AirportScene extends Phaser.Scene {
       return;
     }
     this.hearts = decrementHeart(this.hearts);
-    this.invulnerableUntilMs =
-      this.elapsedMs + DATA_FLIGHT_CONFIG.invulnerabilityMs;
+    this.invulnerableUntilMs = this.elapsedMs + DATA_FLIGHT_CONFIG.invulnerabilityMs;
     this.cameras.main.shake(170, 0.006);
     vibrateDevice([35, 45, 35]);
     createAirportBurst(

@@ -1,0 +1,56 @@
+[
+  {
+    "key": "01-faithful",
+    "originalSize": [
+      1254,
+      1254
+    ],
+    "contentBounds": {
+      "left": 23,
+      "top": 167,
+      "right": 1227,
+      "bottom": 1059
+    },
+    "output": [
+      1024,
+      1024
+    ],
+    "alpha": true
+  },
+  {
+    "key": "02-clean",
+    "originalSize": [
+      1254,
+      1254
+    ],
+    "contentBounds": {
+      "left": 20,
+      "top": 167,
+      "right": 1232,
+      "bottom": 1061
+    },
+    "output": [
+      1024,
+      1024
+    ],
+    "alpha": true
+  },
+  {
+    "key": "03-minimal",
+    "originalSize": [
+      1254,
+      1254
+    ],
+    "contentBounds": {
+      "left": 18,
+      "top": 151,
+      "right": 1233,
+      "bottom": 1070
+    },
+    "output": [
+      1024,
+      1024
+    ],
+    "alpha": true
+  }
+]

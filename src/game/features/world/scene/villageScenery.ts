@@ -6,6 +6,8 @@ import type {
   SceneryDefinition,
 } from "../model/mapDefinition";
 import { isPlayerBehindBuilding } from "../model/villageCollision";
+import { getAmbientRedrawIntervalMs } from "../../../core/runtime/devicePerformance";
+import { createFountainFlow, preloadFountainAssets } from "./villageFountain";
 
 export const VILLAGE_SCENERY_DEPTH_BASE = 100;
 export const VILLAGE_UI_DEPTH = 2_000;
@@ -25,16 +27,6 @@ type DepthFollower = Phaser.GameObjects.GameObject & {
   setDepth(depth: number): unknown;
 };
 
-const FOUNTAIN_SHIMMER_TEXTURE = "village-fountain-shimmer";
-/** Light bands over the basins: speed (screens a second), angle, brightness. */
-const FOUNTAIN_LIGHT = [
-  [0.05, 0.5, 0.22],
-  [-0.035, 2.4, 0.16],
-] as const;
-/** Where the two streams land in the lower basin, as fractions of the fountain picture. */
-const FOUNTAIN_SPLASHES = [[0.284, 0.703], [0.706, 0.703]] as const;
-/** How long one ripple ring takes to spread out and fade (seconds). */
-const FOUNTAIN_RIPPLE_LIFE = 1.7;
 const AI_WORLD_PORTAL_CANVAS = "village-ai-world-portal-swirl";
 /**
  * The portal's whirlpool: number of arms, how tightly they curl, how fast
@@ -112,181 +104,6 @@ function applyAiWorldPortalMask(
     "world",
   );
 }
-
-/**
- * The fountain's water moves in code, inside the water of the fountain picture
- * itself, so it always lines up: soft light drifts slowly over the basins, small
- * glints twinkle at random spots, and the falling streams shimmer downward.
- */
-function createFountainFlow(
-  scene: Phaser.Scene,
-  scenery: SceneryDefinition,
-): DepthFollower[] {
-  if (scenery.id !== "fountain" || !scene.textures.exists(scenery.assetKey)) return [];
-  const source = scene.textures.get(scenery.assetKey).getSourceImage() as CanvasImageSource & {
-    width: number; height: number;
-  };
-  // Half the picture's size is plenty for soft light.
-  const width = Math.round(source.width / 2);
-  const height = Math.round(source.height / 2);
-  const read = document.createElement("canvas");
-  read.width = width;
-  read.height = height;
-  const readCtx = read.getContext("2d", { willReadFrequently: true });
-  if (!readCtx) return [];
-  readCtx.drawImage(source, 0, 0, width, height);
-  const pixels = readCtx.getImageData(0, 0, width, height).data;
-  // Water: the turquoise basins. Streams: the pale see-through falling water.
-  const pool = readCtx.createImageData(width, height);
-  const stream = readCtx.createImageData(width, height);
-  for (let i = 0; i < pixels.length; i += 4) {
-    const [r, g, b, a] = [pixels[i], pixels[i + 1], pixels[i + 2], pixels[i + 3]];
-    if (a < 200) continue;
-    const isPool = b > 180 && g > 150 && r < 140 && b - r > 80;
-    const isStream = !isPool && b > 200 && g > 215 && r > 150 && b >= r;
-    const target = isPool ? pool : isStream ? stream : undefined;
-    if (!target) continue;
-    target.data[i] = 255;
-    target.data[i + 1] = 255;
-    target.data[i + 2] = 255;
-    target.data[i + 3] = 255;
-  }
-  const toCanvas = (data: ImageData) => {
-    const c = document.createElement("canvas");
-    c.width = width;
-    c.height = height;
-    c.getContext("2d")?.putImageData(data, 0, 0);
-    return c;
-  };
-  const poolMask = toCanvas(pool);
-  const streamMask = toCanvas(stream);
-
-  const key = `${FOUNTAIN_SHIMMER_TEXTURE}-${scene.sys.settings.key}`;
-  if (scene.textures.exists(key)) scene.textures.remove(key);
-  const canvas = scene.textures.createCanvas(key, width, height);
-  if (!canvas) return [];
-  const ctx = canvas.getContext();
-  const layer = document.createElement("canvas");
-  layer.width = width;
-  layer.height = height;
-  const layerCtx = layer.getContext("2d");
-  if (!layerCtx) return [];
-
-  const glint = () => ({
-    x: Math.random(), y: Math.random(), size: 1.2 + Math.random() * 1.8,
-    born: scene.time.now / 1000 + Math.random() * 2, life: 0.7 + Math.random() * 1.1,
-  });
-  // Glints only where there is water (picked from the pool mask).
-  const poolPoints: Array<[number, number]> = [];
-  for (let y = 0; y < height; y += 3) {
-    for (let x = 0; x < width; x += 3) {
-      if (pool.data[(y * width + x) * 4 + 3] > 0) poolPoints.push([x, y]);
-    }
-  }
-  const glints = Array.from({ length: 4 }, glint);
-  // Ripples spread from where the streams land, each starting at its own
-  // slightly random moment, so the rings never march in step.
-  const ripples: Array<{ x: number; y: number; born: number }> = [];
-  const nextRipple = FOUNTAIN_SPLASHES.map(() => scene.time.now / 1000 + Math.random() * 0.6);
-  const place = (g: ReturnType<typeof glint>) => {
-    const point = poolPoints[Math.floor(Math.random() * poolPoints.length)];
-    if (point) [g.x, g.y] = [point[0] / width, point[1] / height];
-  };
-  glints.forEach(place);
-
-  const draw = (time: number) => {
-    const t = time / 1000;
-    ctx.clearRect(0, 0, width, height);
-    // 1) Basins: two broad bands of soft light drifting slowly in different directions.
-    layerCtx.globalCompositeOperation = "source-over";
-    layerCtx.clearRect(0, 0, width, height);
-    for (const [speed, angle, alpha] of FOUNTAIN_LIGHT) {
-      const shift = ((t * speed) % 1) * width * 1.6 - width * 0.3;
-      const dx = Math.cos(angle);
-      const dy = Math.sin(angle);
-      const band = layerCtx.createLinearGradient(shift - dx * 40, -dy * 40, shift + dx * 40, dy * 40);
-      band.addColorStop(0, "rgba(255,255,255,0)");
-      band.addColorStop(0.5, `rgba(255,255,255,${alpha})`);
-      band.addColorStop(1, "rgba(255,255,255,0)");
-      layerCtx.fillStyle = band;
-      layerCtx.fillRect(0, 0, width, height);
-    }
-    // Glints: each appears at its own random spot and moment, then fades.
-    glints.forEach((g) => {
-      let k = (t - g.born) / g.life;
-      if (k >= 1) {
-        Object.assign(g, glint());
-        place(g);
-        k = (t - g.born) / g.life;
-      }
-      if (k < 0) return;
-      const shine = Math.sin(k * Math.PI);
-      layerCtx.fillStyle = `rgba(255,255,255,${0.85 * shine})`;
-      layerCtx.beginPath();
-      layerCtx.arc(g.x * width, g.y * height, g.size * (0.6 + shine * 0.6), 0, Math.PI * 2);
-      layerCtx.fill();
-    });
-    // Ripples: thin flattened rings that widen and fade where the water lands.
-    FOUNTAIN_SPLASHES.forEach(([fx, fy], index) => {
-      if (t >= nextRipple[index]) {
-        ripples.push({ x: fx * width, y: fy * height, born: t });
-        nextRipple[index] = t + 0.45 + Math.random() * 0.5;
-      }
-    });
-    for (let i = ripples.length - 1; i >= 0; i -= 1) {
-      const ripple = ripples[i];
-      const k = (t - ripple.born) / FOUNTAIN_RIPPLE_LIFE;
-      if (k >= 1) {
-        ripples.splice(i, 1);
-        continue;
-      }
-      const radius = 3 + k * width * 0.16;
-      layerCtx.strokeStyle = `rgba(255,255,255,${0.75 * (1 - k) ** 1.5})`;
-      layerCtx.lineWidth = 1.6 - k * 0.8;
-      layerCtx.beginPath();
-      layerCtx.ellipse(ripple.x, ripple.y, radius, radius * 0.42, 0, 0, Math.PI * 2);
-      layerCtx.stroke();
-    }
-    layerCtx.globalCompositeOperation = "destination-in";
-    layerCtx.drawImage(poolMask, 0, 0);
-    ctx.drawImage(layer, 0, 0);
-    // 2) Streams: bright streaks sliding down the falling water.
-    layerCtx.globalCompositeOperation = "source-over";
-    layerCtx.clearRect(0, 0, width, height);
-    const fall = (t * 46) % 24;
-    for (let y = -24 + fall; y < height; y += 24) {
-      const streak = layerCtx.createLinearGradient(0, y, 0, y + 12);
-      streak.addColorStop(0, "rgba(255,255,255,0)");
-      streak.addColorStop(0.5, "rgba(255,255,255,0.55)");
-      streak.addColorStop(1, "rgba(255,255,255,0)");
-      layerCtx.fillStyle = streak;
-      layerCtx.fillRect(0, y, width, 12);
-    }
-    layerCtx.globalCompositeOperation = "destination-in";
-    layerCtx.drawImage(streamMask, 0, 0);
-    ctx.drawImage(layer, 0, 0);
-    canvas.refresh();
-  };
-  draw(scene.time.now);
-
-  const { x, y } = scenery.position;
-  const shimmer = scene.add
-    .image(x, y, key)
-    .setDisplaySize(scenery.displaySize.width, scenery.displaySize.height)
-    .setFlipX(Boolean(scenery.flipX))
-    .setBlendMode(Phaser.BlendModes.ADD)
-    .setAlpha(0.6);
-  let last = 0;
-  const onUpdate = (time: number) => {
-    if (time - last < 40) return;
-    last = time;
-    draw(time);
-  };
-  scene.events.on(Phaser.Scenes.Events.UPDATE, onUpdate);
-  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => scene.events.off(Phaser.Scenes.Events.UPDATE, onUpdate));
-  return [shimmer];
-}
-
 
 /**
  * The far side of the starlight gate: a calm whirlpool of deep teal and soft
@@ -424,9 +241,10 @@ export function createAiWorldPortalView(
     .setDisplaySize(width / scale, height / scale);
   applyAiWorldPortalMask(portal, openingMask, scene);
 
+  const portalRedrawMs = getAmbientRedrawIntervalMs();
   let last = 0;
   const onUpdate = (time: number) => {
-    if (time - last < 40) return;
+    if (time - last < portalRedrawMs) return;
     last = time;
     draw(time);
   };
@@ -487,6 +305,7 @@ export function preloadVillageScenery(
   assets.forEach(({ assetKey, url }) => {
     if (!scene.textures.exists(assetKey)) scene.load.image(assetKey, url);
   });
+  preloadFountainAssets(scene);
 }
 
 export function createVillageScenery(

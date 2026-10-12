@@ -11,7 +11,7 @@ export const GAME_ASSETS = {
     villageActivityStarEmpty:
       "/assets/ui/village-activity-star-empty-v1.webp",
     villageActivityStarFilled:
-      "/assets/ui/village-activity-star-filled-v1.webp",
+      "/assets/ui/village-activity-star-filled-v2.webp",
   },
   intro: {
     board: "/assets/intro/gem-board.webp",
@@ -30,7 +30,8 @@ export const GAME_ASSETS = {
     ethicsOffice: "/assets/world/village-ethics-office.webp",
     // Starlight gate: an open tablet whose screen shows the portal.
     aiWorldGate: "/assets/world/village-tablet-gate-v5.webp",
-    fountain: "/assets/world/village-fountain.webp",
+    fountain: "/assets/world/village-fountain-v5.webp",
+    fountainOrb: "/assets/world/village-fountain-orb.webp",
   },
   characters: {
     // The player in the village and workshop: textbook Midi (v2) at 2x of the
@@ -172,6 +173,10 @@ export const GAME_ASSETS = {
       "/assets/customers/v3-game/diary-student-happy.webp",
       "/assets/customers/v3-game/exercising-elderly-happy.webp",
       "/assets/customers/v3-game/novice-driver-happy.webp",
+      "/assets/customers/v3-game/xray-doctor-happy.webp",
+      "/assets/customers/v3-game/dinner-parent-happy.webp",
+      "/assets/customers/v3-game/crosswalk-police-happy.webp",
+      "/assets/customers/v3-game/busy-cleaner-happy.webp",
     ],
   },
   airport: {

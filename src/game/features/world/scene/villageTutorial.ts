@@ -480,7 +480,7 @@ export function createVillageTutorial(scene: Phaser.Scene, options: VillageTutor
       },
     },
     {
-      line: `별빛 졸업길에 들어가려면 별 ${WORLD_EXIT_REQUIRED_STARS}개를 모아야 해.`,
+      line: `별빛 졸업길을 열려면 별 ${WORLD_EXIT_REQUIRED_STARS}개를 모아야 해.`,
       say: { mood: "surprised", after: "idle" },
       enter: showGateCount,
     },

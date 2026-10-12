@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { GAME_SIZE } from "./assets";
 import { syncPageBackdrop } from "./core/runtime/pageBackdrop";
+import { isLowPowerDevice, isTouchFirstDevice } from "./core/runtime/devicePerformance";
 import { selectRenderScale } from "./core/runtime/renderResolution";
 import { createRegisteredScenes } from "./sceneRegistry";
 
@@ -15,6 +16,9 @@ export function createLearningGame(
     gameHeight: GAME_SIZE.height,
     devicePixelRatio:
       typeof window === "undefined" ? 1 : window.devicePixelRatio,
+    screenWidth: typeof window === "undefined" ? 0 : window.screen.width,
+    screenHeight: typeof window === "undefined" ? 0 : window.screen.height,
+    modestDevice: isTouchFirstDevice() || isLowPowerDevice(),
   });
   const renderWidth = GAME_SIZE.width * renderScale;
   const renderHeight = GAME_SIZE.height * renderScale;

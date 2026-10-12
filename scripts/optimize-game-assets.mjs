@@ -265,7 +265,7 @@ const ASSETS = [
     alphaQuality: 100,
   }, { width: 44, height: 44 }),
   highDpiPanelAsset({
-    source: "ui/village-activity-star-filled-v1.png",
+    source: "ui/village-activity-star-filled-v2.png",
     trim: true,
     lossless: true,
     alphaQuality: 100,
@@ -316,13 +316,22 @@ const ASSETS = [
     alphaQuality: 100,
   },
   highDpiPanelAsset({
-    source: "world/village-fountain-v4.png",
-    output: "world/village-fountain.webp",
+    // v5: the orb and its water column are cut out (they move in code).
+    source: "world/village-fountain-v5.png",
+    output: "world/village-fountain-v5.webp",
     // Pre-aligned to the v3 basin (the grid size is fixed), so no trim.
     trim: false,
     lossless: true,
     alphaQuality: 100,
-  }, { width: 211 }),
+  }, { width: 238 }),
+  highDpiPanelAsset({
+    // The round orb on top, lifted out of v4 (its cut top rebuilt) so it can bob.
+    source: "world/village-fountain-orb-v1.png",
+    output: "world/village-fountain-orb.webp",
+    trim: false,
+    lossless: true,
+    alphaQuality: 100,
+  }, { width: 28 }),
   fullScreenAsset({
     source: "shop/ai-workshop-interior-v6.png",
     output: "shop/ai-workshop-interior-v6.webp",

@@ -10,6 +10,7 @@ import {
   randomizeWorkshopStarZone,
   WORKSHOP_STAR_CATCH_HALF_WIDTH, WORKSHOP_STAR_CATCH_TRACK_Y, WORKSHOP_STAR_CATCH_TUNING,
 } from "./workshopStarCatchView";
+import { playWorkshopSound, playWorkshopStarHit } from "./workshopSounds";
 
 /**
  * The crafting minigame at the workbench: a star slides along a track and
@@ -88,6 +89,7 @@ export class WorkshopStarCatch {
     const success = Math.abs(this.x - this.zoneCenter) <= this.zoneWidth / 2;
     if (success) {
       this.hits += 1;
+      playWorkshopStarHit(scene, this.hits);
       this.statusText?.setText(formatWorkshopStarCatchStatus(this.hits, order.requiredStarHits));
       this.setPrompt(`좋아요! 성공 ${this.hits} / ${order.requiredStarHits}`);
       scene.cameras.main.flash(120, 255, 232, 120);
@@ -114,6 +116,7 @@ export class WorkshopStarCatch {
       }
     } else {
       this.misses += 1;
+      playWorkshopSound(scene, "miss");
       this.statusText?.setText(formatWorkshopStarCatchStatus(this.hits, order.requiredStarHits));
       this.setPrompt("괜찮아요! 성공 횟수는 그대로예요. 다시 도전!");
       scene.cameras.main.shake(90, 0.003);

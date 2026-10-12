@@ -14,6 +14,9 @@ import {
   readWorldReturnRequest,
   resolveFeatureSceneKey,
   WORLD_PROGRESS_REGISTRY_KEY,
+  createWorldReturnSceneData,
+  type WorldActivityId,
+  type WorldActivityStars,
   type WorldProgressSnapshot,
 } from "../../../core/navigation";
 import {
@@ -33,9 +36,9 @@ import {
 } from "../../../core/player/playerSprite";
 import { preloadMidiFaces } from "../../../core/player/midiFrames";
 import { preloadCoachAssets } from "../../../core/visual/coachGuide";
-import { drawOutlinedPill } from "../../../core/visual/outlinedButton";
 import { askYesNo } from "../../../core/visual/gameStartOverlay";
 import { resetAllGameProgress } from "../../../core/navigation/resetProgress";
+import { clearEndingSeen } from "../../../core/navigation/endingProgressStorage";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import { createEndingStart } from "../../../core/scenes/endingStart";
@@ -74,6 +77,7 @@ import {
   preloadVillageProgressPresentationAssets,
 } from "./villageProgressPresentation";
 import { createVillageNameTags } from "./villageNameTags";
+import { createVillageTestMenu } from "./villageTestMenu";
 import { VILLAGE_PLAYER_DISPLAY_HEIGHT } from "./villagePreview";
 import { createVillageTutorial, type VillageTutorial } from "./villageTutorial";
 import {
@@ -130,6 +134,7 @@ export class WorldScene extends Phaser.Scene {
   private touchMovement?: WorldTouchDirection;
   /** True while the "start over" question is open; Midi stays still. */
   private resetAsking = false;
+  private testMenu?: ReturnType<typeof createVillageTestMenu>;
   private interactionFeedbackText?: string;
   private interactionFeedbackUntil = 0;
   private actionQueued = false;
@@ -205,6 +210,10 @@ export class WorldScene extends Phaser.Scene {
       WORLD_MAP,
       this.sceneryLayers,
       this.progress,
+      // Back from a place with at least one star: its stars pop in one by one.
+      returnRequest?.result && returnRequest.result.stars > 0
+        ? returnRequest.result.featureId
+        : undefined,
     );
 
     // The place name shows briefly over the sky on entry, then fades so it
@@ -267,8 +276,7 @@ export class WorldScene extends Phaser.Scene {
       stars: getWorldTotalStars(this.progress),
       required: WORLD_EXIT_REQUIRED_STARS,
     });
-    this.createResetButton();
-    this.createFillStarsButton();
+    this.createTestMenu();
     this.hasMoved = false;
     this.tutorial = createVillageTutorial(this, {
       mapDefinition: WORLD_MAP,
@@ -287,127 +295,65 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /**
-   * A small "처음부터" button in the top-right corner: after a yes, every
-   * saved star and seen tutorial is wiped and the game reloads on the first
-   * screen, like a first visit (for classroom demos and replaying tutorials).
+   * The "테스트 ▾" menu in the top-right corner (for teachers trying things
+   * out): reset everything, fill the stars, finish one place with a chosen
+   * number of stars (its stars fill in on return), or watch the ending again.
    */
-  private createResetButton() {
-    const width = 124;
-    const height = 42;
-    const surface = drawOutlinedPill(this.add.graphics(), width, height, "cream");
-    const label = this.add
-      // ↻(시계 방향)이 되감기처럼 읽히고, ↺는 앞으로 가는 화살표처럼 보인다.
-      .text(0, -1, "↻ 처음부터", getTextStyle("support", { color: "#315567", fontSize: "16px" }))
-      .setOrigin(0.5)
-      .setResolution(3);
-    const button = this.add
-      .container(WORLD_MAP.size.width - width / 2 - 14, height / 2 + 12, [surface, label])
-      .setSize(width, height)
-      .setDepth(VILLAGE_UI_DEPTH + 30)
-      .setAlpha(0.85)
-      .setInteractive({ useHandCursor: true });
-    const stop = (
-      _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
-    ) => event.stopPropagation();
-    button.on("pointerover", () => button.setAlpha(1));
-    button.on("pointerout", () => button.setAlpha(0.85));
-    button.on("pointerdown", stop);
-    button.on("pointerup", (
-      _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
-    ) => {
-      event.stopPropagation();
-      if (this.resetAsking || this.endingStarted) return;
-      this.resetAsking = true;
-      this.touchMovement?.cancel();
-      this.stopPlayer();
-      void askYesNo(
-        this,
-        "처음부터 다시 시작할까요?\n모은 별과 튜토리얼 기록이 모두 지워져요.",
-        VILLAGE_UI_DEPTH + 60,
-      ).then((yes) => {
-        if (yes) {
-          resetAllGameProgress();
-          return;
-        }
-        this.resetAsking = false;
-      });
+  private createTestMenu() {
+    const finish = (featureId: WorldActivityId, stars: WorldActivityStars) => () => {
+      // Exactly this many (not the best so far), then back as if from the place.
+      this.applyTestProgress({ ...this.progress, [featureId]: stars }, createWorldReturnSceneData(featureId, stars));
+    };
+    this.testMenu = createVillageTestMenu(this, {
+      sceneWidth: WORLD_MAP.size.width,
+      depth: VILLAGE_UI_DEPTH + 30,
+      canOpen: () => !this.resetAsking && !this.endingStarted,
+      onOpen: () => {
+        this.touchMovement?.cancel();
+        this.stopPlayer();
+      },
+      actions: [
+        { label: "전체 초기화", run: () => this.confirmFullReset() },
+        { label: "별 9개 채우기", run: () => this.applyTestProgress({ "ai-workshop": 3, "data-flight": 3, "ethics-review": 3 }) },
+        { label: "별 7개 채우기 (2/2/3)", run: () => this.applyTestProgress({ "ai-workshop": 2, "data-flight": 2, "ethics-review": 3 }) },
+        { label: "AI 제작소 별 3개로 완료", run: finish("ai-workshop", 3) },
+        { label: "데이터 비행장 별 2개로 완료", run: finish("data-flight", 2) },
+        { label: "윤리 심사소 별 1개로 완료", run: finish("ethics-review", 1) },
+        {
+          label: "엔딩 초기화",
+          run: () => {
+            clearEndingSeen();
+            this.testMenu?.notify("엔딩을 처음부터 다시 볼 수 있어요");
+          },
+        },
+      ],
     });
   }
 
-  /**
-   * "★ 별 채우기" beside 처음부터 (for testing the ending and classroom demos):
-   * every building gets all three stars, saved, and the village redraws.
-   */
-  /**
-   * Test buttons under 처음부터: fill every star, or just seven (2·2·3),
-   * for trying the ending's two cases without playing the minigames.
-   */
-  private createFillStarsButton() {
-    const presets = [
-      {
-        label: "★ 별 채우기",
-        question: "별을 모두 채울까요?",
-        progress: { "ai-workshop": 3, "data-flight": 3, "ethics-review": 3 },
-      },
-      {
-        label: "☆ 별 덜 채우기",
-        question: "별을 7개만 채울까요?",
-        progress: { "ai-workshop": 2, "data-flight": 2, "ethics-review": 3 },
-      },
-    ] as const satisfies readonly { label: string; question: string; progress: WorldProgressSnapshot }[];
-    const width = 136;
-    const height = 42;
-    presets.forEach((preset, index) => {
-      const surface = drawOutlinedPill(this.add.graphics(), width, height, "cream");
-      const label = this.add
-        .text(0, -1, preset.label, getTextStyle("support", { color: "#315567", fontSize: "16px" }))
-        .setOrigin(0.5)
-        .setResolution(3);
-      // Stacked under 처음부터 (left of it would cover the gate's name tag).
-      const button = this.add
-        .container(
-          WORLD_MAP.size.width - 14 - width / 2,
-          height / 2 + 12 + (height + 8) * (index + 1),
-          [surface, label],
-        )
-        .setSize(width, height)
-        .setDepth(VILLAGE_UI_DEPTH + 30)
-        .setAlpha(0.85)
-        .setInteractive({ useHandCursor: true });
-      button.on("pointerover", () => button.setAlpha(1));
-      button.on("pointerout", () => button.setAlpha(0.85));
-      button.on("pointerdown", (
-        _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
-      ) => event.stopPropagation());
-      button.on("pointerup", (
-        _pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData,
-      ) => {
-        event.stopPropagation();
-        if (this.resetAsking || this.endingStarted) return;
-        this.resetAsking = true;
-        this.touchMovement?.cancel();
-        this.stopPlayer();
-        void askYesNo(this, preset.question, VILLAGE_UI_DEPTH + 60).then((yes) => {
-          this.resetAsking = false;
-          if (!yes) return;
-          this.progress = preset.progress;
-          this.registry.set(WORLD_PROGRESS_REGISTRY_KEY, this.progress);
-          saveStoredWorldProgress(this.progress);
-          // The village tour is not replayed after the redraw.
-          markTutorialSeen("village");
-          this.scene.restart();
-        });
-      });
+  /** Saves `progress` as it is and redraws the village (the tour is not replayed). */
+  private applyTestProgress(progress: WorldProgressSnapshot, data?: object) {
+    this.progress = progress;
+    this.registry.set(WORLD_PROGRESS_REGISTRY_KEY, this.progress);
+    saveStoredWorldProgress(this.progress);
+    markTutorialSeen("village");
+    this.scene.restart(data);
+  }
+
+  /** Every saved star and seen tutorial is wiped and the game starts over. */
+  private confirmFullReset() {
+    if (this.resetAsking || this.endingStarted) return;
+    this.resetAsking = true;
+    void askYesNo(
+      this,
+      "처음부터 다시 시작할까요?\n모은 별과 튜토리얼 기록이 모두 지워져요.",
+      VILLAGE_UI_DEPTH + 60,
+    ).then((yes) => {
+      if (yes) {
+        resetAllGameProgress();
+        return;
+      }
+      this.resetAsking = false;
     });
-    // A small note under the two buttons so students know they are for testing.
-    const lastButtonBottom = 12 + height + (height + 8) * presets.length;
-    this.add
-      .text(WORLD_MAP.size.width - 14 - width / 2, lastButtonBottom + 4, "테스트용 버튼",
-        getTextStyle("support", { color: "#315567", fontSize: "13px" }))
-      .setOrigin(0.5, 0)
-      .setResolution(3)
-      .setAlpha(0.75)
-      .setDepth(VILLAGE_UI_DEPTH + 30);
   }
 
   private createInteractionPrompt() {

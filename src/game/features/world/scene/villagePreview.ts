@@ -84,13 +84,14 @@ export const WORLD_VILLAGE_PREVIEW: VillagePreview = {
     preloadVillageScenery(scene, WORLD_MAP);
     preloadVillageProgressPresentationAssets(scene);
   },
-  paint: (scene, key, renderScale) => {
+  paint: (scene, key, renderScale, emptyRoofs) => {
     const art = [WORLD_MAP.background, ...WORLD_MAP.scenery];
     if (!art.every(({ assetKey }) => scene.textures.exists(assetKey))) return false;
     const before = new Set(scene.children.list);
     // Built exactly as the village scene builds them, then drawn once and removed.
     const layers = createVillageScenery(scene, WORLD_MAP);
-    createVillageProgressPresentation(scene, WORLD_MAP, layers, loadStoredWorldProgress());
+    // The ending flies its own stars off the roofs, so there the roofs stay bare.
+    if (!emptyRoofs) createVillageProgressPresentation(scene, WORLD_MAP, layers, loadStoredWorldProgress());
     updateVillageSceneryDepths(layers, WORLD_MAP.defaultSpawn.position, WORLD_MAP.collision);
     const created = scene.children.list
       .filter((object) => !before.has(object))

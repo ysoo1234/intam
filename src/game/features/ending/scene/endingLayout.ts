@@ -37,9 +37,9 @@ export const ENDING_PORTAL_FRAME = { ringWidth: 1_484, originX: 819 / 1_639, ori
 export const ENDING_LIBRARY_VIEW = { width: 620, height: 349 } as const;
 
 // Workshop customers who gather to wave goodbye: feet spots and heights,
-// four on each side of the door (a back row and a front row), clear of the
-// door, the promise button and Midi. Interleaved left/right so they stream
-// in from both sides at once.
+// six on each side of the door (a back row and a front row), clear of the
+// door, the promise button and Midi. Paired left/right (mirrored about the
+// door), and they all walk in together.
 export const ENDING_CUSTOMER_SPOTS = [
   { x: 262, y: 624, height: 176 },
   { x: 1_018, y: 624, height: 176 },
@@ -49,6 +49,11 @@ export const ENDING_CUSTOMER_SPOTS = [
   { x: 1_076, y: 556, height: 148 },
   { x: 330, y: 548, height: 142 },
   { x: 950, y: 548, height: 142 },
+  // Next to the promise button, and one more just behind them, under the door.
+  { x: 478, y: 626, height: 172 },
+  { x: 802, y: 626, height: 172 },
+  { x: 450, y: 560, height: 132 },
+  { x: 830, y: 560, height: 132 },
 ] as const;
 /** Customer canvases are 454 x 680 with the feet centred at (227, 641). */
 export const ENDING_CUSTOMER_FEET = { x: 227 / 454, y: 641 / 680 } as const;

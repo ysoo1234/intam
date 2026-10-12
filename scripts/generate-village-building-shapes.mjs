@@ -61,7 +61,7 @@ const BUILDINGS = {
     back: { kind: "slab", depth: 0.08 },
   },
   fountain: {
-    file: "public/assets/world/village-fountain.webp",
+    file: "public/assets/world/village-fountain-v5.webp",
     // The back follows the basin's painted top rim (not the ground under
     // it), so Midi walking behind the fountain never has the basin drawn
     // over her feet; only the tiers above hide her.

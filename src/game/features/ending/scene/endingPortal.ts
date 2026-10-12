@@ -111,23 +111,22 @@ export function createEndingPortal(scene: Phaser.Scene, options: Readonly<{ calm
       return new Promise<void>((resolve) => scene.time.delayedCall(ms, resolve));
     },
 
-    /** Customers walk in from both sides and wave. */
+    /** Customers walk in from both sides, all together, and wave. */
     welcomeCustomers(instant = false) {
-      customers.forEach(({ container, image, spot }, index) => {
+      customers.forEach(({ container, image, spot }) => {
         container.setVisible(true);
         scene.tweens.killTweensOf(container);
         if (instant || options.calm) {
           container.setX(spot.x);
         } else {
-          scene.tweens.add({
-            targets: container, x: spot.x, delay: index * 120, duration: 900, ease: "Sine.easeOut",
-          });
+          // Same start and length for everyone, so the crowd arrives as one.
+          scene.tweens.add({ targets: container, x: spot.x, duration: 1_000, ease: "Sine.easeOut" });
           // A little hop in their step while walking.
-          scene.tweens.add({ targets: image, y: -8, delay: index * 120, duration: 150, yoyo: true, repeat: 2, ease: "Sine.easeOut" });
+          scene.tweens.add({ targets: image, y: -8, duration: 160, yoyo: true, repeat: 2, ease: "Sine.easeOut" });
         }
         if (!options.calm) {
           scene.tweens.add({
-            targets: image, angle: { from: -4, to: 4 }, delay: index * 120 + 1_000,
+            targets: image, angle: { from: -4, to: 4 }, delay: 1_000,
             duration: 520, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
           });
         }
@@ -137,9 +136,9 @@ export function createEndingPortal(scene: Phaser.Scene, options: Readonly<{ calm
     /** Everyone jumps for joy (after the promise). */
     cheer() {
       if (options.calm) return;
-      customers.forEach(({ container, spot }, index) => {
+      customers.forEach(({ container, spot }) => {
         scene.tweens.add({
-          targets: container, y: spot.y - 26, delay: index * 70, duration: 180, yoyo: true, repeat: 1, ease: "Sine.easeOut",
+          targets: container, y: spot.y - 26, duration: 180, yoyo: true, repeat: 1, ease: "Sine.easeOut",
         });
       });
       burstLight(scene, ENDING_PORTAL.x, ENDING_PORTAL.y + 120, {

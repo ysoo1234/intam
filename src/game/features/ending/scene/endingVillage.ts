@@ -22,14 +22,19 @@ const ACTIVITY_TINT: Readonly<Record<WorldActivityId, number>> = {
   "ethics-review": 0xfff0a8,
 };
 const STAR_SIZE = 40;
-/** The woken stars circle over Midi's head like a little crown. */
-const HALO = { rx: 84, ry: 26 } as const;
+/**
+ * The gathered stars circle on a flat ring above the fountain (`dy` from the
+ * top tier's landmark), clear of the fountain itself.
+ */
+const HALO = { rx: 118, ry: 26, dy: -104 } as const;
+/** Where the stars are drawn into the fountain: the orb on its top. */
+const FOUNTAIN_HEART_DY = -40;
 /** Drawn roof-star slots (villageProgressPresentation): 38 px apart, middle one raised. */
 const ROOF_SLOT_GAP = 38;
 const ROOF_SLOT_YS = [5, -6, 5] as const;
-/** In front of Midi on the lower half of the halo, behind her on the upper half. */
-const HALO_FRONT_DEPTH = ENDING_DEPTH.narrator + 0.5;
-const HALO_BACK_DEPTH = ENDING_DEPTH.narrator - 0.5;
+/** The far half of the ring reads as "behind" by being smaller and a little faded. */
+const HALO_FRONT_DEPTH = ENDING_DEPTH.stars + 0.3;
+const HALO_BACK_DEPTH = ENDING_DEPTH.stars + 0.1;
 /** The village waits a little dim until the stars bring its light back. */
 const VILLAGE_DIM = { color: 0x1d2a5c, alpha: 0.34 } as const;
 
@@ -52,7 +57,7 @@ export function createEndingVillage(
   }>,
 ) {
   const motion = (ms: number) => (options.calm ? 0 : ms);
-  const painted = options.preview?.paint(scene, ENDING_VILLAGE_TEXTURES.live, options.renderScale) ?? false;
+  const painted = options.preview?.paint(scene, ENDING_VILLAGE_TEXTURES.live, options.renderScale, true) ?? false;
   scene.add
     .image(640, 360, painted ? ENDING_VILLAGE_TEXTURES.live : ENDING_VILLAGE_TEXTURES.snapshot)
     .setDisplaySize(1280, 720)
@@ -104,14 +109,26 @@ export function createEndingVillage(
     const front = sin > 0;
     star.image.setDepth(front ? HALO_FRONT_DEPTH : HALO_BACK_DEPTH);
     star.glow.setDepth((front ? HALO_FRONT_DEPTH : HALO_BACK_DEPTH) - 0.01);
-    const size = 0.82 + ((sin + 1) / 2) * 0.3;
-    star.image.setScale(star.baseScale * size);
+    const near = (sin + 1) / 2;
+    const size = 0.72 + near * 0.42;
+    star.image.setScale(star.baseScale * size).setAlpha(0.7 + near * 0.3);
     star.glow.setScale(0.32 * size);
   };
   const placeStar = (star: (typeof stars)[number], point: Point) => {
     star.image.setPosition(point.x, point.y);
     star.glow.setPosition(point.x, point.y);
   };
+
+  // The earned stars sit on their roofs from the start (the painted roofs
+  // underneath have no stars), ready to fly off to the fountain.
+  for (const activity of WORLD_ACTIVITY_IDS) {
+    const home = activitySpot(activity).stars;
+    for (let slot = 0; slot < options.progress[activity]; slot += 1) {
+      const star = makeStar(activity, { x: home.x + (slot - 1) * ROOF_SLOT_GAP, y: home.y + (ROOF_SLOT_YS[slot] ?? 0) });
+      star.glow.setAlpha(0);
+      stars.push(star);
+    }
+  }
 
   const lightBuilding = (activity: WorldActivityId, instant: boolean) => {
     const { center } = activitySpot(activity);
@@ -133,41 +150,62 @@ export function createEndingVillage(
   };
 
   return {
+    /** The middle of the ring the woken stars circle on, around the fountain. */
+    fountainRing: { x: fountainTop.x, y: fountainTop.y + HALO.dy } as Point,
+
     dimTo(alpha: number, duration: number) {
       scene.tweens.killTweensOf(veil);
       scene.tweens.add({ targets: veil, fillAlpha: alpha, duration: motion(duration) });
     },
 
-    /** The stars pop out of the gate's counter one by one and fly to `around`. */
+    /**
+     * The stars already sit on their buildings' roofs (the painted roofs are
+     * empty underneath). One by one they shine (each building glows with its
+     * first), then they all rise and fly to the ring above the fountain.
+     */
     wakeStars(around: Point) {
       return new Promise<void>((resolve) => {
-        const list = WORLD_ACTIVITY_IDS.flatMap((activity) =>
-          Array.from({ length: options.progress[activity] }, () => activity));
+        const list = [...stars];
         if (list.length === 0) {
           resolve();
           return;
         }
-        list.forEach((activity, index) => {
-          const star = makeStar(activity, gate.counter);
-          stars.push(star);
-          star.image.setScale(0);
-          star.glow.setAlpha(0);
-          const delay = motion(120 * index);
+        const order = WORLD_ACTIVITY_IDS.filter((activity) => options.progress[activity] > 0);
+        list.forEach((star, index) => {
+          const { activity } = star;
+          const slot = list.slice(0, index).filter((other) => other.activity === activity).length;
+          const roof = { x: star.image.x, y: star.image.y };
+          const delay = motion(170 * index);
           scene.tweens.add({
-            targets: star.image, scale: STAR_SIZE / star.image.width, delay, duration: motion(220), ease: "Back.easeOut",
+            targets: star.image, scale: star.baseScale * 1.35, delay, duration: motion(160), yoyo: true, ease: "Sine.easeOut",
           });
-          scene.tweens.add({ targets: star.glow, alpha: 0.85, delay, duration: motion(220) });
-          scene.time.delayedCall(delay, () => burstLight(scene, gate.counter.x, gate.counter.y, {
-            depth: ENDING_DEPTH.light, count: 8, calm: options.calm, tint: [0xffffff, ACTIVITY_TINT[activity]],
-          }));
+          scene.tweens.add({ targets: star.glow, alpha: 0.85, delay, duration: motion(260) });
+          scene.time.delayedCall(delay, () => {
+            if (settled) return;
+            burstLight(scene, roof.x, roof.y, {
+              depth: ENDING_DEPTH.light, count: 8, calm: options.calm, tint: [0xffffff, ACTIVITY_TINT[activity]],
+            });
+            // The building glows with its first star; the village brightens a little.
+            if (slot === 0) {
+              lightBuilding(activity, false);
+              const lit = order.indexOf(activity) + 1;
+              scene.tweens.killTweensOf(veil);
+              scene.tweens.add({
+                targets: veil, fillAlpha: VILLAGE_DIM.alpha * (1 - (lit / order.length) * 0.5), duration: motion(400),
+              });
+            }
+          });
+          // Then every star sets off together for the ring above the fountain.
           const angle = (Math.PI * 2 * index) / list.length;
           const target = { x: around.x + Math.cos(angle) * HALO.rx, y: around.y + Math.sin(angle) * HALO.ry };
           const flight = { t: 0 };
-          star.image.setDepth(ENDING_DEPTH.light);
-          star.glow.setDepth(ENDING_DEPTH.light - 0.01);
           flights.push(scene.tweens.add({
-            targets: flight, t: 1, delay: delay + motion(260), duration: motion(760), ease: "Sine.easeInOut",
-            onUpdate: () => placeStar(star, arcPoint(gate.counter, target, 120, flight.t)),
+            targets: flight, t: 1, delay: motion(170 * list.length + 500 + index * 70), duration: motion(900), ease: "Sine.easeInOut",
+            onStart: () => {
+              star.image.setDepth(ENDING_DEPTH.light);
+              star.glow.setDepth(ENDING_DEPTH.light - 0.01);
+            },
+            onUpdate: () => placeStar(star, arcPoint(roof, target, 110, flight.t)),
             onComplete: () => {
               placeOnHalo(star, around, angle);
               if (index === list.length - 1) resolve();
@@ -194,84 +232,55 @@ export function createEndingVillage(
       });
     },
 
-    /** Each building's stars fly home and light it; the veil lifts a little each time. */
-    lightBuildings() {
+    /**
+     * The circling stars are drawn straight into the fountain's orb, all
+     * together, and come back out as one big star over the fountain.
+     */
+    gatherAtFountain(golden: boolean) {
       orbitEvent?.remove(false);
       orbitEvent = undefined;
       return new Promise<void>((resolve) => {
-        const order = WORLD_ACTIVITY_IDS.filter((activity) => options.progress[activity] > 0);
-        if (order.length === 0) {
-          resolve();
-          return;
-        }
-        order.forEach((activity, buildingIndex) => {
-          const group = stars.filter((star) => star.activity === activity);
-          const home = activitySpot(activity).stars;
-          const delay = motion(900 * buildingIndex);
-          group.forEach((star, index) => {
-            const from = { x: star.image.x, y: star.image.y };
-            // Exactly onto the drawn roof-star slot it fills (left to right).
-            const target = {
-              x: home.x + (index - 1) * ROOF_SLOT_GAP,
-              y: home.y + (ROOF_SLOT_YS[index] ?? 0),
-            };
-            const flight = { t: 0 };
-            scene.tweens.killTweensOf(star.image);
-            star.image.setDepth(ENDING_DEPTH.light).setScale(star.baseScale);
-            star.glow.setDepth(ENDING_DEPTH.light - 0.01).setScale(0.32);
-            flights.push(scene.tweens.add({
-              targets: flight, t: 1, delay: delay + motion(index * 90), duration: motion(820), ease: "Sine.easeInOut",
-              onUpdate: () => placeStar(star, arcPoint(from, target, 140, flight.t)),
-              onComplete: () => {
-                placeStar(star, target);
-                scene.tweens.add({ targets: [star.image, star.glow], alpha: 0, duration: motion(260) });
-              },
-            }));
-          });
-          scene.time.delayedCall(delay + motion(820 + (group.length - 1) * 90), () => {
-            if (settled) return;
-            burstLight(scene, home.x, home.y, {
-              depth: ENDING_DEPTH.light, count: 18, speed: 200, calm: options.calm, tint: [0xffffff, ACTIVITY_TINT[activity]],
-            });
-            lightBuilding(activity, false);
-            const left = order.length - buildingIndex - 1;
-            scene.tweens.killTweensOf(veil);
-            scene.tweens.add({ targets: veil, fillAlpha: VILLAGE_DIM.alpha * (left / order.length) * 0.8, duration: motion(500) });
-            if (buildingIndex === order.length - 1) scene.time.delayedCall(motion(400), resolve);
-          });
-        });
-      });
-    },
-
-    /** Light rises from every building and gathers into a big star over the fountain. */
-    gatherAtFountain(golden: boolean) {
-      return new Promise<void>((resolve) => {
-        const orbs = WORLD_ACTIVITY_IDS.filter((activity) => options.progress[activity] > 0);
-        orbs.forEach((activity, index) => {
-          const from = activitySpot(activity).stars;
-          const orb = scene.add
-            .image(from.x, from.y, ENDING_LIGHT.glow)
-            .setBlendMode(Phaser.BlendModes.ADD)
-            .setTint(ACTIVITY_TINT[activity])
-            .setScale(0.4)
-            .setDepth(ENDING_DEPTH.light);
-          const flight = { t: 0 };
-          flights.push(scene.tweens.add({
-            targets: flight, t: 1, delay: motion(index * 120), duration: motion(900), ease: "Sine.easeIn",
-            onUpdate: () => {
-              const point = arcPoint(from, fountainTop, 90, flight.t);
-              orb.setPosition(point.x, point.y);
-            },
-            onComplete: () => orb.destroy(),
-          }));
-        });
-        scene.time.delayedCall(motion(900 + orbs.length * 120), () => {
+        const heart = { x: fountainTop.x, y: fountainTop.y + FOUNTAIN_HEART_DY };
+        const count = stars.length;
+        const finish = () => {
           if (settled) return;
           bigStar = this.showBigStar(golden, false);
           scene.tweens.killTweensOf(veil);
           scene.tweens.add({ targets: veil, fillAlpha: 0, duration: motion(600) });
-          burstLight(scene, fountainTop.x, fountainTop.y - 40, { depth: ENDING_DEPTH.light, count: 34, speed: 320, calm: options.calm });
+          burstLight(scene, heart.x, heart.y - 6, { depth: ENDING_DEPTH.light, count: 34, speed: 320, calm: options.calm });
+          if (!options.calm) scene.cameras.main.shake(140, 0.003);
           scene.time.delayedCall(motion(500), resolve);
+        };
+        if (count === 0) {
+          finish();
+          return;
+        }
+        stars.forEach((star, index) => {
+          // Straight in, all together: each star shrinks into a dot of light
+          // as it is drawn into the orb.
+          const from = { x: star.image.x, y: star.image.y };
+          const fromScale = star.image.scaleX;
+          const pull = { t: 0 };
+          flights.push(scene.tweens.add({
+            targets: pull, t: 1, delay: motion(index * 40), duration: motion(700), ease: "Cubic.easeIn",
+            onUpdate: () => {
+              const k = pull.t;
+              placeStar(star, { x: from.x + (heart.x - from.x) * k, y: from.y + (heart.y - from.y) * k });
+              star.image.setScale(fromScale * (1 - k * 0.85)).setAlpha(1 - k * 0.6);
+              star.glow.setScale(0.32 * (1 + k * 0.4));
+            },
+            onComplete: () => {
+              star.image.destroy();
+              star.glow.destroy();
+              burstLight(scene, heart.x, heart.y, {
+                depth: ENDING_DEPTH.light, count: 5, speed: 120, calm: options.calm, tint: [0xffffff, ACTIVITY_TINT[star.activity]],
+              });
+              if (index === count - 1) {
+                stars.length = 0;
+                scene.time.delayedCall(motion(180), finish);
+              }
+            },
+          }));
         });
       });
     },

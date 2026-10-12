@@ -8,6 +8,7 @@ import {
   type WorldProgressSnapshot,
 } from "../../../core/navigation/worldProgress";
 import { loadStoredWorldProgress } from "../../../core/navigation/worldProgressStorage";
+import { hasSeenEnding, markEndingSeen } from "../../../core/navigation/endingProgressStorage";
 import { MIDI_POSE, preloadMidiFaces } from "../../../core/player/midiFrames";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { readEndingStart, type EndingStart } from "../../../core/scenes/endingStart";
@@ -22,7 +23,6 @@ import {
   ENDING_CINEMA_BAR,
   ENDING_CUSTOMER_SPOTS,
   ENDING_DEPTH,
-  ENDING_NARRATOR,
   ENDING_PROMISE_BUTTON,
   ENDING_SKIP,
 } from "./endingLayout";
@@ -36,27 +36,6 @@ const STARS_MAX = WORLD_ACTIVITY_IDS.length * 3;
 const DEMO_PROGRESS: WorldProgressSnapshot = { "ai-workshop": 3, "data-flight": 2, "ethics-review": 3 };
 // Midi's village body (113 px frame, 110 px body) when there is no village preview.
 const FALLBACK_MIDI = { bodyHeight: 110, bottomBelowSpawn: 13 } as const;
-/**
- * Once the ending has been watched, entering the open gate again goes
- * straight to the last screen (cleared by "처음부터", like the other records).
- */
-const ENDING_SEEN_STORAGE_KEY = "intam:ending-seen:v1";
-
-function hasSeenEnding() {
-  try {
-    return window.localStorage.getItem(ENDING_SEEN_STORAGE_KEY) === "seen";
-  } catch {
-    return false;
-  }
-}
-
-function markEndingSeen() {
-  try {
-    window.localStorage.setItem(ENDING_SEEN_STORAGE_KEY, "seen");
-  } catch {
-    // Storage may be blocked; the story then simply plays again next time.
-  }
-}
 
 /**
  * The ending (textbook pp.102-103 epilogue): after seven stars the gate is
@@ -223,7 +202,7 @@ export class EndingScene extends Phaser.Scene {
     if (!village || !portal || !dialogue) return;
     const golden = this.stars >= STARS_MAX;
 
-    // Act 1: the stars wake up at the gate and circle Midi.
+    // Act 1: the stars light up on their buildings and gather above the fountain.
     village.dimTo(0.34, 700);
     const preview = this.villagePreview;
     dialogue.arriveFrom(
@@ -232,18 +211,16 @@ export class EndingScene extends Phaser.Scene {
     );
     await this.wait(700);
     if (!alive()) return;
-    // The stars circle just over Midi's head, like a little crown.
-    const around = { x: ENDING_NARRATOR.x + 4, y: ENDING_NARRATOR.y - ENDING_NARRATOR.height - 26 };
+    // The stars circle on a ring above the fountain in the middle of the village.
+    const around = village.fountainRing;
     await village.wakeStars(around);
     if (!alive()) return;
     village.orbit(around);
     await dialogue.say(ENDING_LINES.starsAwake, { after: "happy" });
     if (!alive()) return;
 
-    // Act 2: the stars light their buildings and gather over the fountain.
+    // Act 2: the stars are drawn into the fountain and become one big star.
     dialogue.hidePanel();
-    await village.lightBuildings();
-    if (!alive()) return;
     await village.gatherAtFountain(golden);
     if (!alive()) return;
     await dialogue.say(ENDING_LINES.villageShines, { after: "happy" });

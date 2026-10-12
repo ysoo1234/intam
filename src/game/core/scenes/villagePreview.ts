@@ -35,9 +35,10 @@ export type VillagePreview = Readonly<{
   /**
    * Paints the village as it looks on arrival (buildings, fountain, gate and
    * roof stars; no Midi or UI) into texture `key`. Returns false when its art
-   * is not loaded, so the caller can fall back.
+   * is not loaded, so the caller can fall back. `emptyRoofs` leaves the
+   * roof stars out entirely (the ending flies the real stars off the roofs).
    */
-  paint: (scene: Phaser.Scene, key: string, renderScale: number) => boolean;
+  paint: (scene: Phaser.Scene, key: string, renderScale: number, emptyRoofs?: boolean) => boolean;
   /**
    * Adds the starlight gate's moving portal on top of a painted village (a
    * still picture can't move), in village map pixels at `depth`.

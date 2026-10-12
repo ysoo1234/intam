@@ -14,7 +14,7 @@ import {
   createReviewShift, createEthicsDeliveryState, getEthicsDeliveryCase, getEthicsDeliveryVisitor,
   actEthicsDelivery, continueEthicsDelivery, tickEthicsDelivery, canRequestEthicsAction,
   getEthicsReviewStars, isEthicsComboCelebration,
-  type EthicsDeliveryAction, type EthicsDeliveryState,
+  type EthicsDeliveryAction, type EthicsDeliveryState, type EthicsVerdict,
 } from "../model";
 import { createEthicsReviewControls, type EthicsReviewControls } from "./ethicsReviewControls";
 import { createEthicsReviewPlayer, type EthicsReviewPlayer } from "./ethicsReviewPlayer";
@@ -65,6 +65,7 @@ export class EthicsReviewScene extends Phaser.Scene {
   private inputReadyAt = 0;
   private lastTickAt = 0;
   private earnedStars?: 0 | 1 | 2 | 3;
+  private lastVerdict?: EthicsVerdict;
 
   constructor(private readonly renderScale: number) { super(SCENE_KEYS.ethicsReview); }
 
@@ -214,7 +215,8 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.controls?.cancelMovement();
     this.stamp?.destroy(true);
     this.stamp = undefined;
-    this.visitor.leave();
+    // Approved students pass on to the right; returned ones go back left.
+    this.visitor.leave(this.lastVerdict === "approve" ? "right" : "left");
     this.inputReadyAt = performance.now() + DEPARTURE_GAP_MS + ARRIVAL_INPUT_DELAY_MS;
     // The next student steps up once the stamped form has left the desk. A
     // generation counter makes a stale completion (after restart) harmless.
@@ -295,6 +297,7 @@ export class EthicsReviewScene extends Phaser.Scene {
     if (this.state === previous || !this.state.decision) { this.controls?.cancelMovement(); return; }
     const state = this.state;
     const decision = state.decision!;
+    this.lastVerdict = decision.selected;
     const celebrate = !state.practice && decision.correct && isEthicsComboCelebration(state.combo);
     // Practice waits for the reader; the timed shift advances on its own clock.
     this.inputReadyAt = performance.now() + ETHICS_STAMP_IMPACT_MS + 500;

@@ -90,7 +90,7 @@ const RUNTIME_SPECS = new Map([
     { format: "webp", width: 88, height: 84 },
   ],
   [
-    "ui/village-activity-star-filled-v1.webp",
+    "ui/village-activity-star-filled-v2.webp",
     { format: "webp", width: 88, height: 85 },
   ],
   [
@@ -108,7 +108,8 @@ const RUNTIME_SPECS = new Map([
   ["world/village-airport.webp", { format: "webp", width: 538, height: 504 }],
   ["world/village-ethics-office.webp", { format: "webp", width: 502, height: 542 }],
   ["world/village-tablet-gate-v5.webp", { format: "webp", width: 640, height: 608, hasAlpha: true }],
-  ["world/village-fountain.webp", { format: "webp", width: 422, height: 445 }],
+  ["world/village-fountain-v5.webp", { format: "webp", width: 476, height: 502 }],
+  ["world/village-fountain-orb.webp", { format: "webp", width: 56, height: 56, hasAlpha: true }],
   ["characters/midi-v2/front-idle.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
   ["characters/midi-v2/front-blink.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],
   ["characters/midi-v2/front-talk-small.webp", { format: "webp", width: 259, height: 320, hasAlpha: true }],

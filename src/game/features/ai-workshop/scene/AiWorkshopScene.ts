@@ -44,6 +44,7 @@ import {
 } from "./workshopStatus";
 import { createWorkshopTapTargets, type WorkshopTapTargets } from "./workshopTapTargets";
 import { playWorkshopProductReveal } from "./workshopProductReveal";
+import { playWorkshopSound } from "./workshopSounds";
 import { createWorkshopBackground, createWorkshopCustomer, createWorkshopHud, createWorkshopPlayer, setWorkshopCustomerRole, syncWorkshopDialoguePanel } from "./workshopView";
 export class AiWorkshopScene extends Phaser.Scene {
   private keys?: ControlKeys;
@@ -432,6 +433,7 @@ export class AiWorkshopScene extends Phaser.Scene {
       this.carriedOrigins.push(choice.origin);
     }
     this.updateCarriedVisuals();
+    playWorkshopSound(this, "pick");
     createWorkshopSparkBurst(this, this.player.x, this.player.y - 65, choice.product.color);
     this.promptText?.setText(
       handsFull
@@ -498,6 +500,7 @@ export class AiWorkshopScene extends Phaser.Scene {
 
     // A wrong pick in the tutorial is a lesson, not a mistake.
     if (!this.tutorial) this.wrongDeliveries += 1;
+    playWorkshopSound(this, "wrong");
     this.updateHud();
     this.phase = "transition";
     this.cameras.main.shake(160, 0.005);
@@ -551,6 +554,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     this.updateCarriedVisuals();
     this.promptText?.setText("");
     this.workbenchGlow?.setFillStyle(COLORS.yellow, 0.42);
+    playWorkshopSound(this, "reveal");
     playWorkshopProductReveal(this, order.products[0], () => ({
       x: this.player?.x ?? AI_WORKSHOP_LAYOUT.workbench.x, y: (this.player?.y ?? 600) - 92,
     }), () => {
@@ -578,6 +582,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     const thanks = `${order.requests[0].thanks} ${reward}코인 받아 주세요!`;
     this.typeDialogue(thanks);
     this.promptText?.setText(`손님 해결! +${reward}코인`);
+    playWorkshopSound(this, "coins");
     createWorkshopCoinBurst(this,
       AI_WORKSHOP_LAYOUT.customerStage.x + 145,
       AI_WORKSHOP_LAYOUT.customerStage.y - 118,
