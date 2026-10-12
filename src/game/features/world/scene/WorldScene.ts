@@ -399,6 +399,15 @@ export class WorldScene extends Phaser.Scene {
         });
       });
     });
+    // A small note under the two buttons so students know they are for testing.
+    const lastButtonBottom = 12 + height + (height + 8) * presets.length;
+    this.add
+      .text(WORLD_MAP.size.width - 14 - width / 2, lastButtonBottom + 4, "테스트용 버튼",
+        getTextStyle("support", { color: "#315567", fontSize: "13px" }))
+      .setOrigin(0.5, 0)
+      .setResolution(3)
+      .setAlpha(0.75)
+      .setDepth(VILLAGE_UI_DEPTH + 30);
   }
 
   private createInteractionPrompt() {
