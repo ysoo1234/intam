@@ -17,6 +17,15 @@ export function isCoachCardOpen(scene: Phaser.Scene) {
   return (openCards.get(scene) ?? 0) > 0;
 }
 
+/** Counts as an open card (the game waits), e.g. while the pause menu is up. */
+export function holdCoachCard(scene: Phaser.Scene) {
+  openCards.set(scene, (openCards.get(scene) ?? 0) + 1);
+}
+
+export function releaseCoachCard(scene: Phaser.Scene) {
+  openCards.set(scene, Math.max(0, (openCards.get(scene) ?? 1) - 1));
+}
+
 export type CoachCardConfig = Readonly<{
   x?: number;
   y?: number;

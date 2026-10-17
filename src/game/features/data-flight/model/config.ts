@@ -1,7 +1,12 @@
 export const DATA_FLIGHT_CONFIG = {
   gameDurationMs: 150_000,
   countdownMs: 3_000,
-  questionIntervalMs: 27_000,
+  questionIntervalMs: 25_000,
+  /**
+   * No new quiz starts with less time left than this: reading, the answers
+   * flying in and the fever after a right answer must all fit before the end.
+   */
+  lastQuestionWindowMs: 22_000,
   firstQuestionScore: 200,
   questionReadingMs: 3_800,
   feverDurationMs: 7_000,
@@ -32,9 +37,9 @@ export const DATA_FLIGHT_CONFIG = {
   feverDataScore: 30,
   correctAnswerScore: 150,
   starThresholds: {
-    oneStar: 2_000,
-    twoStars: 4_000,
-    threeStars: 6_000,
+    oneStar: 1_500,
+    twoStars: 3_000,
+    threeStars: 5_000,
   },
   dataSpeed: 355,
   questionChoiceSpeed: 390,

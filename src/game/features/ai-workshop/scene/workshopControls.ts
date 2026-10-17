@@ -33,12 +33,10 @@ const STALL_ACT_DISTANCE = 48;
 
 export function createWorkshopControls(
   scene: Phaser.Scene,
-  onBack: () => void,
   getPlayerPosition: () => Readonly<{ x: number; y: number }> | undefined,
 ): WorkshopControls {
   const keys = makeControlKeys(scene);
   const cursors = scene.input.keyboard?.createCursorKeys();
-  scene.input.keyboard?.on("keydown-ESC", onBack);
   const joystick = new Phaser.Math.Vector2();
   const pointerWorldPoint = new Phaser.Math.Vector2();
   const target = new Phaser.Math.Vector2();

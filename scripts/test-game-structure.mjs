@@ -513,7 +513,7 @@ assert.match(ethicsView, /playEthicsFormDeparture/);
 assert.match(ethicsPlayer, /greet:/, "Midi must glance toward each arriving visitor.");
 assert.match(ethicsEffects, /playEthicsVerdictStamp/);
 assert.match(ethicsScene, /createGameStatusHud\(/, "Ethics Review must use the shared status chrome.");
-assert.match(ethicsScene, /createVillageReturnButton\(/);
+assert.match(ethicsScene, /createGamePauseMenu\(/, "Ethics Review must use the shared pause menu (멈춤 → 이어하기·처음부터·마을로).");
 assert.doesNotMatch(ethicsScene, /console\.log/);
 const ethicsSceneLineCount = ethicsScene.split(/\r?\n/).length;
 assert.ok(
@@ -552,7 +552,7 @@ assert.ok(
   airportLineCount <= 700,
   `AirportScene exceeds its 700-line split threshold (${airportLineCount}).`,
 );
-assert.match(airportControls, /keydown-ESC/);
+assert.doesNotMatch(airportControls, /keydown-ESC/, "ESC belongs to the shared pause menu, not the controls.");
 assert.match(airportControls, /keydown-SPACE/);
 assert.match(airportControls, /keydown-ENTER/);
 assert.match(airportControls, /pointerupoutside/);

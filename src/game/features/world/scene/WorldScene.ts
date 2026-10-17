@@ -39,6 +39,7 @@ import { preloadCoachAssets } from "../../../core/visual/coachGuide";
 import { askYesNo } from "../../../core/visual/gameStartOverlay";
 import { resetAllGameProgress } from "../../../core/navigation/resetProgress";
 import { clearEndingSeen } from "../../../core/navigation/endingProgressStorage";
+import { readLastGameError } from "../../../core/runtime/gameErrorGuard";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import { createEndingStart } from "../../../core/scenes/endingStart";
@@ -324,6 +325,16 @@ export class WorldScene extends Phaser.Scene {
           run: () => {
             clearEndingSeen();
             this.testMenu?.notify("엔딩을 처음부터 다시 볼 수 있어요");
+          },
+        },
+        {
+          label: "마지막 오류 보기",
+          run: () => {
+            const error = readLastGameError();
+            this.testMenu?.notify(
+              error ? `[${error.scene}] ${error.message}` : "기록된 오류가 없어요",
+              error ? 6_000 : 1_400,
+            );
           },
         },
       ],

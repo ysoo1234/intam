@@ -68,6 +68,7 @@ const RUNTIME_SPECS = new Map([
     "ui/game-return-button-house-v2.webp",
     { format: "webp", width: 720, height: 237 },
   ],
+  ["ui/game-pause-button-v1.webp", { format: "webp", width: 720, height: 237, hasAlpha: true }],
   [
     "ui/game-status-panel-blank-v1.webp",
     { format: "webp", width: 1200, height: 194 },

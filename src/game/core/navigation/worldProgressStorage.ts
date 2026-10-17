@@ -1,8 +1,12 @@
+import type Phaser from "phaser";
 import {
   EMPTY_WORLD_PROGRESS,
   mergeWorldActivityResult,
   readWorldProgressSnapshot,
   WORLD_ACTIVITY_IDS,
+  WORLD_PROGRESS_REGISTRY_KEY,
+  type WorldActivityId,
+  type WorldActivityStars,
   type WorldProgressSnapshot,
 } from "./worldProgress";
 
@@ -56,4 +60,25 @@ export function mergeWorldProgressSnapshots(
     (merged, featureId) => mergeWorldActivityResult(merged, { featureId, stars: second[featureId] }),
     first,
   );
+}
+
+/**
+ * Records a finished place's stars at once (live registry and the saved
+ * copy), keeping the best so far. Called the moment a game ends, so a
+ * better run is never lost when the student replays and does worse before
+ * going back to the village.
+ */
+export function recordActivityStars(
+  registry: Phaser.Data.DataManager,
+  featureId: WorldActivityId,
+  stars: WorldActivityStars,
+): WorldProgressSnapshot {
+  const current = mergeWorldProgressSnapshots(
+    readWorldProgressSnapshot(registry.get(WORLD_PROGRESS_REGISTRY_KEY)),
+    loadStoredWorldProgress(),
+  );
+  const next = mergeWorldActivityResult(current, { featureId, stars });
+  registry.set(WORLD_PROGRESS_REGISTRY_KEY, next);
+  saveStoredWorldProgress(next);
+  return next;
 }

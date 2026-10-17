@@ -4,6 +4,7 @@ import { FONT_FAMILY, UI_MOTION } from "./theme";
 
 export const GAME_CHROME_TEXTURES = {
   villageReturnButton: "game-village-return-button",
+  pauseButton: "game-pause-button",
   statusPanel: "game-status-panel",
 } as const;
 
@@ -46,6 +47,9 @@ export function preloadGameChromeAssets(scene: Phaser.Scene) {
       GAME_CHROME_TEXTURES.villageReturnButton,
       GAME_ASSETS.ui.villageReturnButton,
     );
+  }
+  if (!scene.textures.exists(GAME_CHROME_TEXTURES.pauseButton)) {
+    scene.load.image(GAME_CHROME_TEXTURES.pauseButton, GAME_ASSETS.ui.pauseButton);
   }
   if (!scene.textures.exists(GAME_CHROME_TEXTURES.statusPanel)) {
     scene.load.image(

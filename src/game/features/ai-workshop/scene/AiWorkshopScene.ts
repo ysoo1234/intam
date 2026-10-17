@@ -4,6 +4,7 @@ import type { ControlKeys } from "../../../core/input/controlKeys";
 import type { PlayerFacing } from "../../../core/player/playerFacing";
 import { preloadPlayerTextures } from "../../../core/player/playerSprite";
 import { createWorldReturnSceneData } from "../../../core/navigation";
+import { recordActivityStars } from "../../../core/navigation/worldProgressStorage";
 import { markTutorialSeen, shouldPlayTutorial } from "../../../core/navigation/tutorialProgressStorage";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
@@ -159,7 +160,11 @@ export class AiWorkshopScene extends Phaser.Scene {
       dialoguePanel: this.dialoguePanel,
       dialogueText: this.dialogueText,
       promptText: this.promptText,
-    } = createWorkshopHud(this, () => this.returnToWorld()));
+    } = createWorkshopHud(this, {
+      onRestart: () => this.scene.restart(),
+      onWorld: () => this.returnToWorld(),
+      canPause: () => !this.finished,
+    }));
     ({
       customerContainer: this.customerContainer,
       customerShadow: this.customerShadow,
@@ -172,11 +177,7 @@ export class AiWorkshopScene extends Phaser.Scene {
       playerSprite: this.playerSprite,
     } = createWorkshopPlayer(this));
     updateWorkshopPlayerPerspective(this.player, this.carriedVisuals);
-    this.controls = createWorkshopControls(
-      this,
-      () => this.returnToWorld(),
-      () => this.player,
-    );
+    this.controls = createWorkshopControls(this, () => this.player);
     ({
       keys: this.keys,
       cursors: this.cursors,
@@ -632,6 +633,8 @@ export class AiWorkshopScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.earnedStars = getWorkshopStars(this.coins);
+    // Saved right away: a replay that does worse must not lose these stars.
+    recordActivityStars(this.registry, "ai-workshop", this.earnedStars);
     this.phase = "finished";
     this.typingTimer?.remove(false);
     this.clearHangingProducts();

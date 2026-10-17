@@ -403,6 +403,9 @@ export function createWorkshopStarCatchView(
     .setOrigin(0.5)
     .setResolution(3);
   const drawStop = (pressed: boolean) => {
+    // The panel may already be gone (the last hit closes it 0.42 s later),
+    // so a late "release" must not touch the destroyed button.
+    if (!stopSurface.active || !stopLabel.active) return;
     stopSurface.setTexture(pressed ? "workshop-stop-button-pressed" : "workshop-stop-button")
       .setDisplaySize(tuning.stopWidth, tuning.stopHeight);
     stopLabel.setY(pressed ? 1 : -3);

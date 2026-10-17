@@ -11,7 +11,6 @@ export function createEthicsReviewControls(
   scene: Phaser.Scene,
   canMove: () => boolean,
   canRequest: (action: EthicsDeliveryAction) => boolean,
-  onBack: () => void,
   onAction: (action: EthicsDeliveryAction) => void,
   onContinue: () => void,
 ) {
@@ -36,7 +35,6 @@ export function createEthicsReviewControls(
     ["keydown-LEFT", approve], ["keydown-A", approve],
     ["keydown-RIGHT", reject], ["keydown-D", reject],
     ["keydown-ENTER", continueKey], ["keydown-SPACE", continueKey],
-    ["keydown-ESC", onBack],
   ] as const;
   for (const [key, handler] of bindings) keyboard?.on(key, handler);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

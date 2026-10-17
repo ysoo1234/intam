@@ -120,18 +120,19 @@ export function createVillageTestMenu(
   }) as PointerHandler);
 
   /** A short note that fades under the button (for actions that change nothing on screen). */
-  const notify = (text: string) => {
+  const notify = (text: string, holdMs = 1_400) => {
     const note = scene.add
       .text(menuRight, menuTop + 4, text, {
         ...getTextStyle("support", { color: "#fffdf6", fontSize: "16px" }),
         backgroundColor: "#315567",
         padding: { x: 12, y: 7 },
+        wordWrap: { width: 420 },
       })
       .setOrigin(1, 0)
       .setResolution(3)
       .setDepth(options.depth + 1);
     scene.tweens.add({
-      targets: note, alpha: 0, delay: 1_400, duration: 500, onComplete: () => note.destroy(),
+      targets: note, alpha: 0, delay: holdMs, duration: 500, onComplete: () => note.destroy(),
     });
   };
 

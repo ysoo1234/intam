@@ -1,7 +1,7 @@
 import Phaser from "phaser";
+import { createGamePauseMenu } from "../../../core/visual/gamePauseMenu";
 import {
   createGameStatusHud,
-  createVillageReturnButton,
   type GameStatusHud,
 } from "../../../core/visual/gameChrome";
 import { COLORS, FONT_FAMILY } from "../../../core/visual/theme";
@@ -40,9 +40,9 @@ export class AirportHud {
 
   constructor(
     private readonly scene: Phaser.Scene,
-    onBack: () => void,
+    pause: Parameters<typeof createGamePauseMenu>[1],
   ) {
-    createVillageReturnButton(scene, onBack);
+    createGamePauseMenu(scene, pause);
     this.statusHud = createGameStatusHud(scene, [
       "비행 1단계",
       "0점",

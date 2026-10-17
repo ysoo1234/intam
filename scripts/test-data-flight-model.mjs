@@ -63,7 +63,14 @@ const pointerOwnership = loadTypeScriptModule(
 );
 
 assert.equal(DATA_FLIGHT_CONFIG.gameDurationMs, 150_000);
-assert.equal(DATA_FLIGHT_CONFIG.questionIntervalMs, 27_000);
+assert.equal(DATA_FLIGHT_CONFIG.questionIntervalMs, 25_000);
+// The last quiz must still leave room for its fever before the flight ends.
+assert.equal(DATA_FLIGHT_CONFIG.lastQuestionWindowMs, 22_000);
+assert.ok(
+  DATA_FLIGHT_CONFIG.lastQuestionWindowMs >=
+    DATA_FLIGHT_CONFIG.questionReadingMs + DATA_FLIGHT_CONFIG.feverDurationMs + 6_000,
+  "A quiz needs reading time, the answers flying in and a full fever.",
+);
 assert.equal(DATA_FLIGHT_CONFIG.firstQuestionScore, 200);
 assert.equal(DATA_FLIGHT_CONFIG.feverDurationMs, 7_000);
 assert.equal(DATA_FLIGHT_CONFIG.initialHearts, 3);

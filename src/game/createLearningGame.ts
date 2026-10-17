@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { GAME_SIZE } from "./assets";
+import { installGameErrorGuard } from "./core/runtime/gameErrorGuard";
 import { syncPageBackdrop } from "./core/runtime/pageBackdrop";
 import { isLowPowerDevice, isTouchFirstDevice } from "./core/runtime/devicePerformance";
 import { selectRenderScale } from "./core/runtime/renderResolution";
@@ -47,6 +48,7 @@ export function createLearningGame(
     },
     scene: createRegisteredScenes({ onReady, renderScale }),
   });
+  installGameErrorGuard(game);
   syncPageBackdrop(game);
   return game;
 }

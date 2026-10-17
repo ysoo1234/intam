@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { createWorldReturnSceneData } from "../../../core/navigation";
+import { recordActivityStars } from "../../../core/navigation/worldProgressStorage";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import { preloadGameChromeAssets } from "../../../core/visual/gameChrome";
 import { preloadGameResultOverlayAssets } from "../../../core/visual/gameResultOverlay";
@@ -111,13 +112,12 @@ export class AirportScene extends Phaser.Scene {
       createAirportBackground(this));
     ({ player: this.player, playerAura: this.playerAura, react: this.reactPlayer, setFever: this.setPlayerFever } =
       createAirportPlayer(this));
-    this.hud = new AirportHud(this, () => this.returnToWorld());
-    this.controls = createAirportControls(
-      this,
-      () => this.returnToWorld(),
-      () => this.finished,
-      () => this.scene.restart(),
-    );
+    this.hud = new AirportHud(this, {
+      onRestart: () => this.scene.restart(),
+      onWorld: () => this.returnToWorld(),
+      canPause: () => !this.finished,
+    });
+    this.controls = createAirportControls(this, () => this.finished, () => this.scene.restart());
     createGameStartOverlay(this, DATA_FLIGHT_START, (withTutorial) => this.handleStart(withTutorial), {
       help: { question: "튜토리얼을 다시 볼까요?" },
     });
@@ -256,8 +256,7 @@ export class AirportScene extends Phaser.Scene {
     readingMs: number = DATA_FLIGHT_CONFIG.questionReadingMs,
   ) {
     this.questionIndex += 1;
-    this.nextQuestionAtMs =
-      this.elapsedMs + DATA_FLIGHT_CONFIG.questionIntervalMs;
+    this.nextQuestionAtMs = this.elapsedMs + DATA_FLIGHT_CONFIG.questionIntervalMs;
     this.clearObjects();
     this.activeQuestion = {
       question,
@@ -313,16 +312,14 @@ export class AirportScene extends Phaser.Scene {
     if (!selected) {
       showAirportNotice(this, "데이터를 놓쳤어요!", "다음 문제에 다시 도전해요.", 0xf5bd46);
       this.nextDataAtMs = this.elapsedMs + DATA_FLIGHT_CONFIG.questionMissDataDelayMs;
-      this.nextObstacleAtMs =
-        this.elapsedMs + DATA_FLIGHT_CONFIG.questionMissObstacleDelayMs;
+      this.nextObstacleAtMs = this.elapsedMs + DATA_FLIGHT_CONFIG.questionMissObstacleDelayMs;
       return;
     }
 
     if (!correct) {
       this.reactPlayer?.("ouch");
       this.hearts = decrementHeart(this.hearts);
-      this.invulnerableUntilMs =
-        this.elapsedMs + DATA_FLIGHT_CONFIG.invulnerabilityMs;
+      this.invulnerableUntilMs = this.elapsedMs + DATA_FLIGHT_CONFIG.invulnerabilityMs;
       this.renderHud();
       this.cameras.main.shake(180, 0.006);
       vibrateDevice([35, 45, 35]);
@@ -340,17 +337,14 @@ export class AirportScene extends Phaser.Scene {
         );
         return;
       }
-      this.nextDataAtMs =
-        this.elapsedMs + DATA_FLIGHT_CONFIG.wrongAnswerDataDelayMs;
-      this.nextObstacleAtMs =
-        this.elapsedMs + DATA_FLIGHT_CONFIG.wrongAnswerObstacleDelayMs;
+      this.nextDataAtMs = this.elapsedMs + DATA_FLIGHT_CONFIG.wrongAnswerDataDelayMs;
+      this.nextObstacleAtMs = this.elapsedMs + DATA_FLIGHT_CONFIG.wrongAnswerObstacleDelayMs;
       return;
     }
 
     this.correctAnswers += 1;
     this.addScore(DATA_FLIGHT_CONFIG.correctAnswerScore);
-    this.feverUntilMs =
-      this.elapsedMs + DATA_FLIGHT_CONFIG.feverDurationMs;
+    this.feverUntilMs = this.elapsedMs + DATA_FLIGHT_CONFIG.feverDurationMs;
     this.invulnerableUntilMs = this.feverUntilMs;
     this.nextDataAtMs = this.elapsedMs;
     this.nextObstacleAtMs =
@@ -540,6 +534,8 @@ export class AirportScene extends Phaser.Scene {
     this.failurePending = false;
     this.finished = true;
     this.earnedStars = getDataFlightStars(this.score);
+    // Saved right away: a replay that does worse must not lose these stars.
+    recordActivityStars(this.registry, "data-flight", this.earnedStars);
     if (this.controls) this.controls.pointer.active = false;
     this.clearObjects();
     this.activeQuestion = undefined;
@@ -635,7 +631,8 @@ export class AirportScene extends Phaser.Scene {
       this.score >= DATA_FLIGHT_CONFIG.firstQuestionScore;
     const laterQuestionReady =
       this.questionIndex > 0 && this.elapsedMs >= this.nextQuestionAtMs;
-    if (!this.activeQuestion && !fever && (firstQuestionReady || laterQuestionReady)) {
+    const questionFits = this.remainingMs >= DATA_FLIGHT_CONFIG.lastQuestionWindowMs;
+    if (!this.activeQuestion && !fever && questionFits && (firstQuestionReady || laterQuestionReady)) {
       this.startQuestion();
     }
     if (
@@ -649,8 +646,7 @@ export class AirportScene extends Phaser.Scene {
       if (this.elapsedMs >= this.nextDataAtMs) {
         if (fever) {
           this.spawnFeverFormation();
-          this.nextDataAtMs =
-            this.elapsedMs + DATA_FLIGHT_CONFIG.feverFormationIntervalMs;
+          this.nextDataAtMs = this.elapsedMs + DATA_FLIGHT_CONFIG.feverFormationIntervalMs;
         } else {
           this.spawnData();
           this.nextDataAtMs =

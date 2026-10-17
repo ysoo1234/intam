@@ -1,10 +1,12 @@
 import Phaser from "phaser";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { createWorldReturnSceneData } from "../../../core/navigation";
+import { recordActivityStars } from "../../../core/navigation/worldProgressStorage";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import {
-  createGameStatusHud, createVillageReturnButton, preloadGameChromeAssets, type GameStatusHud,
+  createGameStatusHud, preloadGameChromeAssets, type GameStatusHud,
 } from "../../../core/visual/gameChrome";
+import { createGamePauseMenu } from "../../../core/visual/gamePauseMenu";
 import { createGameStartOverlay, preloadGameStartOverlayAssets } from "../../../core/visual/gameStartOverlay";
 import { markTutorialSeen, shouldPlayTutorial } from "../../../core/navigation/tutorialProgressStorage";
 import { isCoachCardOpen, playCoachCountdown, preloadCoachAssets } from "../../../core/visual/coachGuide";
@@ -85,13 +87,17 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.player = createEthicsReviewPlayer(this);
     this.form = createEthicsReviewForm(this, () => this.handleContinue());
     this.stations = createEthicsReviewStations(this, action => this.requestStamp(action));
-    createVillageReturnButton(this, () => this.returnToWorld());
+    createGamePauseMenu(this, {
+      onRestart: () => this.scene.restart(),
+      onWorld: () => this.returnToWorld(),
+      canPause: () => !this.leaving && this.state?.phase !== "result",
+    });
     this.hud = createGameStatusHud(this, ["손님 0명", "0점", "콤보 0", "02:00"]);
     this.audio = createEthicsStampAudio(this);
     this.controls = createEthicsReviewControls(
       this, () => this.canStamp(),
       action => Boolean(this.state && canRequestEthicsAction(this.state.phase, action)),
-      () => this.returnToWorld(), action => this.handleAction(action), () => this.handleContinue(),
+      action => this.handleAction(action), () => this.handleContinue(),
     );
     this.input.keyboard?.on("keydown", this.warmAudio, this);
     this.input.on("pointerdown", this.warmAudio, this);
@@ -364,6 +370,8 @@ export class EthicsReviewScene extends Phaser.Scene {
     setEthicsStationState(this.stations, false);
     const stars = getEthicsReviewStars(this.state.score);
     if (this.earnedStars === undefined || stars > this.earnedStars) this.earnedStars = stars;
+    // Saved right away: a replay that does worse must not lose these stars.
+    recordActivityStars(this.registry, "ethics-review", stars);
     this.result = createEthicsResultOverlay(this, {
       stars, score: this.state.score, completedCount: this.state.completedCount,
       processedCount: this.state.processedCount, bestCombo: this.state.bestCombo,

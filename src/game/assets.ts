@@ -1,6 +1,8 @@
 export const GAME_ASSETS = {
   ui: {
     villageReturnButton: "/assets/ui/game-return-button-house-v2.webp",
+    // The same plate with pause bars instead of the house (drawn over v2).
+    pauseButton: "/assets/ui/game-pause-button-v1.webp",
     statusPanel: "/assets/ui/game-status-panel-blank-v1.webp",
     gameStartPanel: "/assets/ui/game-start-panel-v1.webp",
     gameStartButton: "/assets/ui/game-start-button-v1.webp",

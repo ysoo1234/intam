@@ -25,7 +25,6 @@ export type AirportControls = {
 
 export function createAirportControls(
   scene: Phaser.Scene,
-  onBack: () => void,
   isFinished: () => boolean,
   onRestart: () => void,
 ): AirportControls {
@@ -58,7 +57,6 @@ export function createAirportControls(
     return point;
   };
 
-  scene.input.keyboard?.on("keydown-ESC", onBack);
   scene.input.keyboard?.on("keydown-SPACE", () => {
     if (isFinished()) onRestart();
   });

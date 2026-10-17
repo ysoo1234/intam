@@ -1,8 +1,9 @@
 import Phaser from "phaser";
+import { createGamePauseMenu } from "../../../core/visual/gamePauseMenu";
 import { applyArtTone } from "../../../core/visual/artTone";
 import {
   createGameStatusHud,
-  createVillageReturnButton,
+  
 } from "../../../core/visual/gameChrome";
 import { COLORS, FONT_FAMILY, getTextStyle } from "../../../core/visual/theme";
 import { AI_WORKSHOP_LAYOUT } from "./layout";
@@ -118,9 +119,9 @@ export function createWorkshopBackground(
 
 export function createWorkshopHud(
   scene: Phaser.Scene,
-  onBack: () => void,
+  pause: Parameters<typeof createGamePauseMenu>[1],
 ): WorkshopHudView {
-  createVillageReturnButton(scene, onBack);
+  createGamePauseMenu(scene, pause);
   const statusHud = createGameStatusHud(scene, [
     "손님 1명",
     "수입 0코인",
