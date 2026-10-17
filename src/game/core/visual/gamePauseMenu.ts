@@ -41,16 +41,28 @@ export function createGamePauseMenu(
   }>,
 ) {
   // --- The button -------------------------------------------------------------
-  // The painted plate with pause bars where the house used to be.
+  // On the start screen the plate shows the house and goes straight back to
+  // the village; once the game runs it shows the pause bars and opens the menu.
   const background = scene.add
-    .image(0, 0, GAME_CHROME_TEXTURES.pauseButton)
+    .image(0, 0, GAME_CHROME_TEXTURES.villageReturnButton)
     .setDisplaySize(BUTTON.width, BUTTON.height);
   const label = scene.add
-    .text(BUTTON.width * 0.11, 0, "멈춤", {
-      color: "#315567", fontFamily: FONT_FAMILY, fontSize: "17px", fontStyle: "bold", padding: { right: 4 },
+    .text(BUTTON.width * 0.11, 0, "마을로 돌아가기", {
+      color: "#315567", fontFamily: FONT_FAMILY, fontSize: "15px", fontStyle: "bold", padding: { right: 4 },
     })
     .setOrigin(0.5)
     .setResolution(TEXT_RESOLUTION);
+  let showingReturn = true;
+  const refreshButton = () => {
+    const onStartScreen = isGameStartOverlayOpen(scene);
+    if (onStartScreen === showingReturn) return;
+    showingReturn = onStartScreen;
+    background
+      .setTexture(onStartScreen ? GAME_CHROME_TEXTURES.villageReturnButton : GAME_CHROME_TEXTURES.pauseButton)
+      .setDisplaySize(BUTTON.width, BUTTON.height);
+    label.setText(onStartScreen ? "마을로 돌아가기" : "멈춤").setFontSize(onStartScreen ? 15 : 17);
+  };
+  scene.events.on(Phaser.Scenes.Events.UPDATE, refreshButton);
   const button = scene.add
     .container(BUTTON.x, BUTTON.y, [background, label])
     .setDepth(VILLAGE_RETURN_BUTTON_DEPTH)
@@ -61,12 +73,18 @@ export function createGamePauseMenu(
   button.on("pointerout", () => button.setScale(1));
   button.on("pointerdown", ((_pointer, _x, _y, event) => {
     event.stopPropagation();
+    if (isGameStartOverlayOpen(scene)) {
+      options.onWorld();
+      return;
+    }
     open();
   }) as PointerHandler);
 
   // --- The menu -----------------------------------------------------------------
   let overlay: Phaser.GameObjects.GameObject[] = [];
   let paused = false;
+  /** The 3-2-1 after 이어하기: still frozen, and the menu cannot reopen yet. */
+  let countingDown = false;
   /** Whether the game clock was running when paused (then it resumes with 3-2-1). */
   let wasRunning = false;
 
@@ -112,9 +130,17 @@ export function createGamePauseMenu(
   const resume = () => {
     if (!paused) return;
     closeMenu();
-    thaw();
-    // A short 3-2-1 so nobody is caught out by the game moving again.
-    if (wasRunning) playCoachCountdown(scene, () => {});
+    if (!wasRunning) {
+      thaw();
+      return;
+    }
+    // A 3-2-1 on the browser's clock while everything stays frozen, so no
+    // customer walks, no line types and nothing finishes until "시작!".
+    countingDown = true;
+    playCoachCountdown(scene, () => {
+      countingDown = false;
+      if (scene.sys.isActive()) thaw();
+    }, { frozen: true });
   };
   const restart = () => {
     if (!paused) return;
@@ -130,7 +156,7 @@ export function createGamePauseMenu(
   };
 
   function open() {
-    if (paused || options.canPause?.() === false) return;
+    if (paused || countingDown || isGameStartOverlayOpen(scene) || options.canPause?.() === false) return;
     paused = true;
     freeze();
     const blocker = scene.add.rectangle(640, 360, 1280, 720, 0x102d37, 0.5).setDepth(MENU_DEPTH - 1).setInteractive();
@@ -164,12 +190,14 @@ export function createGamePauseMenu(
     event.preventDefault();
     if (event.repeat) return;
     if (paused) resume();
+    else if (isGameStartOverlayOpen(scene)) options.onWorld();
     else open();
   };
   scene.input.keyboard?.on("keydown-ESC", onEscape);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     scene.input.keyboard?.off("keydown-ESC", onEscape);
-    if (paused) {
+    scene.events.off(Phaser.Scenes.Events.UPDATE, refreshButton);
+    if (paused || countingDown) {
       closeMenu();
       thaw();
     }

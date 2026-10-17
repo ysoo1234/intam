@@ -85,9 +85,10 @@ canvas {
   z-index: 2;
   display: grid;
   place-items: center;
-  background: #fdf0ca;
-  color: #173f43;
-  transition: opacity 280ms ease;
+  /* The first screen's sky, so the game appears without a colour jump. */
+  background: linear-gradient(180deg, #7fd0f2 0%, #94b5e5 50%, #a99ad8 100%);
+  color: #315567;
+  transition: opacity 320ms ease;
 }
 
 .game-loading.is-ready {
@@ -95,46 +96,73 @@ canvas {
   opacity: 0;
 }
 
-.loading-mark {
+/* The same cream card with a teal outline as the start screens. */
+.loading-card {
   display: grid;
-  gap: 16px;
+  gap: 14px;
   place-items: center;
-  font-size: clamp(16px, 2vw, 28px);
+  min-width: min(72%, 420px);
+  padding: 28px 36px 26px;
+  background: #fffdf6;
+  border: 4px solid #6fb0b2;
+  border-radius: 28px;
+  box-shadow: 0 8px 0 rgb(22 63 74 / 22%);
+}
+
+.loading-title {
+  font-size: clamp(22px, 3vw, 34px);
   font-weight: 900;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
+  color: #2b6a80;
 }
 
-.loading-flower {
-  position: relative;
-  width: 58px;
-  height: 58px;
-  animation: loading-spin 2.2s linear infinite;
+.loading-text {
+  font-size: clamp(15px, 1.8vw, 20px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.loading-flower::before,
-.loading-flower::after {
-  position: absolute;
-  inset: 0;
-  border: 12px dotted #f87962;
+/* Three little gems bobbing in turn: teal, coral, yellow. */
+.loading-dots {
+  display: flex;
+  gap: 12px;
+  height: 22px;
+  align-items: center;
+}
+
+.loading-dots i {
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  content: "";
+  background: #70cfaa;
+  animation: loading-bob 1.1s ease-in-out infinite;
 }
 
-.loading-flower::after {
-  inset: 19px;
-  border: 0;
+.loading-dots i:nth-child(2) {
+  background: #f87962;
+  animation-delay: 0.18s;
+}
+
+.loading-dots i:nth-child(3) {
   background: #f5bd46;
-  border-radius: 50%;
+  animation-delay: 0.36s;
+}
+
+@keyframes loading-bob {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.75;
+  }
+
+  40% {
+    transform: translateY(-9px) scale(1.12);
+    opacity: 1;
+  }
 }
 
 .orientation-note {
   display: none;
-}
-
-@keyframes loading-spin {
-  to {
-    transform: rotate(1turn);
-  }
 }
 
 @media (orientation: portrait) and (max-width: 760px) {
@@ -166,7 +194,7 @@ canvas {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .loading-flower {
+  .loading-dots i {
     animation: none;
   }
 }

@@ -447,16 +447,41 @@ export function showCoachPraise(
 export function playCoachCountdown(
   scene: Phaser.Scene,
   onDone: () => void,
-  options: Readonly<{ depth?: number }> = {},
+  options: Readonly<{
+    depth?: number;
+    /**
+     * Run on the browser's own clock, with no tweens: for a countdown while
+     * the scene's clock and tweens are paused (coming back from 멈춤), so
+     * nothing in the game moves until "시작!".
+     */
+    frozen?: boolean;
+  }> = {},
 ) {
   const depth = options.depth ?? 1_200;
+  const frozen = options.frozen === true;
   const shade = scene.add.rectangle(640, 360, 1280, 720, 0x102d37, 0.32).setDepth(depth).setInteractive();
   // Counts as an open card so the game waits until "시작!".
   openCards.set(scene, (openCards.get(scene) ?? 0) + 1);
   const labels = ["3", "2", "1", "시작!"];
   let index = 0;
+  const wait = (ms: number, run: () => void) => {
+    if (!frozen) {
+      scene.time.delayedCall(ms, run);
+      return;
+    }
+    window.setTimeout(() => {
+      if (scene.sys.isActive()) run();
+    }, ms);
+  };
   const showNext = () => {
     if (index >= labels.length) {
+      if (frozen) {
+        openCards.set(scene, Math.max(0, (openCards.get(scene) ?? 1) - 1));
+        scene.input.keyboard?.resetKeys();
+        shade.destroy();
+        onDone();
+        return;
+      }
       openCards.set(scene, Math.max(0, (openCards.get(scene) ?? 1) - 1));
       scene.input.keyboard?.resetKeys();
       scene.tweens.add({
@@ -480,12 +505,21 @@ export function playCoachCountdown(
       .setDepth(depth + 1)
       .setScale(1.6)
       .setAlpha(0);
+    if (frozen) {
+      // No tweens while everything is paused: the number simply shows, then goes.
+      text.setScale(1).setAlpha(1);
+      wait(isGo ? 560 : 800, () => {
+        text.destroy();
+        showNext();
+      });
+      return;
+    }
     scene.tweens.add({ targets: text, scale: 1, alpha: 1, duration: 260, ease: "Back.easeOut" });
     scene.tweens.add({
       targets: text, alpha: 0, scale: 0.8, delay: isGo ? 520 : 600, duration: 200, ease: "Sine.easeIn",
       onComplete: () => text.destroy(),
     });
-    scene.time.delayedCall(isGo ? 560 : 800, showNext);
+    wait(isGo ? 560 : 800, showNext);
   };
   showNext();
 }

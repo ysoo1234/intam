@@ -29,7 +29,8 @@ export function createLearningGame(
     parent,
     width: renderWidth,
     height: renderHeight,
-    backgroundColor: "#f8d792",
+    // Shown only until the first frame: the first screen's sky, like the loading page.
+    backgroundColor: "#94b5e5",
     render: {
       antialias: true,
       antialiasGL: true,
