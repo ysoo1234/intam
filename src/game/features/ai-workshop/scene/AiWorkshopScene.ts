@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { SCENE_FADE_RGB } from "../../../core/visual/theme";
 import { GAME_ASSETS } from "../../../assets";
 import type { ControlKeys } from "../../../core/input/controlKeys";
 import type { PlayerFacing } from "../../../core/player/playerFacing";
@@ -671,7 +672,7 @@ export class AiWorkshopScene extends Phaser.Scene {
   }
 
   private returnToWorld() {
-    this.cameras.main.fadeOut(220, 255, 245, 220);
+    this.cameras.main.fadeOut(220, ...SCENE_FADE_RGB);
     this.time.delayedCall(220, () =>
       this.scene.start(SCENE_KEYS.world, createWorldReturnSceneData("ai-workshop", this.earnedStars)),
     );

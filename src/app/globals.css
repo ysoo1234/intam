@@ -101,19 +101,12 @@ canvas {
   display: grid;
   gap: 14px;
   place-items: center;
-  min-width: min(72%, 420px);
-  padding: 28px 36px 26px;
+  min-width: min(60%, 300px);
+  padding: 26px 40px 22px;
   background: #fffdf6;
   border: 4px solid #6fb0b2;
   border-radius: 28px;
   box-shadow: 0 8px 0 rgb(22 63 74 / 22%);
-}
-
-.loading-title {
-  font-size: clamp(22px, 3vw, 34px);
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  color: #2b6a80;
 }
 
 .loading-text {

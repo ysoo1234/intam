@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { GAME_ASSETS } from "../../../assets";
+import { SCENE_FADE_RGB } from "../../../core/visual/theme";
 import {
   makeControlKeys,
   type ControlKeys,
@@ -30,12 +30,9 @@ import {
   applyPlayerTexture,
   choosePlayerFacing,
   getPlayerTexture,
-  preloadPlayerTextures,
   settlePlayerTurn,
   startPlayerBlink,
 } from "../../../core/player/playerSprite";
-import { preloadMidiFaces } from "../../../core/player/midiFrames";
-import { preloadCoachAssets } from "../../../core/visual/coachGuide";
 import { askYesNo } from "../../../core/visual/gameStartOverlay";
 import { resetAllGameProgress } from "../../../core/navigation/resetProgress";
 import { clearEndingSeen } from "../../../core/navigation/endingProgressStorage";
@@ -69,16 +66,15 @@ import {
   createVillageScenery,
   getVillagePlayerDepth,
   type VillageSceneryLayer,
-  preloadVillageScenery,
   updateVillageSceneryDepths,
   VILLAGE_UI_DEPTH,
 } from "./villageScenery";
 import {
   createVillageProgressPresentation,
-  preloadVillageProgressPresentationAssets,
 } from "./villageProgressPresentation";
 import { createVillageNameTags } from "./villageNameTags";
 import { createVillageTestMenu } from "./villageTestMenu";
+import { preloadWorldSceneAssets } from "./worldSceneAssets";
 import { VILLAGE_PLAYER_DISPLAY_HEIGHT } from "./villagePreview";
 import { createVillageTutorial, type VillageTutorial } from "./villageTutorial";
 import {
@@ -151,18 +147,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   preload() {
-    preloadVillageScenery(this, WORLD_MAP);
-    preloadVillageProgressPresentationAssets(this);
-    if (!this.textures.exists("village-entry-button")) {
-      this.load.image(
-        "village-entry-button",
-        GAME_ASSETS.ui.villageEntryButton,
-      );
-    }
-    preloadPlayerTextures(this);
-    // Textbook face frames, so Midi's mouth and eyes move while she talks.
-    preloadMidiFaces(this);
-    preloadCoachAssets(this);
+    preloadWorldSceneAssets(this);
   }
 
   create(data?: unknown) {
@@ -292,7 +277,7 @@ export class WorldScene extends Phaser.Scene {
 
     // Straight out of the intro's door the village is already on screen exactly as
     // drawn there, so it must not fade in again.
-    if (!isVillageDoorArrival(data)) this.cameras.main.fadeIn(350, 255, 245, 220);
+    if (!isVillageDoorArrival(data)) this.cameras.main.fadeIn(350, ...SCENE_FADE_RGB);
   }
 
   /**
@@ -497,7 +482,7 @@ export class WorldScene extends Phaser.Scene {
 
     markTutorialSeen("village");
     this.tutorial?.notifyEntered();
-    this.cameras.main.fadeOut(230, 255, 245, 220);
+    this.cameras.main.fadeOut(230, ...SCENE_FADE_RGB);
     const destination = resolveFeatureSceneKey(
       this.nearestBuilding.destination.featureId,
     );

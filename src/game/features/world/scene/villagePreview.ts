@@ -4,15 +4,14 @@ import type { WorldActivityId } from "../../../core/navigation/worldProgress";
 import type { VillageLandmarks, VillagePreview } from "../../../core/scenes/villagePreview";
 import type { SceneryDefinition } from "../model/mapDefinition";
 import { getWorldMapDefinition } from "../model/mapRegistry";
+import { preloadWorldSceneAssets } from "./worldSceneAssets";
 import {
   createVillageProgressPresentation,
-  preloadVillageProgressPresentationAssets,
 } from "./villageProgressPresentation";
 import {
   createAiWorldPortalView,
   createVillageScenery,
   getAiWorldPortalScreen,
-  preloadVillageScenery,
   updateVillageSceneryDepths,
 } from "./villageScenery";
 
@@ -80,10 +79,8 @@ export const WORLD_VILLAGE_PREVIEW: VillagePreview = {
     bottomBelowSpawn: (PLAYER_FRAME.feetBelowPivot - PLAYER_FRAME.padBelow) * frameScale - PLAYER_FRAME.restLift,
   },
   landmarks: getVillageLandmarks(),
-  preload: (scene) => {
-    preloadVillageScenery(scene, WORLD_MAP);
-    preloadVillageProgressPresentationAssets(scene);
-  },
+  // The whole village scene's art, so entering it from the story needs no loading.
+  preload: (scene) => preloadWorldSceneAssets(scene),
   paint: (scene, key, renderScale, emptyRoofs) => {
     const art = [WORLD_MAP.background, ...WORLD_MAP.scenery];
     if (!art.every(({ assetKey }) => scene.textures.exists(assetKey))) return false;

@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { SCENE_FADE_RGB } from "../../../core/visual/theme";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { createWorldReturnSceneData } from "../../../core/navigation";
 import { recordActivityStars } from "../../../core/navigation/worldProgressStorage";
@@ -384,7 +385,7 @@ export class EthicsReviewScene extends Phaser.Scene {
     if (this.leaving) return;
     this.leaving = true;
     this.controls?.cancelMovement();
-    this.cameras.main.fadeOut(220, 255, 245, 220);
+    this.cameras.main.fadeOut(220, ...SCENE_FADE_RGB);
     this.time.delayedCall(220, () => {
       this.scene.start(SCENE_KEYS.world, createWorldReturnSceneData("ethics-review", this.earnedStars));
     });

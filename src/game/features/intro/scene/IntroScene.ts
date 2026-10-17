@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { SCENE_FADE_RGB } from "../../../core/visual/theme";
 import { GAME_ASSETS } from "../../../assets";
 import { getPointerWorldPoint } from "../../../core/input/pointerCoordinates";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
@@ -486,7 +487,7 @@ export class IntroScene extends Phaser.Scene {
         ease: "Sine.easeIn",
       });
       this.time.delayedCall(180, () => {
-        this.cameras.main.fadeOut(180, 255, 245, 220);
+        this.cameras.main.fadeOut(180, ...SCENE_FADE_RGB);
       });
       this.time.delayedCall(380, () => this.scene.start(SCENE_KEYS.world));
       return;
@@ -508,7 +509,7 @@ export class IntroScene extends Phaser.Scene {
       ease: "Cubic.easeIn",
     });
     this.time.delayedCall(620, () => {
-      this.cameras.main.fadeOut(300, 255, 245, 220);
+      this.cameras.main.fadeOut(300, ...SCENE_FADE_RGB);
     });
     this.time.delayedCall(940, () => this.scene.start(SCENE_KEYS.world));
   }

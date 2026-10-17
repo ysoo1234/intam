@@ -120,3 +120,9 @@ export function getTextStyle(
     ...overrides,
   };
 }
+
+/**
+ * The colour every scene change fades through (first screen → village,
+ * village ↔ the places): a soft white, so no change flashes yellow.
+ */
+export const SCENE_FADE_RGB = [246, 249, 255] as const;

@@ -133,13 +133,12 @@ export function GameShell() {
           aria-hidden={ready}
         >
           <div className="loading-card">
-            <span className="loading-title">AI 월드 탐험가</span>
             <span className="loading-dots" aria-hidden="true">
               <i />
               <i />
               <i />
             </span>
-            <span className="loading-text">배움마을로 가는 중…</span>
+            <span className="loading-text">이동하는 중...</span>
           </div>
         </div>
       </section>
