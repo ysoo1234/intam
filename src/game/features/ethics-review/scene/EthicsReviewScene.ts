@@ -1,6 +1,5 @@
 import Phaser from "phaser";
-import { showSceneLoading } from "../../../core/visual/sceneLoading";
-import { irisClose, irisOpen, sceneColor } from "../../../core/visual/irisTransition";
+import { fadeOutOfPlace, startSceneTravel } from "../../../core/visual/sceneTravel";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { createWorldReturnSceneData } from "../../../core/navigation";
 import { recordActivityStars } from "../../../core/navigation/worldProgressStorage";
@@ -80,7 +79,7 @@ export class EthicsReviewScene extends Phaser.Scene {
     preloadEthicsReviewAssets(this);
     preloadCoachAssets(this);
     // A loading card instead of an empty canvas while the pictures load.
-    showSceneLoading(this, this.renderScale);
+    startSceneTravel(this, this.renderScale, "윤리 심사소 가는 중...");
   }
 
   create() {
@@ -117,7 +116,6 @@ export class EthicsReviewScene extends Phaser.Scene {
       this.input.keyboard?.off("keydown", this.warmAudio, this);
       this.input.off("pointerdown", this.warmAudio, this);
     });
-    irisOpen(this, { color: sceneColor(SCENE_KEYS.ethicsReview) });
   }
 
   update() {
@@ -389,7 +387,7 @@ export class EthicsReviewScene extends Phaser.Scene {
     if (this.leaving) return;
     this.leaving = true;
     this.controls?.cancelMovement();
-    irisClose(this, { x: 640, y: 360, color: sceneColor(SCENE_KEYS.world) }, () => {
+    fadeOutOfPlace(this, () => {
       this.scene.start(SCENE_KEYS.world, createWorldReturnSceneData("ethics-review", this.earnedStars));
     });
   }

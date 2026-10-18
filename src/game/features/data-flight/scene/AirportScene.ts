@@ -1,6 +1,5 @@
 import Phaser from "phaser";
-import { irisClose, irisOpen, sceneColor } from "../../../core/visual/irisTransition";
-import { showSceneLoading } from "../../../core/visual/sceneLoading";
+import { fadeOutOfPlace, startSceneTravel } from "../../../core/visual/sceneTravel";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { createWorldReturnSceneData } from "../../../core/navigation";
 import { recordActivityStars } from "../../../core/navigation/worldProgressStorage";
@@ -104,7 +103,7 @@ export class AirportScene extends Phaser.Scene {
     preloadGameStartOverlayAssets(this);
     preloadCoachAssets(this);
     // A loading card instead of an empty canvas while the pictures load.
-    showSceneLoading(this, this.renderScale);
+    startSceneTravel(this, this.renderScale, "데이터 비행장 가는 중...");
   }
   create() {
     configureSceneCamera(this, this.renderScale);
@@ -125,7 +124,6 @@ export class AirportScene extends Phaser.Scene {
     createGameStartOverlay(this, DATA_FLIGHT_START, (withTutorial) => this.handleStart(withTutorial), {
       help: { question: "튜토리얼을 다시 볼까요?" },
     });
-    irisOpen(this, { color: sceneColor(SCENE_KEYS.airport) });
   }
 
   /** `withTutorial`: set by ? (then it ends on the start screen); else first plays only. */
@@ -562,7 +560,7 @@ export class AirportScene extends Phaser.Scene {
 
   private returnToWorld() {
     if (!this.scene.isActive()) return;
-    irisClose(this, { x: 640, y: 360, color: sceneColor(SCENE_KEYS.world) }, () => this.scene.start(
+    fadeOutOfPlace(this, () => this.scene.start(
       SCENE_KEYS.world,
       createWorldReturnSceneData("data-flight", this.earnedStars),
     ));

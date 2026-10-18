@@ -1,6 +1,5 @@
 import Phaser from "phaser";
-import { showSceneLoading } from "../../../core/visual/sceneLoading";
-import { irisClose, irisOpen, sceneColor } from "../../../core/visual/irisTransition";
+import { fadeOutOfPlace, startSceneTravel } from "../../../core/visual/sceneTravel";
 import { GAME_ASSETS } from "../../../assets";
 import type { ControlKeys } from "../../../core/input/controlKeys";
 import type { PlayerFacing } from "../../../core/player/playerFacing";
@@ -129,7 +128,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     preloadPlayerTextures(this);
     preloadCoachAssets(this);
     // A loading card instead of an empty canvas while the pictures load.
-    showSceneLoading(this, this.renderScale);
+    startSceneTravel(this, this.renderScale, "AI 제작소 가는 중...");
   }
 
   create() {
@@ -206,7 +205,6 @@ export class AiWorkshopScene extends Phaser.Scene {
     createGameStartOverlay(this, AI_WORKSHOP_START, (withTutorial) => this.handleStart(withTutorial), {
       help: { question: "튜토리얼을 다시 볼까요?" },
     });
-    irisOpen(this, { color: sceneColor(SCENE_KEYS.aiWorkshop) });
   }
 
   /**
@@ -675,7 +673,7 @@ export class AiWorkshopScene extends Phaser.Scene {
   }
 
   private returnToWorld() {
-    irisClose(this, { x: 640, y: 360, color: sceneColor(SCENE_KEYS.world) }, () =>
+    fadeOutOfPlace(this, () =>
       this.scene.start(SCENE_KEYS.world, createWorldReturnSceneData("ai-workshop", this.earnedStars)),
     );
   }

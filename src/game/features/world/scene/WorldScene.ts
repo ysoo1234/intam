@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { irisClose, irisOpen, sceneColor } from "../../../core/visual/irisTransition";
+import { markSceneTrip, sceneRgb, TRIP_FADE_OUT_MS } from "../../../core/visual/sceneTravel";
 import {
   makeControlKeys,
   type ControlKeys,
@@ -277,8 +277,10 @@ export class WorldScene extends Phaser.Scene {
 
     // Straight out of the intro's door the village is already on screen exactly as
     // drawn there, so it must not fade in again.
+    // Back from a place, out of that place's own colour (it faded into it).
     if (!isVillageDoorArrival(data)) {
-      irisOpen(this, { x: this.player?.x, y: this.player?.y, color: sceneColor(SCENE_KEYS.world) });
+      const from = returnRequest ? resolveFeatureSceneKey(returnRequest.sourceFeatureId) : SCENE_KEYS.world;
+      this.cameras.main.fadeIn(380, ...sceneRgb(from));
     }
   }
 
@@ -487,13 +489,18 @@ export class WorldScene extends Phaser.Scene {
     const destination = resolveFeatureSceneKey(
       this.nearestBuilding.destination.featureId,
     );
-    // The view closes in a circle onto Midi, into the place's own colour;
+    // The village fades into its green, where the trip to the place plays
+    // (sceneTravel);
     // Midi stands still meanwhile (the same "leaving" hold as the ending).
     this.touchMovement?.cancel();
     this.stopPlayer();
     this.endingStarted = true;
-    const door = this.player ?? { x: 640, y: 360 };
-    irisClose(this, { x: door.x, y: door.y, color: sceneColor(destination) }, () => this.scene.start(destination));
+    const camera = this.cameras.main;
+    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      markSceneTrip(destination);
+      this.scene.start(destination);
+    });
+    camera.fadeOut(TRIP_FADE_OUT_MS, ...sceneRgb(SCENE_KEYS.world));
   }
 
   private isPortalAvailable(portal: WorldPortal) {

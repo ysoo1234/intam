@@ -18,6 +18,13 @@ export const PAGE_BACKDROPS: Readonly<Record<SceneKey, PageBackdrop>> = {
   [SCENE_KEYS.ending]: { top: "#94bb86", middle: "#a2ba75", bottom: "#a2ba75" },
 };
 
+let heldKey: string | null = null;
+
+/** Keeps the page in one scene's colours (e.g. the village green during a trip); null lets it follow again. */
+export function holdPageBackdrop(sceneKey: string | null) {
+  heldKey = sceneKey;
+}
+
 export function applyPageBackdrop(sceneKey: string) {
   if (typeof document === "undefined") return;
   const backdrop = PAGE_BACKDROPS[sceneKey as SceneKey];
@@ -36,7 +43,7 @@ export function syncPageBackdrop(game: Phaser.Game) {
   let appliedKey = "";
   game.events.on(Phaser.Core.Events.POST_STEP, () => {
     const scenes = game.scene.getScenes(true);
-    const key = scenes[scenes.length - 1]?.sys.settings.key;
+    const key = heldKey ?? scenes[scenes.length - 1]?.sys.settings.key;
     if (!key || key === appliedKey) return;
     appliedKey = key;
     applyPageBackdrop(key);
