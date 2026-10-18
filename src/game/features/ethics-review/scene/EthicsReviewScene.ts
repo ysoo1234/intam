@@ -205,6 +205,9 @@ export class EthicsReviewScene extends Phaser.Scene {
       this.tutorial = createEthicsReviewTutorial(this, this.stations);
       this.inputReadyAt = Number.POSITIVE_INFINITY;
       this.tutorial.start(() => { this.inputReadyAt = performance.now(); this.uiKey = ""; });
+    } else {
+      // Straight into play: 3-2-1 first; the clock starts on "시작!".
+      playCoachCountdown(this, () => { this.lastTickAt = performance.now(); this.uiKey = ""; });
     }
   }
 

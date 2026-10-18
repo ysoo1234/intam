@@ -11,14 +11,33 @@ import { COLORS, FONT_FAMILY, TEXT_COLORS, UI_MOTION } from "./theme";
  */
 
 const openCards = new WeakMap<Phaser.Scene, number>();
+const runningCountdowns = new WeakMap<Phaser.Scene, number>();
 const MIDI_TEXTURE = "player-front";
 
 export function isCoachCardOpen(scene: Phaser.Scene) {
   return (openCards.get(scene) ?? 0) > 0;
 }
 
+/**
+ * A scene object lives on across 처음부터 다시 (scene.restart), so whatever
+ * was open when it shut down (a card, a 3-2-1, a pause hold) must not carry
+ * over: otherwise the restarted game thinks a card is still up and never
+ * moves again. Cleared once per run of the scene.
+ */
+const resetHooked = new WeakSet<Phaser.Scene>();
+function clearOnShutdown(scene: Phaser.Scene) {
+  if (resetHooked.has(scene)) return;
+  resetHooked.add(scene);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    resetHooked.delete(scene);
+    openCards.delete(scene);
+    runningCountdowns.delete(scene);
+  });
+}
+
 /** Counts as an open card (the game waits), e.g. while the pause menu is up. */
 export function holdCoachCard(scene: Phaser.Scene) {
+  clearOnShutdown(scene);
   openCards.set(scene, (openCards.get(scene) ?? 0) + 1);
 }
 
@@ -140,6 +159,7 @@ export function createCoachCard(scene: Phaser.Scene, config: CoachCardConfig): C
     .container(config.x ?? 640, config.y ?? 130, [hitArea, ...children])
     .setDepth(config.depth ?? 1_100);
 
+  clearOnShutdown(scene);
   openCards.set(scene, (openCards.get(scene) ?? 0) + 1);
   let closed = false;
   const keyboard = scene.input.keyboard;
@@ -443,67 +463,42 @@ export function showCoachPraise(
   return label;
 }
 
-/** Big "3, 2, 1, 시작!" in the middle of the screen, then onDone. The scene counts as paused (isCoachCardOpen) until then. */
+/**
+ * Big "3, 2, 1, 시작!" in the middle of the screen, then onDone. The scene
+ * counts as paused (isCoachCardOpen) until then.
+ *
+ * Each number pops in and fades out on its own little clock (the game's
+ * render step), so it looks the same whether the game clock is running (the
+ * first count, which 멈춤 simply holds) or frozen (the count after 이어하기).
+ */
 export function playCoachCountdown(
   scene: Phaser.Scene,
   onDone: () => void,
   options: Readonly<{
     depth?: number;
     /**
-     * Run on the browser's own clock, with no tweens: for a countdown while
-     * the scene's clock and tweens are paused (coming back from 멈춤), so
-     * nothing in the game moves until "시작!".
+     * Count while the scene's clock and tweens are paused (coming back from
+     * 멈춤), so nothing in the game moves until "시작!". Otherwise the count
+     * holds whenever the scene's clock is paused.
      */
     frozen?: boolean;
+    /** The last word; "시작!" unless a place has its own (e.g. "출발!"). */
+    goLabel?: string;
   }> = {},
 ): CoachCountdown {
   const depth = options.depth ?? 1_200;
-  runningCountdowns.set(scene, (runningCountdowns.get(scene) ?? 0) + 1);
-  const countDone = () => runningCountdowns.set(scene, Math.max(0, (runningCountdowns.get(scene) ?? 1) - 1));
   const frozen = options.frozen === true;
-  const shade = scene.add.rectangle(640, 360, 1280, 720, 0x102d37, 0.32).setDepth(depth).setInteractive();
-  // Counts as an open card so the game waits until "시작!".
+  clearOnShutdown(scene);
+  runningCountdowns.set(scene, (runningCountdowns.get(scene) ?? 0) + 1);
+  // Counts as an open card so the game waits until the last word.
   openCards.set(scene, (openCards.get(scene) ?? 0) + 1);
-  const labels = ["3", "2", "1", "시작!"];
-  let index = 0;
-  let stopped = false;
-  let current: Phaser.GameObjects.Text | undefined;
-  const wait = (ms: number, run: () => void) => {
-    const go = () => {
-      if (!stopped) run();
-    };
-    if (!frozen) {
-      scene.time.delayedCall(ms, go);
-      return;
-    }
-    window.setTimeout(() => {
-      if (scene.sys.isActive()) go();
-    }, ms);
-  };
-  const showNext = () => {
-    if (index >= labels.length) {
-      stopped = true;
-      countDone();
-      if (frozen) {
-        openCards.set(scene, Math.max(0, (openCards.get(scene) ?? 1) - 1));
-        scene.input.keyboard?.resetKeys();
-        shade.destroy();
-        onDone();
-        return;
-      }
-      openCards.set(scene, Math.max(0, (openCards.get(scene) ?? 1) - 1));
-      scene.input.keyboard?.resetKeys();
-      scene.tweens.add({
-        targets: shade, alpha: 0, duration: 160,
-        onComplete: () => shade.destroy(),
-      });
-      onDone();
-      return;
-    }
-    const label = labels[index];
+  const shade = scene.add.rectangle(640, 360, 1280, 720, 0x102d37, 0.32).setDepth(depth).setInteractive();
+  const labels = ["3", "2", "1", options.goLabel ?? "시작!"];
+  const STEP_MS = 800;
+  const GO_MS = 560;
+  const texts = labels.map((label, index) => {
     const isGo = index === labels.length - 1;
-    index += 1;
-    const text = scene.add
+    return scene.add
       .text(640, 350, label, {
         color: isGo ? "#ffe680" : "#fffdf2", fontFamily: FONT_FAMILY,
         fontSize: isGo ? "112px" : "150px", fontStyle: "bold",
@@ -512,41 +507,92 @@ export function playCoachCountdown(
       .setOrigin(0.5)
       .setResolution(2)
       .setDepth(depth + 1)
-      .setScale(1.6)
-      .setAlpha(0);
-    current = text;
-    if (frozen) {
-      // No tweens while everything is paused: the number simply shows, then goes.
-      text.setScale(1).setAlpha(1);
-      wait(isGo ? 560 : 800, () => {
-        text.destroy();
-        showNext();
-      });
-      return;
-    }
-    scene.tweens.add({ targets: text, scale: 1, alpha: 1, duration: 260, ease: "Back.easeOut" });
-    scene.tweens.add({
-      targets: text, alpha: 0, scale: 0.8, delay: isGo ? 520 : 600, duration: 200, ease: "Sine.easeIn",
-      onComplete: () => text.destroy(),
-    });
-    wait(isGo ? 560 : 800, showNext);
+      .setVisible(false);
+  });
+  const total = STEP_MS * 3 + GO_MS;
+  let elapsed = 0;
+  let last = performance.now();
+  let stopped = false;
+  let finished = false;
+
+  const backOut = (t: number) => {
+    const c = 1.70158;
+    return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2);
   };
-  showNext();
+  const clear = () => {
+    scene.game.events.off(Phaser.Core.Events.PRE_RENDER, step);
+    scene.events.off(Phaser.Scenes.Events.SHUTDOWN, onShutdown);
+    texts.forEach((text) => text.destroy());
+    shade.destroy();
+  };
+  const release = () => {
+    runningCountdowns.set(scene, Math.max(0, (runningCountdowns.get(scene) ?? 1) - 1));
+    openCards.set(scene, Math.max(0, (openCards.get(scene) ?? 1) - 1));
+  };
+  function step() {
+    const now = performance.now();
+    const dt = Math.min(now - last, 50);
+    last = now;
+    // The first count holds while 멈춤 has the game frozen.
+    if (!frozen && scene.time.paused) return;
+    elapsed += dt;
+    texts.forEach((text, index) => {
+      const isGo = index === labels.length - 1;
+      const local = elapsed - index * STEP_MS;
+      const life = isGo ? GO_MS + 160 : STEP_MS;
+      if (local < 0 || local > life) {
+        text.setVisible(false);
+        return;
+      }
+      const fadeAt = isGo ? 520 : 600;
+      const pop = Math.min(1, local / 260);
+      let scale = 1.6 + (1 - 1.6) * backOut(pop);
+      let alpha = Math.min(1, pop * 1.2);
+      if (local > fadeAt) {
+        const out = Math.min(1, (local - fadeAt) / 200);
+        const eased = out * out;
+        scale = 1 + (0.8 - 1) * eased;
+        alpha = 1 - eased;
+      }
+      text.setVisible(true).setScale(scale).setAlpha(alpha);
+    });
+    if (!finished && elapsed >= total) {
+      // The game goes on at the last word; the shade lifts as it fades.
+      finished = true;
+      release();
+      // The fading shade must not catch the next tap (e.g. on 멈춤).
+      shade.disableInteractive();
+      scene.input.keyboard?.resetKeys();
+      onDone();
+    }
+    if (finished) {
+      const lift = Math.min(1, (elapsed - total) / 160);
+      shade.setAlpha(1 - lift);
+      if (lift >= 1 && elapsed >= total + 200) {
+        stopped = true;
+        clear();
+      }
+    }
+  }
+  function onShutdown() {
+    if (stopped) return;
+    stopped = true;
+    if (!finished) release();
+    scene.game.events.off(Phaser.Core.Events.PRE_RENDER, step);
+  }
+  scene.game.events.on(Phaser.Core.Events.PRE_RENDER, step);
+  scene.events.once(Phaser.Scenes.Events.SHUTDOWN, onShutdown);
   return {
     cancel: () => {
       if (stopped) return;
       stopped = true;
-      countDone();
-      openCards.set(scene, Math.max(0, (openCards.get(scene) ?? 1) - 1));
-      current?.destroy();
-      shade.destroy();
+      if (!finished) release();
+      clear();
     },
   };
 }
 
-const runningCountdowns = new WeakMap<Phaser.Scene, number>();
-
-/** Whether a 3-2-1 is on screen in this scene. */
+/** Whether a 3-2-1 is still counting in this scene. */
 export function isCoachCountdownRunning(scene: Phaser.Scene) {
   return (runningCountdowns.get(scene) ?? 0) > 0;
 }

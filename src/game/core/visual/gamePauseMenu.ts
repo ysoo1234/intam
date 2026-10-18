@@ -43,6 +43,13 @@ export function createGamePauseMenu(
     onWorld: () => void;
     /** False once the result screen is up (its own buttons take over). */
     canPause?: () => boolean;
+    /** The 3-2-1's last word after 이어하기 ("출발!" at the airport). */
+    goLabel?: string;
+    /**
+     * True while the place's own start count is running (the airport's
+     * HUD 3-2-1): 멈춤 just holds it, and 이어하기 lets it carry on.
+     */
+    isCountingDown?: () => boolean;
   }>,
 ) {
   // --- The button -------------------------------------------------------------
@@ -95,7 +102,7 @@ export function createGamePauseMenu(
   let wasRunning = false;
 
   const freeze = () => {
-    wasRunning = !isGameStartOverlayOpen(scene) && !isCoachCardOpen(scene);
+    wasRunning = !isGameStartOverlayOpen(scene) && !isCoachCardOpen(scene) && options.isCountingDown?.() !== true;
     holdCoachCard(scene);
     scene.time.paused = true;
     scene.tweens.pauseAll();
@@ -145,7 +152,7 @@ export function createGamePauseMenu(
     countdown = playCoachCountdown(scene, () => {
       countdown = undefined;
       if (scene.sys.isActive()) thaw();
-    }, { frozen: true });
+    }, { frozen: true, goLabel: options.goLabel });
   };
   const restart = () => {
     if (!paused) return;

@@ -118,7 +118,7 @@ export class AirportScene extends Phaser.Scene {
     this.hud = new AirportHud(this, {
       onRestart: () => this.scene.restart(),
       onWorld: () => this.returnToWorld(),
-      canPause: () => !this.finished,
+      canPause: () => !this.finished, goLabel: "출발!", isCountingDown: () => this.countdownMs > 0,
     });
     this.controls = createAirportControls(this, () => this.finished, () => this.scene.restart());
     createGameStartOverlay(this, DATA_FLIGHT_START, (withTutorial) => this.handleStart(withTutorial), {
@@ -150,7 +150,7 @@ export class AirportScene extends Phaser.Scene {
         this.tutorial = undefined;
         if (replaying) { this.scene.restart(); return; }
         this.resetForRealGame();
-        playCoachCountdown(this, () => this.renderHud());
+        playCoachCountdown(this, () => this.renderHud(), { goLabel: "출발!" });
       },
     );
   }

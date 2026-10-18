@@ -2,6 +2,7 @@
 
 import type Phaser from "phaser";
 import { useEffect, useRef, useState } from "react";
+import { GameLoadingTrip } from "./GameLoadingTrip";
 
 type NextDevelopmentWindow = Window &
   typeof globalThis & {
@@ -128,19 +129,7 @@ export function GameShell() {
         aria-describedby="game-controls"
       >
         <div ref={gameParentRef} className="game-canvas" />
-        <div
-          className={`game-loading${ready ? " is-ready" : ""}`}
-          aria-hidden={ready}
-        >
-          <div className="loading-card">
-            <span className="loading-dots" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </span>
-            <span className="loading-text">이동하는 중...</span>
-          </div>
-        </div>
+        <GameLoadingTrip ready={ready} />
       </section>
       <p id="game-controls" className="orientation-note">
         가로로 돌리면 더 넓게 플레이할 수 있어요

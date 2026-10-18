@@ -10,16 +10,17 @@ import {
 } from "../../../core/navigation/worldProgress";
 import { loadStoredWorldProgress } from "../../../core/navigation/worldProgressStorage";
 import { hasSeenEnding, markEndingSeen } from "../../../core/navigation/endingProgressStorage";
-import { MIDI_POSE, preloadMidiFaces } from "../../../core/player/midiFrames";
+import { MIDI_POSE } from "../../../core/player/midiFrames";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { readEndingStart, type EndingStart } from "../../../core/scenes/endingStart";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import type { VillagePreview } from "../../../core/scenes/villagePreview";
-import { addEndingArtButton, preloadEndingButtons } from "./endingButtons";
+import { addEndingArtButton } from "./endingButtons";
+import { preloadEndingAssets } from "./endingAssets";
 import { FONT_FAMILY } from "../../../core/visual/theme";
 import { showEndingCertificate, type FinishedCertificate } from "./endingCertificateView";
 import { createEndingDialogue, type EndingDialogue } from "./endingDialogue";
-import { ENDING_FINALE_TEXTURES, showEndingFinale } from "./endingFinale";
+import { showEndingFinale } from "./endingFinale";
 import {
   ENDING_CINEMA_BAR,
   ENDING_CUSTOMER_SPOTS,
@@ -28,7 +29,7 @@ import {
   ENDING_SKIP,
 } from "./endingLayout";
 import { ensureEndingLights } from "./endingLights";
-import { createEndingPortal, endingCustomerTexture, ENDING_PORTAL_TEXTURES, type EndingPortal } from "./endingPortal";
+import { createEndingPortal, type EndingPortal } from "./endingPortal";
 import { createEndingVillage, ENDING_VILLAGE_TEXTURES, type EndingVillage } from "./endingVillage";
 
 /** Nine stars in all: three places, three stars each. */
@@ -70,18 +71,9 @@ export class EndingScene extends Phaser.Scene {
 
   preload() {
     this.villagePreview?.preload(this);
-    const load = (key: string, url: string) => {
-      if (!this.textures.exists(key)) this.load.image(key, url);
-    };
-    load(ENDING_VILLAGE_TEXTURES.snapshot, GAME_ASSETS.intro.storyVillage);
-    load(ENDING_VILLAGE_TEXTURES.star, GAME_ASSETS.ui.villageActivityStarFilled);
-    load(ENDING_PORTAL_TEXTURES.library, GAME_ASSETS.ending.library);
-    load(ENDING_PORTAL_TEXTURES.frame, GAME_ASSETS.intro.storyFrame);
-    load(ENDING_FINALE_TEXTURES.board, GAME_ASSETS.intro.board);
-    GAME_ASSETS.ending.customers.forEach((url, index) => load(endingCustomerTexture(index), url));
-    preloadEndingButtons(this);
-    preloadMidiFaces(this);
-    // A loading card instead of an empty canvas while the pictures load.
+    // Normally all loaded already in the village (preloadEndingInBackground);
+    // the loading card only shows if the ending is opened straight away.
+    preloadEndingAssets(this);
     showSceneLoading(this, this.renderScale);
   }
 

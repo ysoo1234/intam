@@ -3,7 +3,7 @@ import type { SceneKey } from "./core/scenes/sceneKeys";
 import { SCENE_KEYS } from "./core/scenes/sceneKeys";
 import { AirportScene } from "./features/data-flight/scene";
 import { AiWorkshopScene } from "./features/ai-workshop/scene";
-import { EndingScene } from "./features/ending/scene";
+import { EndingScene, preloadEndingInBackground } from "./features/ending/scene";
 import { EthicsReviewScene } from "./features/ethics-review/scene";
 import { IntroScene } from "./features/intro/scene";
 import { WORLD_VILLAGE_PREVIEW, WorldScene } from "./features/world/scene";
@@ -93,6 +93,16 @@ export function defineSceneRegistry(
   return Object.freeze([...registrations]);
 }
 
+/** The village also loads the ending's few pictures quietly, so the ending opens with no loading. */
+function withEndingPreload(world: WorldScene) {
+  const create = world.create.bind(world);
+  world.create = (data?: unknown) => {
+    create(data);
+    preloadEndingInBackground(world);
+  };
+  return world;
+}
+
 export const GAME_SCENE_REGISTRY = defineSceneRegistry([
   {
     id: "intro",
@@ -106,7 +116,7 @@ export const GAME_SCENE_REGISTRY = defineSceneRegistry([
     id: "world",
     sceneKey: SCENE_KEYS.world,
     assetScopes: ["world", "player"],
-    create: ({ renderScale }) => new WorldScene(renderScale),
+    create: ({ renderScale }) => withEndingPreload(new WorldScene(renderScale)),
   },
   {
     id: "ai-workshop",
