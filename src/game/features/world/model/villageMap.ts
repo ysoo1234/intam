@@ -179,7 +179,7 @@ export const VILLAGE_MAP = defineMap({
       // The front yard below and beside the hangar door and the plane (not
       // the plain wall side or the lawn behind it).
       position: offsetVillagePoint("airport", { x: 895, y: 271 }),
-      label: "데이터 비행 공항",
+      label: "데이터 비행장",
       availability: { kind: "always" },
       destination: {
         kind: "feature",

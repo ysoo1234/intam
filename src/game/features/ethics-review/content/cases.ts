@@ -67,7 +67,7 @@ export const ETHICS_REVIEW_CASES: readonly EthicsReviewCase[] = [
     "'만 14세 이상'이 무슨 뜻인지\n몰라서 그냥 가입했어요.",
     "모르는 표시가 있으면 어른께 먼저 물어봐요."),
   form("sibling-app", "age", "reject",
-    "언니가 쓰는 AI 앱이라\n저도 그냥 사용했어요.",
+    "가족이 쓰는 AI 앱이라\n저도 그냥 사용했어요.",
     "다른 사람이 써도 내 나이에 맞는지 확인해요."),
 
   // AI 도움 표시 (도움받은 부분 기록, AI가 만든 결과물 표시)
