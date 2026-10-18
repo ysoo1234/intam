@@ -279,7 +279,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🔐",
     productId: "face-lock",
     dialogue:
-      "비밀번호가 자꾸 머릿속에서 숨바꼭질해요. 제 얼굴로 잠금을 풀고 싶어요.",
+      "오늘도 비밀번호를 잊어버렸어요. 이제는 제 얼굴로 잠금을 풀고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "diary-student",
@@ -303,7 +303,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🧹",
     productId: "robot-vacuum",
     dialogue:
-      "먼지는 매일 놀러 오는데 청소할 시간이 부족해요. 청소를 도와주는 기기가 필요해요.",
+      "먼지는 매일 쌓여 가는데 청소할 시간이 부족해요. 청소를 도와주는 기기가 필요해요.",
   }),
   makeWorkshopRequest({
     id: "pet-owner",
@@ -343,7 +343,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "📝",
     productId: "study-helper",
     dialogue:
-      "답은 틀렸는데 이유는 꼭꼭 숨었어요. 어디서 잘못했는지 알고 싶어요.",
+      "답을 틀렸는데 이유를 잘 모르겠어요. 어디서 잘못했는지 알고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "cafeteria-student",
@@ -391,7 +391,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🚗",
     productId: "autonomous-car",
     dialogue:
-      "운전할 때 눈이 네 개였으면 좋겠어요. 차 주변을 살피며 안전하게 운전하고 싶어요.",
+      "운전이 아직 서툴러서 앞과 옆, 뒤를 한꺼번에 살피기 어려워요. 자동차가 스스로 주변을 살피며 안전하게 운전해 주면 좋겠어요.",
   }),
   makeWorkshopRequest({
     id: "courier",

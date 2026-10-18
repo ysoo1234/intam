@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { showSceneLoading } from "../../../core/visual/sceneLoading";
 import { GAME_ASSETS } from "../../../assets";
 import { ENDING_LINES, ENDING_PROMISE_LABEL } from "../../../content/endingStory";
 import {
@@ -80,6 +81,8 @@ export class EndingScene extends Phaser.Scene {
     GAME_ASSETS.ending.customers.forEach((url, index) => load(endingCustomerTexture(index), url));
     preloadEndingButtons(this);
     preloadMidiFaces(this);
+    // A loading card instead of an empty canvas while the pictures load.
+    showSceneLoading(this, this.renderScale);
   }
 
   create(data?: unknown) {

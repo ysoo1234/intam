@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { showSceneLoading } from "../../../core/visual/sceneLoading";
 import { SCENE_FADE_RGB } from "../../../core/visual/theme";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { createWorldReturnSceneData } from "../../../core/navigation";
@@ -78,6 +79,8 @@ export class EthicsReviewScene extends Phaser.Scene {
     preloadGameStartOverlayAssets(this);
     preloadEthicsReviewAssets(this);
     preloadCoachAssets(this);
+    // A loading card instead of an empty canvas while the pictures load.
+    showSceneLoading(this, this.renderScale);
   }
 
   create() {

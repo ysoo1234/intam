@@ -133,28 +133,57 @@ function createCounterFormCopy(scene: Phaser.Scene) {
 
 /**
  * Lays the sentence onto the two printed rules: words fill the first rule as
- * far as they fit, the rest go on the second. The authored line break is only
- * a fallback. Tries the largest font first and shrinks until both lines fit.
+ * far as they fit, the rest go on the second (words and quoted phrases are never cut).
+ * Greedy filling at the biggest font can leave a wide gap on the first rule
+ * when the next word just misses, so a slightly smaller font is chosen when it
+ * fills the first rule clearly better. The authored line break is only a fallback.
  */
+const PROMPT_FILL = {
+  /** A first line at least this full (of the rule width) is good enough. */
+  goodFill: 0.85,
+  /** How much smaller than the biggest font a fuller first line may use. */
+  maxShrink: 3,
+  /** A smaller font must fill the first line at least this much more. */
+  minGain: 0.08,
+} as const;
+
 function fitFormPrompt(view: EthicsReviewFormView) {
   const { maxFont, minFont, width } = FORM_INNER.prompt;
   const [top, bottom] = view.promptLines;
-  const words = view.casePrompt.replace(/\n/g, " ").split(/\s+/).filter(Boolean);
+  // A quoted phrase ('AI가 만든 그림'이라고) stays together on one line.
+  const words = view.casePrompt.replace(/\n/g, " ").match(/'[^']*'\S*|\S+/g) ?? [];
   const measure = (text: string) => top.setText(text).width;
-  for (let size = maxFont; size >= minFont; size -= 1) {
+  type Layout = { size: number; first: string; second: string; fill: number };
+  const layoutAt = (size: number): Layout | undefined => {
     top.setFontSize(size);
-    bottom.setFontSize(size);
     let count = 0;
     while (count < words.length && measure(words.slice(0, count + 1).join(" ")) <= width) count += 1;
     const first = words.slice(0, count).join(" ");
     const second = words.slice(count).join(" ");
-    if (count > 0 && measure(second) <= width) {
-      top.setText(first);
-      bottom.setText(second);
-      return;
-    }
+    if (count === 0 || measure(second) > width) return undefined;
+    // A sentence that fits on one line counts as full.
+    return { size, first, second, fill: second ? measure(first) / width : 1 };
+  };
+  // The biggest font that fits at all, then up to `maxShrink` px smaller.
+  const layouts: Layout[] = [];
+  for (let size = maxFont; size >= minFont; size -= 1) {
+    const layout = layoutAt(size);
+    if (layout) layouts.push(layout);
+    if (layouts.length && layouts[0].size - size >= PROMPT_FILL.maxShrink) break;
+  }
+  // Biggest font with a well-filled first line; otherwise the fullest first
+  // line, but only if it is clearly fuller than at the biggest font.
+  const good = layouts.find(layout => layout.fill >= PROMPT_FILL.goodFill);
+  const fullest = layouts.reduce<Layout | undefined>((most, layout) => (!most || layout.fill > most.fill ? layout : most), undefined);
+  const best = good ?? (fullest && layouts[0] && fullest.fill - layouts[0].fill > PROMPT_FILL.minGain ? fullest : layouts[0]);
+  if (best) {
+    top.setFontSize(best.size).setText(best.first);
+    bottom.setFontSize(best.size).setText(best.second);
+    return;
   }
   // Nothing fit: fall back to the authored two lines at the smallest size.
+  top.setFontSize(minFont);
+  bottom.setFontSize(minFont);
   const [first = "", ...rest] = view.casePrompt.split("\n");
   top.setText(first);
   bottom.setText(rest.join(" "));

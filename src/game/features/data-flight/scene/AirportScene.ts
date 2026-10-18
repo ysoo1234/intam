@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { showSceneLoading } from "../../../core/visual/sceneLoading";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { createWorldReturnSceneData } from "../../../core/navigation";
 import { recordActivityStars } from "../../../core/navigation/worldProgressStorage";
@@ -101,6 +102,8 @@ export class AirportScene extends Phaser.Scene {
     preloadGameResultOverlayAssets(this);
     preloadGameStartOverlayAssets(this);
     preloadCoachAssets(this);
+    // A loading card instead of an empty canvas while the pictures load.
+    showSceneLoading(this, this.renderScale);
   }
   create() {
     configureSceneCamera(this, this.renderScale);

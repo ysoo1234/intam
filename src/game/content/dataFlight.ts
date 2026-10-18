@@ -76,11 +76,11 @@ export const FLIGHT_QUESTIONS: FlightQuestion[] = [
     explanation: "바르고 고운 표현이 담긴 글이 필요해요.",
   },
   {
-    id: "text-search",
+    id: "text-translate-ai",
     category: "AI에 필요한 데이터",
-    prompt: "검색창에 '인공지능'을 입력해 찾을 때 쓰는 데이터는?",
+    prompt: "글로 쓴 문장을 영어로 바꿔 주는 AI에 필요한 데이터는?",
     answer: "doc",
-    explanation: "글자를 입력해 찾는 문자 검색이에요.",
+    explanation: "글로 쓴 문장을 바꾸려면 문자 데이터가 필요해요.",
   },
   {
     id: "face-ai",
@@ -146,11 +146,11 @@ export const FLIGHT_QUESTIONS: FlightQuestion[] = [
     explanation: "연속된 장면이 담긴 경기 영상이 필요해요.",
   },
   {
-    id: "baseball-ai",
+    id: "pet-camera-ai",
     category: "AI에 필요한 데이터",
-    prompt: "야구 경기의 판정을 돕는 AI에 필요한 데이터는?",
+    prompt: "집에 있는 강아지의 움직임을 살피는 AI에 필요한 데이터는?",
     answer: "video",
-    explanation: "공과 선수의 움직임이 담긴 경기 영상이 필요해요.",
+    explanation: "강아지가 움직이는 모습이 담긴 영상이 필요해요.",
   },
   {
     id: "security-ai",
@@ -162,7 +162,7 @@ export const FLIGHT_QUESTIONS: FlightQuestion[] = [
   {
     id: "traffic-ai",
     category: "AI에 필요한 데이터",
-    prompt: "교통 흐름을 살펴 신호를 바꾸는 AI에 필요한 데이터는?",
+    prompt: "차들의 움직임을 살펴 신호를 바꾸는 AI에 필요한 데이터는?",
     answer: "video",
     explanation: "차가 움직이는 도로 영상이 필요해요.",
   },

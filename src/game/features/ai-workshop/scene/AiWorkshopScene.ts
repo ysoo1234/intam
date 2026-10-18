@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { showSceneLoading } from "../../../core/visual/sceneLoading";
 import { SCENE_FADE_RGB } from "../../../core/visual/theme";
 import { GAME_ASSETS } from "../../../assets";
 import type { ControlKeys } from "../../../core/input/controlKeys";
@@ -127,6 +128,8 @@ export class AiWorkshopScene extends Phaser.Scene {
     });
     preloadPlayerTextures(this);
     preloadCoachAssets(this);
+    // A loading card instead of an empty canvas while the pictures load.
+    showSceneLoading(this, this.renderScale);
   }
 
   create() {
