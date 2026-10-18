@@ -10,8 +10,9 @@ import { FONT_FAMILY } from "./theme";
  * green; on that green "OO 가는 중..." and a bar along the bottom fade in, and
  * Midi runs along the tip of a bar along the bottom. The bar only creeps
  * while the place loads and is built; then it eases in, speeds up and
- * settles into full (1.8 s the first time, 1 s after that), the trip fades
- * out and the place fades in.
+ * settles into full (1.8 s), the trip fades out and the place fades in.
+ * That is the first visit only (when the pictures really load); after that
+ * the green simply fades into the place.
  *
  * Leaving a place is a plain fade into the place's own colour; the village
  * then fades in out of that same colour.
@@ -21,7 +22,6 @@ import { FONT_FAMILY } from "./theme";
  */
 const DEPTH = 100_000;
 const FIRST_TRIP_MS = 1_800;
-const REPEAT_TRIP_MS = 1_000;
 const LEAVE_FADE_MS = 280;
 /** The village's fade into green before the trip. */
 export const TRIP_FADE_OUT_MS = 300;
@@ -63,8 +63,8 @@ export function startSceneTravel(scene: Phaser.Scene, renderScale: number, label
     return;
   }
   pendingTrip = null;
-  const fillMs = visited.has(key) ? REPEAT_TRIP_MS : FIRST_TRIP_MS;
-  visited.add(key);
+  const firstVisit = !visited.has(key);
+    visited.add(key);
   configureSceneCamera(scene, renderScale);
   holdPageBackdrop(SCENE_KEYS.world);
 
@@ -91,7 +91,7 @@ export function startSceneTravel(scene: Phaser.Scene, renderScale: number, label
   // Centred with all three dots, so the name stays put as they come and go.
   text.setX(640 - text.width / 2);
   const parts = [track, fill, shadow, midi, text];
-  parts.forEach((part) => part.setAlpha(0));
+  parts.forEach((part) => part.setAlpha(0).setVisible(firstVisit));
 
   const startedAt = performance.now();
   let loaded = false;
@@ -119,11 +119,17 @@ export function startSceneTravel(scene: Phaser.Scene, renderScale: number, label
     // creeps, so the run starts afterwards, on a calm frame. Then it eases
     // in from that creep, speeds up and settles into full: no sudden start.
     if (created) calmFrames += 1;
+    if (!firstVisit) {
+      // Already been here: no bar, the green just fades into the place once it is built.
+      if (!doneAt && loaded && calmFrames > 3) doneAt = elapsed;
+      if (doneAt) reveal(elapsed - doneAt);
+      return;
+    }
     if (readyAt < 0 && loaded && calmFrames > 3 && elapsed >= UI_FADE_MS) readyAt = elapsed;
     const creep = 0.08 * (1 - Math.exp(-elapsed / 900));
     let target = creep;
     if (readyAt >= 0) {
-      const u = Phaser.Math.Clamp((elapsed - readyAt) / fillMs, 0, 1);
+      const u = Phaser.Math.Clamp((elapsed - readyAt) / FIRST_TRIP_MS, 0, 1);
       const eased = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
       target = creepAtReady + (1 - creepAtReady) * eased;
       if (u >= 1) target = 1;
@@ -156,12 +162,13 @@ export function startSceneTravel(scene: Phaser.Scene, renderScale: number, label
     const since = elapsed - doneAt;
     const vanish = smooth(Phaser.Math.Clamp(since / UI_FADE_MS, 0, 1));
     parts.forEach((part) => part.setAlpha(1 - vanish));
-    if (since >= UI_FADE_MS) {
-      holdPageBackdrop(null);
-      const reveal = smooth(Phaser.Math.Clamp((since - UI_FADE_MS) / REVEAL_MS, 0, 1));
-      cover.setAlpha(1 - reveal);
-      if (reveal >= 1) finish();
-    }
+    if (since >= UI_FADE_MS) reveal(since - UI_FADE_MS);
+  };
+  const reveal = (since: number) => {
+    holdPageBackdrop(null);
+    const shown = smooth(Phaser.Math.Clamp(since / REVEAL_MS, 0, 1));
+    cover.setAlpha(1 - shown);
+    if (shown >= 1) finish();
   };
   const finish = () => {
     scene.game.events.off(Phaser.Core.Events.PRE_RENDER, step);
