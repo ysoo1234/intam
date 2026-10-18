@@ -54,6 +54,10 @@ const smooth = (t: number) => t * t * (3 - 2 * t);
  */
 export function startSceneTravel(scene: Phaser.Scene, renderScale: number, label: string) {
   const key = scene.sys.settings.key as SceneKey;
+  // Until the place draws its first frame the canvas shows the camera's
+  // background: make that the place's own colour (or the trip's green), not
+  // the page's default blue. Matters on 처음부터 다시.
+  scene.cameras.main.setBackgroundColor(PAGE_BACKDROPS[pendingTrip === key ? SCENE_KEYS.world : key].middle);
   if (pendingTrip !== key) {
     scene.events.once(Phaser.Scenes.Events.CREATE, () => scene.cameras.main.fadeIn(260, ...sceneRgb(key)));
     return;

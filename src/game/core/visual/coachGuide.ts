@@ -456,25 +456,34 @@ export function playCoachCountdown(
      */
     frozen?: boolean;
   }> = {},
-) {
+): CoachCountdown {
   const depth = options.depth ?? 1_200;
+  runningCountdowns.set(scene, (runningCountdowns.get(scene) ?? 0) + 1);
+  const countDone = () => runningCountdowns.set(scene, Math.max(0, (runningCountdowns.get(scene) ?? 1) - 1));
   const frozen = options.frozen === true;
   const shade = scene.add.rectangle(640, 360, 1280, 720, 0x102d37, 0.32).setDepth(depth).setInteractive();
   // Counts as an open card so the game waits until "시작!".
   openCards.set(scene, (openCards.get(scene) ?? 0) + 1);
   const labels = ["3", "2", "1", "시작!"];
   let index = 0;
+  let stopped = false;
+  let current: Phaser.GameObjects.Text | undefined;
   const wait = (ms: number, run: () => void) => {
+    const go = () => {
+      if (!stopped) run();
+    };
     if (!frozen) {
-      scene.time.delayedCall(ms, run);
+      scene.time.delayedCall(ms, go);
       return;
     }
     window.setTimeout(() => {
-      if (scene.sys.isActive()) run();
+      if (scene.sys.isActive()) go();
     }, ms);
   };
   const showNext = () => {
     if (index >= labels.length) {
+      stopped = true;
+      countDone();
       if (frozen) {
         openCards.set(scene, Math.max(0, (openCards.get(scene) ?? 1) - 1));
         scene.input.keyboard?.resetKeys();
@@ -505,6 +514,7 @@ export function playCoachCountdown(
       .setDepth(depth + 1)
       .setScale(1.6)
       .setAlpha(0);
+    current = text;
     if (frozen) {
       // No tweens while everything is paused: the number simply shows, then goes.
       text.setScale(1).setAlpha(1);
@@ -522,4 +532,24 @@ export function playCoachCountdown(
     wait(isGo ? 560 : 800, showNext);
   };
   showNext();
+  return {
+    cancel: () => {
+      if (stopped) return;
+      stopped = true;
+      countDone();
+      openCards.set(scene, Math.max(0, (openCards.get(scene) ?? 1) - 1));
+      current?.destroy();
+      shade.destroy();
+    },
+  };
 }
+
+const runningCountdowns = new WeakMap<Phaser.Scene, number>();
+
+/** Whether a 3-2-1 is on screen in this scene. */
+export function isCoachCountdownRunning(scene: Phaser.Scene) {
+  return (runningCountdowns.get(scene) ?? 0) > 0;
+}
+
+/** A running 3-2-1; `cancel` takes it off the screen without calling its `onDone`. */
+export type CoachCountdown = Readonly<{ cancel: () => void }>;

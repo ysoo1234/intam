@@ -1,5 +1,7 @@
 import Phaser from "phaser";
-import { holdCoachCard, isCoachCardOpen, playCoachCountdown, releaseCoachCard } from "./coachGuide";
+import {
+  holdCoachCard, isCoachCardOpen, isCoachCountdownRunning, playCoachCountdown, releaseCoachCard, type CoachCountdown,
+} from "./coachGuide";
 import { GAME_CHROME_TEXTURES, VILLAGE_RETURN_BUTTON_DEPTH } from "./gameChrome";
 import { isGameStartOverlayOpen } from "./gameStartOverlay";
 import { drawOutlinedPill, outlinedButtonTextStyle, type OutlinedButtonVariant } from "./outlinedButton";
@@ -14,6 +16,9 @@ import { FONT_FAMILY } from "./theme";
  */
 const BUTTON = { x: 122, y: 44.5, width: 210, height: 69 } as const;
 const MENU_DEPTH = 1_300;
+// While a 3-2-1 shows, the button rises above its shade (1 200) so the game
+// can be paused then too; otherwise it stays under the tutorial's spotlight.
+const COUNTDOWN_BUTTON_DEPTH = 1_250;
 const PANEL = { width: 440, height: 352, radius: 28 } as const;
 const MENU_BUTTON = { width: 300, height: 60, gap: 16 } as const;
 const TEXT_RESOLUTION = 3;
@@ -54,6 +59,7 @@ export function createGamePauseMenu(
     .setResolution(TEXT_RESOLUTION);
   let showingReturn = true;
   const refreshButton = () => {
+    button.setDepth(isCoachCountdownRunning(scene) ? COUNTDOWN_BUTTON_DEPTH : VILLAGE_RETURN_BUTTON_DEPTH);
     const onStartScreen = isGameStartOverlayOpen(scene);
     if (onStartScreen === showingReturn) return;
     showingReturn = onStartScreen;
@@ -83,8 +89,8 @@ export function createGamePauseMenu(
   // --- The menu -----------------------------------------------------------------
   let overlay: Phaser.GameObjects.GameObject[] = [];
   let paused = false;
-  /** The 3-2-1 after 이어하기: still frozen, and the menu cannot reopen yet. */
-  let countingDown = false;
+  /** The 3-2-1 after 이어하기 (everything still frozen); 멈춤 cancels it. */
+  let countdown: CoachCountdown | undefined;
   /** Whether the game clock was running when paused (then it resumes with 3-2-1). */
   let wasRunning = false;
 
@@ -136,9 +142,8 @@ export function createGamePauseMenu(
     }
     // A 3-2-1 on the browser's clock while everything stays frozen, so no
     // customer walks, no line types and nothing finishes until "시작!".
-    countingDown = true;
-    playCoachCountdown(scene, () => {
-      countingDown = false;
+    countdown = playCoachCountdown(scene, () => {
+      countdown = undefined;
       if (scene.sys.isActive()) thaw();
     }, { frozen: true });
   };
@@ -156,9 +161,18 @@ export function createGamePauseMenu(
   };
 
   function open() {
-    if (paused || countingDown || isGameStartOverlayOpen(scene) || options.canPause?.() === false) return;
+    if (paused || isGameStartOverlayOpen(scene) || options.canPause?.() === false) return;
     paused = true;
-    freeze();
+    if (countdown) {
+      // Paused again during the 3-2-1 after 이어하기: the game is still
+      // frozen, so drop that count; 이어하기 starts a fresh one.
+      countdown.cancel();
+      countdown = undefined;
+    } else {
+      // (A 3-2-1 at the very start runs on the game clock, so freezing it
+      // here simply holds it; 이어하기 then lets it carry on.)
+      freeze();
+    }
     const blocker = scene.add.rectangle(640, 360, 1280, 720, 0x102d37, 0.5).setDepth(MENU_DEPTH - 1).setInteractive();
     blocker.on("pointerdown", swallow);
     blocker.on("pointerup", swallow);
@@ -197,7 +211,8 @@ export function createGamePauseMenu(
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     scene.input.keyboard?.off("keydown-ESC", onEscape);
     scene.events.off(Phaser.Scenes.Events.UPDATE, refreshButton);
-    if (paused || countingDown) {
+    if (paused || countdown) {
+      countdown?.cancel();
       closeMenu();
       thaw();
     }
