@@ -8,9 +8,10 @@ import { FONT_FAMILY } from "./theme";
 /**
  * The trip from the village into a place. The village fades out into its
  * green; on that green "OO 가는 중..." and a bar along the bottom fade in, and
- * the bar fills smoothly while Midi runs along on its tip. Once it is full
- * (never before 1.8 s the first time, 1 s after that, and never before the
- * place's pictures have loaded) the trip fades out and the place fades in.
+ * Midi runs along the tip of a bar along the bottom. The bar only creeps
+ * while the place loads and is built; then it eases in, speeds up and
+ * settles into full (1.8 s the first time, 1 s after that), the trip fades
+ * out and the place fades in.
  *
  * Leaving a place is a plain fade into the place's own colour; the village
  * then fades in out of that same colour.
@@ -90,23 +91,43 @@ export function startSceneTravel(scene: Phaser.Scene, renderScale: number, label
 
   const startedAt = performance.now();
   let loaded = false;
+  let created = false;
   let shown = 0;
+  let last = startedAt;
+  // The trip's own clock: real time, but a long frame (pictures being
+  // decoded, the place being built) counts as one short step, so Midi never
+  // jumps ahead.
+  let clock = 0;
+  let readyAt = -1;
+  let creepAtReady = 0;
   let doneAt = 0;
-  const markLoaded = () => { loaded = true; };
-  scene.load.once(Phaser.Loader.Events.COMPLETE, markLoaded);
-  scene.events.once(Phaser.Scenes.Events.CREATE, markLoaded);
+  scene.load.once(Phaser.Loader.Events.COMPLETE, () => { loaded = true; });
+  scene.events.once(Phaser.Scenes.Events.CREATE, () => { loaded = true; created = true; });
+  // The first frames after building also upload its pictures; let them pass.
+  let calmFrames = 0;
 
   const step = () => {
     const now = performance.now();
-    const elapsed = now - startedAt;
-    // The bar starts once the trip has faded in, and fills on one smooth
-    // curve in real time; it only waits near the end if pictures are still
-    // coming, then glides on.
-    const u = Phaser.Math.Clamp((elapsed - UI_FADE_MS) / fillMs, 0, 1);
-    const curve = 1 - Math.pow(1 - u, 1.7);
-    if (loaded) shown = Math.max(shown, curve);
-    else shown = Math.max(shown, Math.min(curve, 0.9));
-    if (loaded && shown < curve) shown = curve;
+    clock += Math.min(now - last, 50);
+    last = now;
+    const elapsed = clock;
+    // Until the place is loaded and built (the heavy part) the bar only
+    // creeps, so the run starts afterwards, on a calm frame. Then it eases
+    // in from that creep, speeds up and settles into full: no sudden start.
+    if (created) calmFrames += 1;
+    if (readyAt < 0 && loaded && calmFrames > 3 && elapsed >= UI_FADE_MS) readyAt = elapsed;
+    const creep = 0.08 * (1 - Math.exp(-elapsed / 900));
+    let target = creep;
+    if (readyAt >= 0) {
+      const u = Phaser.Math.Clamp((elapsed - readyAt) / fillMs, 0, 1);
+      const eased = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+      target = creepAtReady + (1 - creepAtReady) * eased;
+      if (u >= 1) target = 1;
+    } else {
+      creepAtReady = creep;
+    }
+    shown = Math.max(shown, target);
+    const u = shown >= 1 ? 1 : 0;
 
     const tipX = BAR.left + BAR.width * shown;
     fill.clear();
@@ -122,13 +143,13 @@ export function startSceneTravel(scene: Phaser.Scene, renderScale: number, label
     midi.setPosition(tipX, BAR.y + 3 - (1 + sway) * 2.2).setAngle(5 + sway * 1.5);
     shadow.setPosition(tipX, BAR.y + 3);
 
-    if (!doneAt && u >= 1 && loaded) doneAt = now;
+    if (!doneAt && u >= 1) doneAt = elapsed;
     if (!doneAt) {
       const appear = smooth(Phaser.Math.Clamp(elapsed / UI_FADE_MS, 0, 1));
       parts.forEach((part) => part.setAlpha(appear));
       return;
     }
-    const since = now - doneAt;
+    const since = elapsed - doneAt;
     const vanish = smooth(Phaser.Math.Clamp(since / UI_FADE_MS, 0, 1));
     parts.forEach((part) => part.setAlpha(1 - vanish));
     if (since >= UI_FADE_MS) {
