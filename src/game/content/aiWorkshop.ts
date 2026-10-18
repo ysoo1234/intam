@@ -287,7 +287,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "📔",
     productId: "spell-checker",
     dialogue:
-      "일기는 멋지게 썼는데 맞춤법이 걱정돼요. 틀린 곳을 찾아 바르고 고치고 싶어요.",
+      "일기는 멋지게 썼는데 맞춤법이 걱정돼요. 틀린 곳을 찾아 바르게 고치고 싶어요.",
   }),
   makeWorkshopRequest({
     id: "dinner-parent",

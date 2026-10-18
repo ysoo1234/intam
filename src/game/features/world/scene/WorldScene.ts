@@ -24,7 +24,7 @@ import {
   mergeWorldProgressSnapshots,
   saveStoredWorldProgress,
 } from "../../../core/navigation/worldProgressStorage";
-import { markTutorialSeen, shouldPlayTutorial } from "../../../core/navigation/tutorialProgressStorage";
+import { markAllTutorialsSeen, markTutorialSeen, shouldPlayTutorial } from "../../../core/navigation/tutorialProgressStorage";
 import type { PlayerFacing } from "../../../core/player/playerFacing";
 import {
   applyPlayerTexture,
@@ -286,7 +286,7 @@ export class WorldScene extends Phaser.Scene {
 
   /**
    * The "테스트 ▾" menu in the top-right corner (for teachers trying things
-   * out): reset everything, fill the stars, finish one place with a chosen
+   * out): reset everything, skip every tutorial, fill the stars, finish one place with a chosen
    * number of stars (its stars fill in on return), or watch the ending again.
    */
   private createTestMenu() {
@@ -304,6 +304,14 @@ export class WorldScene extends Phaser.Scene {
       },
       actions: [
         { label: "전체 초기화", run: () => this.confirmFullReset() },
+        {
+          // Village tour and all three places start straight into play.
+          label: "튜토리얼 모두 건너뛰기",
+          run: () => {
+            markAllTutorialsSeen();
+            this.applyTestProgress(this.progress);
+          },
+        },
         { label: "별 9개 채우기", run: () => this.applyTestProgress({ "ai-workshop": 3, "data-flight": 3, "ethics-review": 3 }) },
         { label: "별 7개 채우기 (2/2/3)", run: () => this.applyTestProgress({ "ai-workshop": 2, "data-flight": 2, "ethics-review": 3 }) },
         { label: "AI 제작소 별 3개로 완료", run: finish("ai-workshop", 3) },

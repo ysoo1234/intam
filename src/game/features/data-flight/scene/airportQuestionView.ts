@@ -4,6 +4,35 @@ import { createAirportCardPanel, createAirportCapsulePanel } from "./airportPane
 import type { FlightQuestion } from "../../../content/dataFlight";
 import { DATA_FLIGHT_CONFIG } from "../model";
 
+const QUIZ_PROMPT_WIDTH = 680;
+
+/**
+ * Splits a quiz question into at most two lines without leaving a lone word
+ * ("데이터는?") on the second line. Most questions read "…하는 / AI에 필요한
+ * 데이터는?", so the break goes before the last word starting with "AI" when
+ * both halves fit; otherwise the most even split between words is used.
+ * Quoted phrases ('오늘의 날씨'라고) are never split.
+ */
+function breakQuizPrompt(text: Phaser.GameObjects.Text, prompt: string, maxWidth: number): string {
+  const measure = (value: string) => text.setText(value).width;
+  if (measure(prompt) <= maxWidth) return prompt;
+  const words = prompt.match(/'[^']*'\S*|\S+/g) ?? [prompt];
+  const split = (index: number) => [words.slice(0, index).join(" "), words.slice(index).join(" ")] as const;
+  const fits = (index: number) => split(index).every(line => measure(line) <= maxWidth);
+  let aiIndex = -1;
+  words.forEach((word, index) => { if (index > 0 && word.startsWith("AI")) aiIndex = index; });
+  if (aiIndex > 0 && fits(aiIndex)) return split(aiIndex).join("\n");
+  let best: { index: number; width: number } | undefined;
+  for (let index = 1; index < words.length; index += 1) {
+    const width = Math.max(...split(index).map(measure));
+    if (width <= maxWidth && (!best || width < best.width)) best = { index, width };
+  }
+  if (best) return split(best.index).join("\n");
+  // Too long for two lines: let Phaser wrap it.
+  text.setWordWrapWidth(maxWidth);
+  return prompt;
+}
+
 /** The quiz card shown while the question is read (a bar counts the reading time down). */
 export function createAirportQuestionOverlay(
   scene: Phaser.Scene, question: FlightQuestion, readingMs: number = DATA_FLIGHT_CONFIG.questionReadingMs,
@@ -24,17 +53,17 @@ export function createAirportQuestionOverlay(
   const rule = scene.add.graphics();
   rule.lineStyle(2, 0x6fb0b2, 0.8).lineBetween(-60, -106, 60, -106);
   const prompt = scene.add
-    .text(0, -4, question.prompt, {
+    .text(0, -4, "", {
       color: "#173f43",
       fontFamily: FONT_FAMILY,
       fontSize: "38px",
       fontStyle: "bold",
       align: "center",
       lineSpacing: 8,
-      wordWrap: { width: 680 },
     })
     .setOrigin(0.5)
     .setResolution(3);
+  prompt.setText(breakQuizPrompt(prompt, question.prompt, QUIZ_PROMPT_WIDTH));
   // A slim timer: the reading time left before the four choices fly in.
   const readingTrack = scene.add.graphics();
   readingTrack.fillStyle(0x2b6a80, 0.14).fillRoundedRect(-200, 116, 400, 12, 6);

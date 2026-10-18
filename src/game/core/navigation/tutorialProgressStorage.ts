@@ -7,6 +7,9 @@ export const TUTORIAL_PROGRESS_STORAGE_KEY = "intam:tutorials-seen:v1";
 
 export type TutorialId = "village" | "ai-workshop" | "data-flight" | "ethics-review";
 
+/** Every first-play tutorial: the village tour and the three places. */
+export const ALL_TUTORIAL_IDS: readonly TutorialId[] = ["village", "ai-workshop", "data-flight", "ethics-review"];
+
 type StorageLike = Pick<Storage, "getItem" | "setItem">;
 
 function resolveStorage(storage?: StorageLike): StorageLike | undefined {
@@ -57,4 +60,9 @@ export function markTutorialSeen(id: TutorialId, storage?: StorageLike) {
   } catch {
     // Storage may be blocked; the tutorial simply plays again next time.
   }
+}
+
+/** Marks every tutorial as finished (test menu: skip straight to playing). */
+export function markAllTutorialsSeen(storage?: StorageLike) {
+  for (const id of ALL_TUTORIAL_IDS) markTutorialSeen(id, storage);
 }
