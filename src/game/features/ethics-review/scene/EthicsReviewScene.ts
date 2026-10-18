@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { showSceneLoading } from "../../../core/visual/sceneLoading";
-import { SCENE_FADE_RGB } from "../../../core/visual/theme";
+import { irisClose, irisOpen, sceneColor } from "../../../core/visual/irisTransition";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { createWorldReturnSceneData } from "../../../core/navigation";
 import { recordActivityStars } from "../../../core/navigation/worldProgressStorage";
@@ -117,6 +117,7 @@ export class EthicsReviewScene extends Phaser.Scene {
       this.input.keyboard?.off("keydown", this.warmAudio, this);
       this.input.off("pointerdown", this.warmAudio, this);
     });
+    irisOpen(this, { color: sceneColor(SCENE_KEYS.ethicsReview) });
   }
 
   update() {
@@ -388,8 +389,7 @@ export class EthicsReviewScene extends Phaser.Scene {
     if (this.leaving) return;
     this.leaving = true;
     this.controls?.cancelMovement();
-    this.cameras.main.fadeOut(220, ...SCENE_FADE_RGB);
-    this.time.delayedCall(220, () => {
+    irisClose(this, { x: 640, y: 360, color: sceneColor(SCENE_KEYS.world) }, () => {
       this.scene.start(SCENE_KEYS.world, createWorldReturnSceneData("ethics-review", this.earnedStars));
     });
   }

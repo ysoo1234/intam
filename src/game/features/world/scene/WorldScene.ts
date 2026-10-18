@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { SCENE_FADE_RGB } from "../../../core/visual/theme";
+import { irisClose, irisOpen, sceneColor } from "../../../core/visual/irisTransition";
 import {
   makeControlKeys,
   type ControlKeys,
@@ -277,7 +277,9 @@ export class WorldScene extends Phaser.Scene {
 
     // Straight out of the intro's door the village is already on screen exactly as
     // drawn there, so it must not fade in again.
-    if (!isVillageDoorArrival(data)) this.cameras.main.fadeIn(350, ...SCENE_FADE_RGB);
+    if (!isVillageDoorArrival(data)) {
+      irisOpen(this, { x: this.player?.x, y: this.player?.y, color: sceneColor(SCENE_KEYS.world) });
+    }
   }
 
   /**
@@ -482,11 +484,16 @@ export class WorldScene extends Phaser.Scene {
 
     markTutorialSeen("village");
     this.tutorial?.notifyEntered();
-    this.cameras.main.fadeOut(230, ...SCENE_FADE_RGB);
     const destination = resolveFeatureSceneKey(
       this.nearestBuilding.destination.featureId,
     );
-    this.time.delayedCall(230, () => this.scene.start(destination));
+    // The view closes in a circle onto Midi, into the place's own colour;
+    // Midi stands still meanwhile (the same "leaving" hold as the ending).
+    this.touchMovement?.cancel();
+    this.stopPlayer();
+    this.endingStarted = true;
+    const door = this.player ?? { x: 640, y: 360 };
+    irisClose(this, { x: door.x, y: door.y, color: sceneColor(destination) }, () => this.scene.start(destination));
   }
 
   private isPortalAvailable(portal: WorldPortal) {

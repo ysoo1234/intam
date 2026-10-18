@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { showSceneLoading } from "../../../core/visual/sceneLoading";
-import { SCENE_FADE_RGB } from "../../../core/visual/theme";
+import { irisClose, irisOpen, sceneColor } from "../../../core/visual/irisTransition";
 import { GAME_ASSETS } from "../../../assets";
 import type { ControlKeys } from "../../../core/input/controlKeys";
 import type { PlayerFacing } from "../../../core/player/playerFacing";
@@ -206,7 +206,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     createGameStartOverlay(this, AI_WORKSHOP_START, (withTutorial) => this.handleStart(withTutorial), {
       help: { question: "튜토리얼을 다시 볼까요?" },
     });
-    this.cameras.main.fadeIn(320, 255, 244, 210);
+    irisOpen(this, { color: sceneColor(SCENE_KEYS.aiWorkshop) });
   }
 
   /**
@@ -675,8 +675,7 @@ export class AiWorkshopScene extends Phaser.Scene {
   }
 
   private returnToWorld() {
-    this.cameras.main.fadeOut(220, ...SCENE_FADE_RGB);
-    this.time.delayedCall(220, () =>
+    irisClose(this, { x: 640, y: 360, color: sceneColor(SCENE_KEYS.world) }, () =>
       this.scene.start(SCENE_KEYS.world, createWorldReturnSceneData("ai-workshop", this.earnedStars)),
     );
   }

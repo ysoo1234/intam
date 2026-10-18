@@ -1,13 +1,16 @@
 import Phaser from "phaser";
 import { configureSceneCamera } from "../runtime/configureSceneCamera";
-import { FONT_FAMILY, SCENE_FADE_RGB } from "./theme";
+import { PAGE_BACKDROPS } from "../runtime/pageBackdrop";
+import type { SceneKey } from "../scenes/sceneKeys";
+import { FONT_FAMILY } from "./theme";
 
 /**
- * While a place loads its pictures the canvas would show its plain
- * background colour. Instead this shows the same card as the page's first
- * loading screen: three dots bobbing in turn and "이동하는 중...", on the
- * soft white every scene change fades through. Call at the end of
- * `preload()`; it does nothing when nothing needs loading.
+ * While a place still has pictures to load (only the first visit: after that
+ * they stay loaded), the canvas would show its plain background colour.
+ * Instead the place's own colour fills the screen, the same colour the
+ * door closed into, with the page's loading card: three dots bobbing in
+ * turn and "이동하는 중...". Call at the end of `preload()`; it does nothing
+ * when nothing needs loading.
  *
  * The scene's own update (and so its tweens) does not run while it loads,
  * so the dots are moved from the game's render step instead.
@@ -16,17 +19,19 @@ const DOT_COLORS = [0x70cfaa, 0xf87962, 0xf5bd46] as const;
 const CARD = { width: 300, height: 128, radius: 28 } as const;
 const DEPTH = 100_000;
 
+const hex = (value: string) => Phaser.Display.Color.HexStringToColor(value).color;
+
 export function showSceneLoading(scene: Phaser.Scene, renderScale: number) {
   if (scene.load.list.size === 0) return;
   configureSceneCamera(scene, renderScale);
-  const [r, g, b] = SCENE_FADE_RGB;
-  const background = scene.add
-    .rectangle(640, 360, 1280, 720, Phaser.Display.Color.GetColor(r, g, b), 1)
-    .setDepth(DEPTH);
+  const backdrop = PAGE_BACKDROPS[scene.sys.settings.key as SceneKey];
+  // One calm colour: exactly the colour the door closed into.
+  const color = backdrop ? hex(backdrop.middle) : 0x94b5e5;
+  const background = scene.add.rectangle(640, 360, 1280, 720, color, 1).setDepth(DEPTH);
   const card = scene.add.graphics().setDepth(DEPTH + 1);
   const left = 640 - CARD.width / 2;
   const top = 360 - CARD.height / 2;
-  card.fillStyle(0x163f4a, 0.16).fillRoundedRect(left, top + 6, CARD.width, CARD.height, CARD.radius);
+  card.fillStyle(0x163f4a, 0.22).fillRoundedRect(left, top + 6, CARD.width, CARD.height, CARD.radius);
   card.fillStyle(0xfffdf6, 1).fillRoundedRect(left, top, CARD.width, CARD.height, CARD.radius);
   card.lineStyle(4, 0x6fb0b2, 1).strokeRoundedRect(left, top, CARD.width, CARD.height, CARD.radius);
   const dots = DOT_COLORS.map((color, index) =>
