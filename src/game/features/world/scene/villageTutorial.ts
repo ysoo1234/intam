@@ -198,6 +198,8 @@ export function createVillageTutorial(scene: Phaser.Scene, options: VillageTutor
   const face = createVillageMidiFace(scene, options.playerSprite, options.playerDisplayHeight);
   /** The door a line was said at (it may stay over that door's button); others close it. */
   let lineDoorId: string | undefined;
+  /** The door Midi stood at in the last update (for lines said wherever she is). */
+  let lastNearPortalId: string | undefined;
   const closeBubble = () => {
     bubbleHideTimer?.remove(false);
     bubbleHideTimer = undefined;
@@ -587,7 +589,7 @@ export function createVillageTutorial(scene: Phaser.Scene, options: VillageTutor
      * At the locked starlight gate: Midi says the stars are not enough yet.
      * The line closes 1 s after it is said, or as soon as she reaches another door.
      */
-    /** True while the "별이 부족해" line is up at this door (its button hides then). */
+    /** True while a gate line is up at this door (its button hides then). */
     isGateLineUp: (portalId: string | undefined) => lineDoorId !== undefined && lineDoorId === portalId,
     sayGateLocked: (portalId: string) => {
       if (blocking) return;
@@ -601,17 +603,26 @@ export function createVillageTutorial(scene: Phaser.Scene, options: VillageTutor
       });
       lineDoorId = portalId;
     },
-    /** The starlight gate has just woken (or shone at 9 stars): a happy line that closes on its own. */
+    /**
+     * The starlight gate has just woken (or shone at 9 stars): a happy line
+     * that closes on its own. Back from a place, Midi often stands at its
+     * door, so that door's button hides while the line is up.
+     */
     sayGateOpened: (line: string) => {
       if (blocking) return;
+      const door = lastNearPortalId;
       say(line, {
         mood: "happy",
         after: "idle",
         onDone: () => {
           bubbleHideTimer?.remove(false);
-          bubbleHideTimer = scene.time.delayedCall(2_600, closeBubble);
+          bubbleHideTimer = scene.time.delayedCall(2_600, () => {
+            closeBubble();
+            if (lineDoorId === door) lineDoorId = undefined;
+          });
         },
       });
+      lineDoorId = door;
     },
     /** True while a card or the welcome line is up: Midi must not move or go in. */
     isBlocking: () => blocking,
@@ -632,6 +643,7 @@ export function createVillageTutorial(scene: Phaser.Scene, options: VillageTutor
       playerMoving = false,
     ) => {
       lastPlayer = playerPosition;
+      lastNearPortalId = nearPortalId;
       const atDoor = promptPortalId !== undefined;
       // Her line must never sit over another door's entry button: it closes first.
       if (atDoor && !blocking && promptPortalId !== lineDoorId) closeBubble();

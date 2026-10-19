@@ -15,6 +15,13 @@ export function addGradientImage(
   const height = Math.max(1, Math.round(area.height));
   const alphaLeft = colors.alphaLeft ?? 1;
   const alphaRight = colors.alphaRight ?? 1;
+  // With WebGL the GPU draws the gradient itself, as before: some browsers'
+  // forced dark modes (Whale) darken colours painted into a canvas.
+  if (scene.sys.game.renderer.type === Phaser.WEBGL) {
+    return scene.add.graphics()
+      .fillGradientStyle(colors.top, colors.top, colors.bottom, colors.bottom, alphaLeft, alphaRight, alphaLeft, alphaRight)
+      .fillRect(area.x, area.y, area.width, area.height);
+  }
   const key = `gradient-${colors.top.toString(16)}-${colors.bottom.toString(16)}-${width}x${height}-${alphaLeft}-${alphaRight}`;
   if (!scene.textures.exists(key)) {
     const texture = scene.textures.createCanvas(key, width, height);

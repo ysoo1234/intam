@@ -5,6 +5,8 @@
 }
 
 :root {
+  /* Never let a browser's forced dark mode darken the game (see layout.tsx). */
+  color-scheme: only light;
   --ink: #173f43;
   --cream: #fff5dc;
   --coral: #f87962;

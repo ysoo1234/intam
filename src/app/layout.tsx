@@ -14,6 +14,8 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: "cover",
   themeColor: "#173f43",
+  // A bright picture-book game: browsers' forced dark modes (Whale, Chrome flags) must not darken it.
+  colorScheme: "only light",
 };
 
 export default function RootLayout({

@@ -43,15 +43,13 @@ const PORTAL_SWIRL = {
 let portalCount = 0;
 
 /**
- * How awake the portal looks: "sleep" (fewer than 7 stars: dim and greyish,
- * no sparkles), "awake" (the starlight road is open: it breathes brighter and
- * dimmer), "full" (all 9 stars: the same with a touch of gold). "plain" is the
- * portal as it always was (the ending). `flare` (0–1) is a passing flash.
+ * How the portal looks: "plain" (as it always was: fewer than 7 stars, the
+ * ending) or "awake" (the starlight road is open: it breathes gently brighter
+ * and dimmer). `flare` (0–1) is a passing flash.
  */
-export type AiWorldPortalLevel = "plain" | "sleep" | "awake" | "full";
+export type AiWorldPortalLevel = "plain" | "awake";
 export type AiWorldPortalMood = { level: AiWorldPortalLevel; flare: number };
 const PORTAL_MOOD_KEY = "portal-mood";
-const PORTAL_GOLD = [255, 224, 140] as const;
 
 /** The mood object a live portal reads every time it is drawn (set its fields). */
 export function getAiWorldPortalMood(portal: Phaser.GameObjects.GameObject | undefined) {
@@ -184,20 +182,14 @@ export function createAiWorldPortalView(
     }
   }
   const mood: AiWorldPortalMood = { level: "plain", flare: 0 };
-  const { deep } = PORTAL_SWIRL;
+  const { deep, light } = PORTAL_SWIRL;
   const swirl = (t: number) => {
     const phase = t * PORTAL_SWIRL.speed;
     const drift = t * 0.35;
     // The mood, worked out once per drawing.
-    const asleep = mood.level === "sleep";
-    const full = mood.level === "full";
-    const breathing = mood.level === "awake" || full;
-    const breath = breathing ? Math.sin((t * Math.PI * 2) / 2.6) * (full ? 0.11 : 0.08) : 0;
-    const gain = asleep ? 0.6 : 1 + breath;
-    const lift = asleep ? 0.04 : breath * 0.5;
-    const goldMix = full ? 0.32 : 0;
-    const light = PORTAL_SWIRL.light.map((value, index) => value + (PORTAL_GOLD[index] - value) * goldMix);
-    const grey = asleep ? 0.42 : 0;
+    const breath = mood.level === "awake" ? Math.sin((t * Math.PI * 2) / 2.6) * 0.08 : 0;
+    const gain = 1 + breath;
+    const lift = breath * 0.5;
     const flash = Math.min(1, mood.flare) * 0.6;
     for (let i = 0; i < angle.length; i += 1) {
       // Soft arms, with a slow second wave so they never look mechanical.
@@ -213,10 +205,6 @@ export function createAiWorldPortalView(
       let r = deep[0] + (light[0] - deep[0]) * k;
       let g = deep[1] + (light[1] - deep[1]) * k;
       let b = deep[2] + (light[2] - deep[2]) * k;
-      if (grey > 0) {
-        const lum = r * 0.3 + g * 0.59 + b * 0.11;
-        r += (lum - r) * grey; g += (lum - g) * grey; b += (lum - b) * grey;
-      }
       if (flash > 0) {
         r += (255 - r) * flash; g += (255 - g) * flash; b += (255 - b) * flash;
       }
@@ -245,8 +233,7 @@ export function createAiWorldPortalView(
     ctx.drawImage(swirlCanvas, 0, 0, width, height);
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    // A sleeping portal has no sparkles.
-    if (mood.level !== "sleep") sparkles.forEach((sparkle) => {
+    sparkles.forEach((sparkle) => {
       const life = (t - sparkle.born) / sparkle.duration;
       if (life >= 1) {
         Object.assign(sparkle, newSparkle(t));

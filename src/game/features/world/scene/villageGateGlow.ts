@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { GAME_ASSETS } from "../../../assets";
 import { playSoftNotes } from "../../../core/audio/softTones";
 import {
   getAiWorldPortalMood,
@@ -8,35 +9,42 @@ import {
 } from "./villageScenery";
 
 /**
- * The starlight gate (the tablet) tells how close the road home is:
- * - under 7 stars it sleeps (dim, greyish screen, no sparkles);
- * - from 7 it is awake: its screen breathes and a soft light glows round it,
- *   inviting without asking (more stars can still be collected);
- * - at 9 the same light turns a little golden.
- * The first time 7 and then 9 are reached it wakes with one short flash:
- * rings, sparkles, a chime and a line from Midi. Nothing is dimmed and
- * nothing waits for a tap. Which moments were shown is remembered, so each
- * plays once.
+ * The starlight gate (the tablet) wakes up when the road home opens:
+ * - under 7 stars it looks as it always did;
+ * - from 7 its screen gently breathes brighter and dimmer, inviting without
+ *   asking (more stars can still be collected).
+ * The first time 7 and then 9 are reached it shines once: the screen flashes,
+ * Midi's sparkle stars (the Ethics Review office's) burst round it, a chime
+ * plays and Midi says a line. Nothing is dimmed and nothing waits for a tap.
+ * Which moments were shown is remembered, so each plays once.
  */
 export type GateMilestone = 7 | 9;
 
 const CELEBRATED_KEY = "intam:gate-celebrated:v1";
-const GLOW_DEPTH = 1;
 const BURST_DEPTH = 1_900;
-const COLORS = {
-  awake: { glow: 0x8ff3ff, ring: 0xd9fbff },
-  full: { glow: 0xffd977, ring: 0xfff1b8 },
-} as const;
+/** Midi's hand-drawn sparkle stars (the same art as the Ethics Review office). */
+const SPARKLES = ["gate-sparkle-1", "gate-sparkle-2", "gate-sparkle-3"] as const;
+const SPARKLE_SOURCES = [
+  GAME_ASSETS.ethicsReview.midiEffects.sparkle,
+  GAME_ASSETS.ethicsReview.midiEffects.sparkleMid,
+  GAME_ASSETS.ethicsReview.midiEffects.sparkleSmall,
+] as const;
 
-export const GATE_LINES: Readonly<Record<GateMilestone, string>> = {
-  7: "별빛 졸업길이 열렸어! 별을 더 모아도 되고, 지금 가 봐도 돼.",
-  9: "별 9개를 다 모았어! 졸업길이 반짝반짝 빛나고 있어.",
-};
+/** Midi's line: 7–8 stars say how many were collected, 9 says all of them. */
+export function getGateLine(milestone: GateMilestone, totalStars: number) {
+  return milestone === 9
+    ? "모든 별을 모았어! 별빛 졸업길로 가보자!"
+    : `별을 ${totalStars}개 모아서 별빛 졸업길이 열렸어!`;
+}
 
 export function getGateLevel(totalStars: number): AiWorldPortalLevel {
-  if (totalStars >= 9) return "full";
-  if (totalStars >= 7) return "awake";
-  return "sleep";
+  return totalStars >= 7 ? "awake" : "plain";
+}
+
+export function preloadGateSparkles(scene: Phaser.Scene) {
+  SPARKLES.forEach((key, index) => {
+    if (!scene.textures.exists(key)) scene.load.image(key, SPARKLE_SOURCES[index]);
+  });
 }
 
 function readCelebrated(): number {
@@ -72,46 +80,55 @@ function markCelebrated(milestone: GateMilestone) {
   }
 }
 
-/** The gate's look for its star count; returns the soft glow round it (awake/full). */
-export function setUpVillageGate(scene: Phaser.Scene, layer: VillageSceneryLayer, level: AiWorldPortalLevel) {
-  const portal = layer.depthBackdrops[0];
-  const mood = getAiWorldPortalMood(portal);
+/** The gate's look for its star count. */
+export function setUpVillageGate(layer: VillageSceneryLayer, level: AiWorldPortalLevel) {
+  const mood = getAiWorldPortalMood(layer.depthBackdrops[0]);
   if (mood) mood.level = level;
-  if (level !== "awake" && level !== "full") return undefined;
-  const { image } = layer;
-  const color = COLORS[level].glow;
-  const glow = scene.add.graphics().setPosition(image.x, image.y).setDepth(GLOW_DEPTH)
-    .setBlendMode(Phaser.BlendModes.ADD);
-  const width = image.displayWidth * 1.12;
-  const height = image.displayHeight * 0.98;
-  for (let ring = 0; ring < 7; ring += 1) {
-    const shrink = 1 - ring * 0.11;
-    glow.fillStyle(color, 0.05);
-    glow.fillEllipse(0, image.displayHeight * 0.08, width * shrink, height * shrink);
-  }
+}
+
+/** One of Midi's sparkle stars: pops in, twinkles, then fades. */
+function popSparkle(
+  scene: Phaser.Scene,
+  at: Readonly<{ x: number; y: number }>,
+  size: number,
+  delay: number,
+  drift: Readonly<{ x: number; y: number }>,
+) {
+  const key = SPARKLES[Phaser.Math.Between(0, SPARKLES.length - 1)];
+  if (!scene.textures.exists(key)) return;
+  const star = scene.add.image(at.x, at.y, key).setDepth(BURST_DEPTH + 1);
+  const full = size / Math.max(star.width, star.height);
+  star.setScale(0).setAngle(Phaser.Math.Between(-35, -15));
   scene.tweens.add({
-    targets: glow, alpha: { from: 0.55, to: 1 }, duration: 1_300, yoyo: true, repeat: -1, ease: "Sine.easeInOut",
+    targets: star, scale: full, angle: 0, x: at.x + drift.x * 0.6, y: at.y + drift.y * 0.6,
+    duration: 280, delay, ease: "Back.easeOut",
   });
-  return glow;
+  scene.tweens.add({
+    targets: star, scale: full * 0.78, duration: 220, delay: delay + 330, yoyo: true, repeat: 1, ease: "Sine.easeInOut",
+  });
+  scene.tweens.add({
+    targets: star, alpha: 0, scale: full * 0.5, x: at.x + drift.x, y: at.y + drift.y,
+    duration: 360, delay: delay + 1_150, ease: "Sine.easeIn", onComplete: () => star.destroy(),
+  });
 }
 
 /**
- * The one-off wake-up flash. `delayMs` lets the stars over the roof finish
- * first; `onLine` is where Midi says her line.
+ * The one-off shine. `delayMs` lets the stars over the roof finish first;
+ * `onLine` is where Midi says her line.
  */
 export function playGateMilestone(
   scene: Phaser.Scene,
   layer: VillageSceneryLayer,
   milestone: GateMilestone,
-  options: Readonly<{ delayMs: number; starTexture: string; onLine: (line: string) => void }>,
+  options: Readonly<{ delayMs: number; totalStars: number; onLine: (line: string) => void }>,
 ) {
   markCelebrated(milestone);
   const big = milestone === 9;
-  const palette = big ? COLORS.full : COLORS.awake;
   const screen = getAiWorldPortalScreen(layer.definition);
   const cx = screen.left + screen.width / 2;
   const cy = screen.top + screen.height / 2;
   const mood = getAiWorldPortalMood(layer.depthBackdrops[0]);
+  const { image } = layer;
 
   scene.time.delayedCall(options.delayMs, () => {
     if (!scene.sys.isActive()) return;
@@ -124,38 +141,30 @@ export function playGateMilestone(
       });
     }
     // The whole tablet gives a small happy bounce.
-    const { image } = layer;
     const rest = { x: image.scaleX, y: image.scaleY };
     scene.tweens.add({
       targets: image, scaleX: rest.x * 1.04, scaleY: rest.y * 1.04, duration: 180, yoyo: true, ease: "Sine.easeOut",
       onComplete: () => image.setScale(rest.x, rest.y),
     });
-    // Rings of light spread from the screen.
-    const rings = big ? 3 : 2;
-    for (let index = 0; index < rings; index += 1) {
-      const ring = scene.add.graphics().setPosition(cx, cy).setDepth(BURST_DEPTH).setBlendMode(Phaser.BlendModes.ADD);
-      ring.lineStyle(5, palette.ring, 0.85).strokeEllipse(0, 0, screen.width * 0.9, screen.height * 0.9);
-      ring.setScale(0.7).setAlpha(0);
-      scene.tweens.add({
-        targets: ring, scale: big ? 2.3 : 1.9, alpha: { from: 0.9, to: 0 }, delay: index * 180,
-        duration: 900, ease: "Cubic.easeOut", onComplete: () => ring.destroy(),
-      });
+
+    // One big star blooms in the middle of the screen.
+    popSparkle(scene, { x: cx, y: cy }, big ? 150 : 120, 40, { x: 0, y: -10 });
+    // Then Midi's sparkle stars burst out round the tablet, in two waves for all nine.
+    const waves = big ? 2 : 1;
+    const perWave = big ? 9 : 8;
+    const reachX = image.displayWidth * 0.5;
+    const reachY = image.displayHeight * 0.48;
+    for (let wave = 0; wave < waves; wave += 1) {
+      for (let index = 0; index < perWave; index += 1) {
+        const angle = ((Math.PI * 2) * (index + wave * 0.5)) / perWave + Phaser.Math.FloatBetween(-0.18, 0.18);
+        const reach = Phaser.Math.FloatBetween(0.72, 1.05) * (1 + wave * 0.18);
+        const at = { x: cx + Math.cos(angle) * reachX * reach, y: cy + Math.sin(angle) * reachY * reach };
+        const size = Phaser.Math.Between(big ? 46 : 40, big ? 72 : 62) * (wave ? 0.85 : 1);
+        const drift = { x: Math.cos(angle) * 26, y: Math.sin(angle) * 22 - 8 };
+        popSparkle(scene, at, size, 160 + wave * 420 + index * 45, drift);
+      }
     }
-    // Little stars fly out of the screen and fade.
-    const count = big ? 16 : 10;
-    for (let index = 0; index < count; index += 1) {
-      const angle = (Math.PI * 2 * index) / count + Phaser.Math.FloatBetween(-0.2, 0.2);
-      const distance = Phaser.Math.Between(big ? 120 : 90, big ? 190 : 150);
-      const size = Phaser.Math.Between(14, big ? 26 : 22);
-      const star = scene.add.image(cx, cy, options.starTexture).setDisplaySize(size, size)
-        .setDepth(BURST_DEPTH + 1).setAlpha(0);
-      const scale = star.scaleX;
-      scene.tweens.add({
-        targets: star, x: cx + Math.cos(angle) * distance, y: cy + Math.sin(angle) * distance * 0.8,
-        alpha: { from: 1, to: 0 }, scale: { from: scale * 0.4, to: scale * 1.1 }, angle: Phaser.Math.Between(-120, 120),
-        delay: 60 + (index % 4) * 40, duration: 950, ease: "Cubic.easeOut", onComplete: () => star.destroy(),
-      });
-    }
+
     // A rising chime (a fuller one for all nine).
     playSoftNotes(scene, big
       ? [
@@ -168,7 +177,7 @@ export function playGateMilestone(
         [1_319, 1_319, 0.22, 0.5, 0.048, "triangle"], [2_637, 2_637, 0.22, 0.4, 0.012, "sine"],
       ]);
     scene.time.delayedCall(520, () => {
-      if (scene.sys.isActive()) options.onLine(GATE_LINES[milestone]);
+      if (scene.sys.isActive()) options.onLine(getGateLine(milestone, options.totalStars));
     });
   });
 }
