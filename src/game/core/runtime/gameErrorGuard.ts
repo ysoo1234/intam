@@ -81,7 +81,8 @@ export function installGameErrorGuard(game: Phaser.Game) {
       // The scene keeps failing: back to the village, stars and records kept.
       try {
         game.scene.getScenes(true).forEach((scene) => game.scene.stop(scene.scene.key));
-        game.scene.start(SCENE_KEYS.world);
+        // Empty data, so the village does not replay its last arrival.
+        game.scene.start(SCENE_KEYS.world, {});
       } catch (recoverError) {
         report(recoverError, "recover");
       }

@@ -9,7 +9,7 @@ import {
   type WorldProgressSnapshot,
 } from "../../../core/navigation/worldProgress";
 import { loadStoredWorldProgress } from "../../../core/navigation/worldProgressStorage";
-import { hasSeenEnding, markEndingSeen } from "../../../core/navigation/endingProgressStorage";
+import { hasSeenEndingWith, markEndingSeen } from "../../../core/navigation/endingProgressStorage";
 import { MIDI_POSE } from "../../../core/player/midiFrames";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { readEndingStart, type EndingStart } from "../../../core/scenes/endingStart";
@@ -88,9 +88,10 @@ export class EndingScene extends Phaser.Scene {
     ensureEndingLights(this);
     const fromGate = readEndingStart(data);
     this.start = fromGate ?? this.directStart();
-    // A repeat visit through the gate goes straight to the last screen
-    // (the story and the photo were already done; ?ending replays in full).
-    if (fromGate && hasSeenEnding()) {
+    // A repeat visit through the gate goes straight to the last screen (the
+    // story and the photo were already done; ?ending replays in full). With
+    // more stars than last time (7 then 8 or 9) the whole story plays again.
+    if (fromGate && hasSeenEndingWith(this.stars)) {
       this.finale = showEndingFinale(this, {
         calm: this.calm,
         fromVillage: true,
@@ -346,7 +347,7 @@ export class EndingScene extends Phaser.Scene {
     dialogue.setNarratorVisible(false, 300);
     const white = await portal.rushThrough();
     if (!this.sys.isActive()) return;
-    markEndingSeen();
+    markEndingSeen(this.stars);
     this.finale = showEndingFinale(this, {
       calm: this.calm,
       onReturn: () => this.returnToVillage(),
@@ -383,6 +384,9 @@ export class EndingScene extends Phaser.Scene {
 
   /** Back to the village; every star and record stays as it is. */
   private returnToVillage() {
-    this.scene.start(SCENE_KEYS.world);
+    // Empty data on purpose: with none, Phaser hands the village the data it
+    // was last started with (the return from the last place), and the stars
+    // just earned there would fill in again.
+    this.scene.start(SCENE_KEYS.world, {});
   }
 }
