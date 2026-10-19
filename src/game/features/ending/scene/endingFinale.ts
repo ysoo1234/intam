@@ -4,6 +4,7 @@ import { MIDI_FRAME_HEIGHT, MIDI_POSE } from "../../../core/player/midiFrames";
 import { applyPageBackdrop } from "../../../core/runtime/pageBackdrop";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
 import { DISPLAY_FONT_FAMILY } from "../../../core/visual/fonts";
+import { addGradientImage } from "../../../core/visual/gradientImage";
 import { FONT_FAMILY } from "../../../core/visual/theme";
 import { addEndingArtButton } from "./endingButtons";
 import { ENDING_LIGHT } from "./endingLights";
@@ -43,9 +44,8 @@ export function showEndingFinale(
   const motion = (ms: number) => (options.calm ? 0 : ms);
   // The page around the canvas takes the first screen's sky colours again.
   applyPageBackdrop(SCENE_KEYS.intro);
+  addGradientImage(scene, { x: 0, y: 0, width: 1280, height: 720 }, SKY).setDepth(DEPTH.sky);
   const sky = scene.add.graphics().setDepth(DEPTH.sky);
-  sky.fillGradientStyle(SKY.top, SKY.top, SKY.bottom, SKY.bottom, 1, 1, 1, 1);
-  sky.fillRect(0, 0, 1280, 720);
   for (let ring = 0; ring < 6; ring += 1) {
     sky.fillStyle(0xffffff, 0.06);
     sky.fillEllipse(BOARD.x, BOARD.y + 30, 1_000 - ring * 120, 640 - ring * 80);

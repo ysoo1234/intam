@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { addGradientImage } from "../../../core/visual/gradientImage";
 import { SCENE_FADE_RGB } from "../../../core/visual/theme";
 import { GAME_ASSETS } from "../../../assets";
 import { getPointerWorldPoint } from "../../../core/input/pointerCoordinates";
@@ -108,13 +109,9 @@ export class IntroScene extends Phaser.Scene {
 
   /** Sky-blue to lavender wash, radiating light behind the board, sparkles. */
   private createSky() {
+    const sky = { top: INTRO_COLORS.skyTop, bottom: INTRO_COLORS.skyBottom };
+    addGradientImage(this, { x: 0, y: 0, width: 1280, height: 720 }, sky).setDepth(INTRO_DEPTH.wash);
     const wash = this.add.graphics().setDepth(INTRO_DEPTH.wash);
-    wash.fillGradientStyle(
-      INTRO_COLORS.skyTop, INTRO_COLORS.skyTop,
-      INTRO_COLORS.skyBottom, INTRO_COLORS.skyBottom,
-      1, 1, 1, 1,
-    );
-    wash.fillRect(0, 0, 1280, 720);
     // A soft bright core behind the board, like the page's glow.
     for (let ring = 0; ring < 6; ring += 1) {
       wash.fillStyle(0xffffff, 0.05);
@@ -145,18 +142,11 @@ export class IntroScene extends Phaser.Scene {
 
     // Fade the rays out toward the left and right edges so the canvas melts
     // into the page colour (pageBackdrop.ts) on wide windows.
-    const edgeFade = this.add.graphics().setDepth(INTRO_DEPTH.rays + 0.5);
     const fadeWidth = 170;
-    edgeFade.fillGradientStyle(
-      INTRO_COLORS.skyTop, INTRO_COLORS.skyTop, INTRO_COLORS.skyBottom, INTRO_COLORS.skyBottom,
-      1, 0, 1, 0,
-    );
-    edgeFade.fillRect(0, 0, fadeWidth, 720);
-    edgeFade.fillGradientStyle(
-      INTRO_COLORS.skyTop, INTRO_COLORS.skyTop, INTRO_COLORS.skyBottom, INTRO_COLORS.skyBottom,
-      0, 1, 0, 1,
-    );
-    edgeFade.fillRect(1280 - fadeWidth, 0, fadeWidth, 720);
+    addGradientImage(this, { x: 0, y: 0, width: fadeWidth, height: 720 }, { ...sky, alphaLeft: 1, alphaRight: 0 })
+      .setDepth(INTRO_DEPTH.rays + 0.5);
+    addGradientImage(this, { x: 1280 - fadeWidth, y: 0, width: fadeWidth, height: 720 }, { ...sky, alphaLeft: 0, alphaRight: 1 })
+      .setDepth(INTRO_DEPTH.rays + 0.5);
 
     // Four-point sparkles scattered around the board, like the printed page.
     const sparkleSpots = [
@@ -474,8 +464,10 @@ export class IntroScene extends Phaser.Scene {
     }
 
     this.talker?.stop();
-    for (const extra of [this.mascot, this.titleGroup]) {
+    // The board's shadow and Midi's bubble go with them, so nothing is left under the opening board.
+    for (const extra of [this.mascot, this.titleGroup, this.midiBubble, this.boardShadow]) {
       if (!extra) continue;
+      this.tweens.killTweensOf(extra);
       this.tweens.add({ targets: extra, alpha: 0, duration: 220, ease: "Sine.easeIn" });
     }
 

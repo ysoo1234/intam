@@ -342,7 +342,7 @@ export type CoachSpotlight = Readonly<{
  */
 export function createCoachSpotlight(
   scene: Phaser.Scene,
-  options: Readonly<{ depth?: number; alpha?: number }> = {},
+  options: Readonly<{ depth?: number; alpha?: number; fadeMs?: number }> = {},
 ): CoachSpotlight {
   const width = 1_280;
   const height = 720;
@@ -372,7 +372,7 @@ export function createCoachSpotlight(
   };
   const show = () => {
     scene.tweens.killTweensOf(image);
-    scene.tweens.add({ targets: image, alpha: 1, duration: reducedMotion ? 0 : 260 });
+    scene.tweens.add({ targets: image, alpha: 1, duration: reducedMotion ? 0 : options.fadeMs ?? 260, ease: "Sine.easeInOut" });
   };
   const softEdge = 70;
   // The hole's edge is one smooth blur (a canvas shadow), not stacked rings:

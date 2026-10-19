@@ -68,6 +68,8 @@ export class EthicsReviewScene extends Phaser.Scene {
   /** While the 3-2-1 runs, the next student waits outside (then comes in on "시작!"). */
   private arrivalHeld = false;
   private heldArrival?: () => void;
+  /** The tally the HUD keeps showing until the stamp lands (then it counts up with the +points). */
+  private hudTally?: Readonly<{ processedCount: number; score: number; combo: number }>;
   private inputReadyAt = 0;
   private lastTickAt = 0;
   private earnedStars?: 0 | 1 | 2 | 3;
@@ -157,6 +159,7 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.presentGeneration = 0;
     this.arrivalHeld = false;
     this.heldArrival = undefined;
+    this.hudTally = undefined;
     this.arrived = true;
     this.inputReadyAt = 0;
     this.lastTickAt = 0;
@@ -324,6 +327,7 @@ export class EthicsReviewScene extends Phaser.Scene {
     const previous = this.state;
     this.state = actEthicsDelivery(previous, action);
     if (this.state === previous || !this.state.decision) { this.controls?.cancelMovement(); return; }
+    this.hudTally = { processedCount: previous.processedCount, score: previous.score, combo: previous.combo };
     const state = this.state;
     const decision = state.decision!;
     this.lastVerdict = decision.selected;
@@ -333,6 +337,8 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.player.react(decision.correct);
     this.tutorial?.notify("stamped");
     this.stamp = playEthicsVerdictStamp(this, decision, this.stations, this.form, () => {
+      this.hudTally = undefined;
+      this.updateHud();
       this.audio?.play(decision.correct);
       if (celebrate) this.audio?.cheer();
       // Only a good use, approved, makes the student beam; a rightly rejected
@@ -367,17 +373,18 @@ export class EthicsReviewScene extends Phaser.Scene {
   private updateHud() {
     if (!this.state || !this.hud) return;
     const state = this.state;
+    const tally = this.hudTally ?? state;
     const seconds = Math.ceil(state.remainingMs / 1000);
     const clock = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
     const values = [
-      `손님 ${state.processedCount}명`, `${state.score.toLocaleString()}점`,
-      `콤보 ${state.combo}`, state.practice ? "연습" : clock,
+      `손님 ${tally.processedCount}명`, `${tally.score.toLocaleString()}점`,
+      `콤보 ${tally.combo}`, state.practice ? "연습" : clock,
     ] as const;
     const key = values.join("|");
     if (key === this.hudKey) return;
     this.hud.setValues(values);
     this.hud.setValue(3, values[3], seconds <= 10 && !state.practice ? "#c8574a" : "#315567");
-    this.hud.setValue(2, values[2], state.combo >= 3 ? "#d4792e" : "#315567");
+    this.hud.setValue(2, values[2], tally.combo >= 3 ? "#d4792e" : "#315567");
     this.hudKey = key;
   }
 

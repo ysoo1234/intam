@@ -167,7 +167,8 @@ export function createVillageTutorial(scene: Phaser.Scene, options: VillageTutor
 
   // --- Spotlight (first visit only) -------------------------------------------
   const spotlight: CoachSpotlight | undefined = options.firstVisit
-    ? createCoachSpotlight(scene, { depth: SPOTLIGHT_DEPTH, alpha: 0.55 })
+    // A slow dim, so the village doesn't seem to jolt as the intro hands over.
+    ? createCoachSpotlight(scene, { depth: SPOTLIGHT_DEPTH, alpha: 0.55, fadeMs: 750 })
     : undefined;
   let spotlightOn = Boolean(spotlight);
   let doorLit = false;

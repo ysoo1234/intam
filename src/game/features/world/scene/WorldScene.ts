@@ -288,6 +288,17 @@ export class WorldScene extends Phaser.Scene {
     if (!isVillageDoorArrival(data)) {
       const from = returnRequest ? resolveFeatureSceneKey(returnRequest.sourceFeatureId) : SCENE_KEYS.world;
       this.cameras.main.fadeIn(380, ...sceneRgb(from));
+    } else {
+      // The intro's picture had still water: the fountain's moving water eases
+      // in instead of popping on (its orb was in the picture, so it stays).
+      this.sceneryLayers.flatMap((layer) => layer.depthFollowers)
+        .filter((part) => !(part instanceof Phaser.GameObjects.Image && part.texture.key.includes("orb")))
+        .forEach((target) => {
+          const part = target as unknown as Phaser.GameObjects.Components.Alpha;
+          const alpha = part.alpha;
+          part.setAlpha(0);
+          this.tweens.add({ targets: target, alpha, duration: 900, ease: "Sine.easeInOut" });
+        });
     }
   }
 

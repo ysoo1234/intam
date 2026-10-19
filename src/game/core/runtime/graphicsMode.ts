@@ -142,23 +142,44 @@ export function chooseRendererType(): number {
 }
 
 /**
- * In "auto" with WebGL, counts frames for a few seconds once the first screen
- * is up. Too slow: this computer switches to Canvas (remembered) and the page
- * reloads once, on the first screen, before any playing starts.
+ * In "auto" with WebGL, watches the frames for a few seconds once the first
+ * screen is up. It looks at the typical frame (the median), so a moment of
+ * heavy work (the board opening into the village) does not count as a slow
+ * computer. Too slow: this computer switches to light mode (remembered). The
+ * page reloads for it only if nobody has touched anything yet; otherwise the
+ * switch waits for the next visit.
  */
 export function watchFrameRate(game: Phaser.Game) {
   if (readGraphicsMode() !== "auto" || game.renderer.type !== Phaser.WEBGL) return;
   if (storage("session")?.getItem(RELOADED_KEY) === "1") return;
+  let touched = false;
+  const onInput = () => { touched = true; };
+  window.addEventListener("pointerdown", onInput, { capture: true });
+  window.addEventListener("keydown", onInput, { capture: true });
+  const stopListening = () => {
+    window.removeEventListener("pointerdown", onInput, { capture: true });
+    window.removeEventListener("keydown", onInput, { capture: true });
+  };
   window.setTimeout(() => {
-    if (!game.isRunning) return;
-    const startFrame = game.loop.frame;
-    const startedAt = performance.now();
+    if (!game.isRunning) return stopListening();
+    const intervals: number[] = [];
+    let last = performance.now();
+    const onFrame = () => {
+      const now = performance.now();
+      intervals.push(now - last);
+      last = now;
+    };
+    game.events.on(Phaser.Core.Events.POST_RENDER, onFrame);
     window.setTimeout(() => {
-      if (!game.isRunning || document.hidden) return;
-      const fps = (game.loop.frame - startFrame) / ((performance.now() - startedAt) / 1_000);
-      if (fps >= SLOW_FPS) return;
+      game.events.off(Phaser.Core.Events.POST_RENDER, onFrame);
+      stopListening();
+      if (!game.isRunning || document.hidden || intervals.length < 3) return;
+      intervals.sort((a, b) => a - b);
+      const typicalFps = 1_000 / intervals[Math.floor(intervals.length / 2)];
+      if (typicalFps >= SLOW_FPS) return;
       try {
         storage("local")?.setItem(AUTO_LIGHT_KEY, "1");
+        if (touched) return;
         storage("session")?.setItem(RELOADED_KEY, "1");
       } catch {
         return;
