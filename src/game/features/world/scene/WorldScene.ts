@@ -346,7 +346,7 @@ export class WorldScene extends Phaser.Scene {
           label: "그래픽 상태 보기",
           run: () => {
             this.testMenu?.notify("1초 동안 재는 중...", 1_000);
-            void describeGraphics(this.game).then((text) => this.testMenu?.notify(text, 5_000));
+            void describeGraphics(this.game).then((text) => this.testMenu?.notify(text, 7_000));
           },
         },
         {

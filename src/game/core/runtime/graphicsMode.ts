@@ -63,6 +63,74 @@ function isWebGlSoftware(): boolean {
   }
 }
 
+/**
+ * How sharp the light (Canvas) mode can afford to be on this computer.
+ *
+ * Canvas draws with the processor, so its cost grows with the number of
+ * pixels; a strong processor manages a sharper picture easily, a weak one
+ * does not. A quick test (well under a tenth of a second, during the loading
+ * screen) times full-screen picture draws, and the sharpest scale whose
+ * heaviest place (the airport in play, about 36 of those draws a frame, measured)
+ * still runs at 40 fps or more is chosen, up to what the screen needs.
+ */
+const LIGHT_SCALE_STEPS = [1, 1.25, 1.5, 1.75, 2] as const;
+const HEAVIEST_FRAME_LAYERS = 36;
+const FRAME_BUDGET_MS = 25;
+
+function timeFullScreenDraw(): number {
+  const source = document.createElement("canvas");
+  source.width = 1_280;
+  source.height = 720;
+  const paint = source.getContext("2d");
+  const out = document.createElement("canvas");
+  out.width = 1_280;
+  out.height = 720;
+  const draw = out.getContext("2d", { willReadFrequently: false });
+  if (!paint || !draw) return Number.POSITIVE_INFINITY;
+  const gradient = paint.createLinearGradient(0, 0, 1_280, 720);
+  gradient.addColorStop(0, "#7fd0f2");
+  gradient.addColorStop(1, "#a2ba75");
+  paint.fillStyle = gradient;
+  paint.fillRect(0, 0, 1_280, 720);
+  for (let i = 0; i < 300; i += 1) {
+    paint.fillStyle = `hsl(${(i * 37) % 360} 60% 60% / 0.6)`;
+    paint.beginPath();
+    paint.arc((i * 97) % 1_280, (i * 53) % 720, 10 + (i % 30), 0, Math.PI * 2);
+    paint.fill();
+  }
+  const runs: number[] = [];
+  draw.drawImage(source, 0, 0);
+  draw.getImageData(0, 0, 1, 1);
+  for (let run = 0; run < 3; run += 1) {
+    const reps = 6;
+    const startedAt = performance.now();
+    for (let i = 0; i < reps; i += 1) {
+      draw.globalAlpha = 0.9;
+      draw.drawImage(source, (i % 3) - 1, 0, 1_280, 720);
+    }
+    // Reading one pixel makes the browser finish the drawing now.
+    draw.getImageData(0, 0, 1, 1);
+    runs.push((performance.now() - startedAt) / reps);
+  }
+  runs.sort((x, y) => x - y);
+  return runs[1];
+}
+
+export function chooseLightRenderScale(maxScale: number): number {
+  let layerMs: number;
+  try {
+    layerMs = timeFullScreenDraw();
+  } catch {
+    return 1;
+  }
+  let chosen = 1;
+  for (const scale of LIGHT_SCALE_STEPS) {
+    if (scale > maxScale) break;
+    if (HEAVIEST_FRAME_LAYERS * layerMs * scale * scale <= FRAME_BUDGET_MS) chosen = scale;
+  }
+  return chosen;
+}
+
 /** The Phaser renderer type to boot with. */
 export function chooseRendererType(): number {
   if (typeof window === "undefined") return Phaser.AUTO;
@@ -110,7 +178,12 @@ export function describeGraphics(game: Phaser.Game): Promise<string> {
       const mode = { auto: "자동", light: "가벼운", sharp: "선명한" }[readGraphicsMode()];
       const renderer = game.renderer.type === Phaser.WEBGL ? "WebGL" : "Canvas";
       const scale = (game.canvas.width / 1_280).toFixed(2).replace(/\.?0+$/, "");
-      resolve(`초당 ${fps}프레임 · ${mode} 모드(${renderer}) · 화면 배율 ${scale}x`);
+      const summary = `초당 ${fps}프레임 · ${mode} 모드(${renderer}) · 화면 배율 ${scale}x`;
+      // A web page cannot switch graphics acceleration on; the browser setting can.
+      const tip = renderer === "Canvas" && readGraphicsMode() === "auto"
+        ? "\n그래픽 가속이 꺼져 있어요. 크롬 설정 › 시스템 › '가능한 경우 그래픽 가속 사용'을 켜면 더 선명해져요."
+        : "";
+      resolve(summary + tip);
     }, 1_000);
   });
 }
