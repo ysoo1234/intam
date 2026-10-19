@@ -8,7 +8,7 @@ import {
   type WorldProgressSnapshot,
 } from "../../../core/navigation";
 import type { MapDefinition, Point } from "../model/mapDefinition";
-import { getGateLevel, getPendingGateMilestone, playGateMilestone, preloadGateSparkles, setUpVillageGate } from "./villageGateGlow";
+import { getGateLevel, getPendingGateMilestone, playGateMilestone, setUpVillageGate } from "./villageGateGlow";
 import type { VillageSceneryLayer } from "./villageScenery";
 
 const PROGRESS_DEPTH = 1_880;
@@ -18,7 +18,6 @@ export const VILLAGE_STAR_TEXTURES = {
 } as const;
 
 export function preloadVillageProgressPresentationAssets(scene: Phaser.Scene) {
-  preloadGateSparkles(scene);
   if (!scene.textures.exists(VILLAGE_STAR_TEXTURES.empty)) {
     scene.load.image(
       VILLAGE_STAR_TEXTURES.empty,
@@ -184,7 +183,7 @@ export function createVillageProgressPresentation(
   if (exitLayer) {
     exitLayer.image.clearTint().setAlpha(1);
     const totalStars = getWorldTotalStars(progress);
-    setUpVillageGate(exitLayer, getGateLevel(totalStars));
+    setUpVillageGate(scene, exitLayer, getGateLevel(totalStars));
     const milestone = getPendingGateMilestone(totalStars);
     if (milestone) {
       // After the roof's stars have popped in (when just back from a place).

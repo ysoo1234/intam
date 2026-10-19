@@ -45,10 +45,21 @@ let portalCount = 0;
 /**
  * How the portal looks: "plain" (as it always was: fewer than 7 stars, the
  * ending) or "awake" (the starlight road is open: it breathes gently brighter
- * and dimmer). `flare` (0–1) is a passing flash.
+ * and dimmer). Everything below is drawn inside the screen, so the tablet's
+ * case is never lit:
+ * - `flare` (0–1): the screen brightens for a moment;
+ * - `sweep` (0–1 while it runs, otherwise outside that): a band of light
+ *   glides across the glass, `sweepStrength` bright;
+ * - `twinkle(count)`: a burst of extra sparkles inside the screen.
  */
 export type AiWorldPortalLevel = "plain" | "awake";
-export type AiWorldPortalMood = { level: AiWorldPortalLevel; flare: number };
+export type AiWorldPortalMood = {
+  level: AiWorldPortalLevel;
+  flare: number;
+  sweep: number;
+  sweepStrength: number;
+  twinkle: (count: number) => void;
+};
 const PORTAL_MOOD_KEY = "portal-mood";
 
 /** The mood object a live portal reads every time it is drawn (set its fields). */
@@ -181,7 +192,7 @@ export function createAiWorldPortalView(
       near[i] = r / maxR;
     }
   }
-  const mood: AiWorldPortalMood = { level: "plain", flare: 0 };
+  const mood: AiWorldPortalMood = { level: "plain", flare: 0, sweep: -1, sweepStrength: 1, twinkle: () => undefined };
   const { deep, light } = PORTAL_SWIRL;
   const swirl = (t: number) => {
     const phase = t * PORTAL_SWIRL.speed;
@@ -190,7 +201,7 @@ export function createAiWorldPortalView(
     const breath = mood.level === "awake" ? Math.sin((t * Math.PI * 2) / 2.6) * 0.08 : 0;
     const gain = 1 + breath;
     const lift = breath * 0.5;
-    const flash = Math.min(1, mood.flare) * 0.6;
+    const flash = Math.min(1, mood.flare) * 0.45;
     for (let i = 0; i < angle.length; i += 1) {
       // Soft arms, with a slow second wave so they never look mechanical.
       const wave = Math.sin(PORTAL_SWIRL.arms * angle[i] + curl[i] - phase)
@@ -200,7 +211,7 @@ export function createAiWorldPortalView(
       const d = near[i];
       k += 0.45 * Math.exp(-(d * d) / 0.035);
       k -= 0.22 * d * d;
-      k = k * gain + lift + mood.flare * 0.35;
+      k = k * gain + lift + mood.flare * 0.3;
       k = k < 0 ? 0 : k > 1 ? 1 : k;
       let r = deep[0] + (light[0] - deep[0]) * k;
       let g = deep[1] + (light[1] - deep[1]) * k;
@@ -225,6 +236,58 @@ export function createAiWorldPortalView(
     duration: 0.8 + Math.random() * 1.2,
   });
   const sparkles = Array.from({ length: 4 }, () => newSparkle(scene.time.now / 1000));
+  // Extra sparkles of a celebration: bigger, brighter, and they do not come back.
+  let bursts: ReturnType<typeof newSparkle>[] = [];
+  mood.twinkle = (count: number) => {
+    const now = scene.time.now / 1000;
+    bursts = bursts.concat(Array.from({ length: count }, (_, index) => ({
+      x: 0.2 + Math.random() * 0.6,
+      y: 0.18 + Math.random() * 0.64,
+      size: 6 + Math.random() * 7,
+      born: now + index * 0.07 + Math.random() * 0.12,
+      duration: 0.7 + Math.random() * 0.5,
+    })));
+  };
+  const drawSparkle = (sparkle: ReturnType<typeof newSparkle>, shine: number) => {
+    const arm = sparkle.size * (0.6 + shine);
+    const sx = sparkle.x * width;
+    const sy = sparkle.y * height;
+    const core = ctx.createRadialGradient(sx, sy, 0, sx, sy, arm * 0.7);
+    core.addColorStop(0, `rgba(255, 255, 255, ${0.8 * shine})`);
+    core.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = core;
+    ctx.fillRect(sx - arm, sy - arm, arm * 2, arm * 2);
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 * shine})`;
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(sx - arm, sy);
+    ctx.lineTo(sx + arm, sy);
+    ctx.moveTo(sx, sy - arm);
+    ctx.lineTo(sx, sy + arm);
+    ctx.stroke();
+  };
+  /** A soft diagonal band of light gliding across the glass, like a reflection. */
+  const drawSweep = (progress: number, strength: number) => {
+    const span = width + height;
+    const centre = -0.25 * span + progress * 1.5 * span;
+    const band = span * 0.16;
+    // Along the direction (1, 0.55): left-top to right-bottom, leaning like a reflection.
+    const dx = 1;
+    const dy = 0.55;
+    const unit = Math.hypot(dx, dy);
+    const x0 = ((centre - band) * dx) / unit;
+    const y0 = ((centre - band) * dy) / unit;
+    const x1 = ((centre + band) * dx) / unit;
+    const y1 = ((centre + band) * dy) / unit;
+    const sheen = ctx.createLinearGradient(x0, y0, x1, y1);
+    sheen.addColorStop(0, "rgba(255, 255, 255, 0)");
+    sheen.addColorStop(0.38, `rgba(255, 255, 255, ${0.18 * strength})`);
+    sheen.addColorStop(0.5, `rgba(255, 255, 255, ${0.5 * strength})`);
+    sheen.addColorStop(0.6, `rgba(255, 255, 255, ${0.18 * strength})`);
+    sheen.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = sheen;
+    ctx.fillRect(0, 0, width, height);
+  };
 
   const draw = (time: number) => {
     const t = time / 1000;
@@ -233,6 +296,7 @@ export function createAiWorldPortalView(
     ctx.drawImage(swirlCanvas, 0, 0, width, height);
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
+    if (mood.sweep > 0 && mood.sweep < 1) drawSweep(mood.sweep, mood.sweepStrength);
     sparkles.forEach((sparkle) => {
       const life = (t - sparkle.born) / sparkle.duration;
       if (life >= 1) {
@@ -240,24 +304,15 @@ export function createAiWorldPortalView(
         return;
       }
       if (life < 0) return;
-      const shine = Math.sin(life * Math.PI) ** 2;
-      const arm = sparkle.size * (0.6 + shine);
-      const sx = sparkle.x * width;
-      const sy = sparkle.y * height;
-      const core = ctx.createRadialGradient(sx, sy, 0, sx, sy, arm * 0.7);
-      core.addColorStop(0, `rgba(255, 255, 255, ${0.8 * shine})`);
-      core.addColorStop(1, "rgba(255, 255, 255, 0)");
-      ctx.fillStyle = core;
-      ctx.fillRect(sx - arm, sy - arm, arm * 2, arm * 2);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 * shine})`;
-      ctx.lineWidth = 1.1;
-      ctx.beginPath();
-      ctx.moveTo(sx - arm, sy);
-      ctx.lineTo(sx + arm, sy);
-      ctx.moveTo(sx, sy - arm);
-      ctx.lineTo(sx, sy + arm);
-      ctx.stroke();
+      drawSparkle(sparkle, Math.sin(life * Math.PI) ** 2);
     });
+    if (bursts.length) {
+      bursts = bursts.filter((sparkle) => t < sparkle.born + sparkle.duration);
+      bursts.forEach((sparkle) => {
+        const life = (t - sparkle.born) / sparkle.duration;
+        if (life >= 0) drawSparkle(sparkle, Math.sin(life * Math.PI) ** 2);
+      });
+    }
     ctx.restore();
     canvas.refresh();
   };
@@ -272,7 +327,9 @@ export function createAiWorldPortalView(
   const portalRedrawMs = getAmbientRedrawIntervalMs();
   let last = 0;
   const onUpdate = (time: number) => {
-    if (time - last < portalRedrawMs) return;
+    // A flash, a gliding light or a burst of sparkles is drawn every frame, so it moves smoothly.
+    const lively = mood.flare > 0 || (mood.sweep > 0 && mood.sweep < 1) || bursts.length > 0;
+    if (!lively && time - last < portalRedrawMs) return;
     last = time;
     draw(time);
   };

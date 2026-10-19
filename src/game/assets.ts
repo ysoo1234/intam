@@ -239,7 +239,6 @@ export const GAME_ASSETS = {
     // Little effects drawn in Midi's style: sparkles for a right stamp, sweat drops for a wrong one.
     midiEffects: {
       sparkle: "/assets/ethics-review/midi-effect-sparkle-1.webp",
-      sparkleMid: "/assets/ethics-review/midi-effect-sparkle-2.webp",
       sparkleSmall: "/assets/ethics-review/midi-effect-sparkle-3.webp",
       sweat: "/assets/ethics-review/midi-effect-sweat-1.webp",
       sweatSmall: "/assets/ethics-review/midi-effect-sweat-2.webp",
