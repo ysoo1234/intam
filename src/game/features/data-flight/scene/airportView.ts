@@ -1,9 +1,21 @@
 import Phaser from "phaser";
 
+/**
+ * One scrolling backdrop layer: two copies of the picture side by side,
+ * slid left and wrapped. (A TileSprite refilled a full-screen pattern for
+ * each layer every frame, which cost about 5 ms a layer without graphics
+ * acceleration; two plain images cost a fraction of that.)
+ */
+export type AirportBackgroundLayer = Readonly<{
+  /** Scrolls by this many logical pixels (the 1600-wide tile's own pixels). */
+  advance: (logicalDistance: number) => void;
+  setDepth: (depth: number) => void;
+}>;
+
 export type AirportBackground = {
-  sky: Phaser.GameObjects.TileSprite;
-  city: Phaser.GameObjects.TileSprite;
-  ground: Phaser.GameObjects.TileSprite;
+  sky: AirportBackgroundLayer;
+  city: AirportBackgroundLayer;
+  ground: AirportBackgroundLayer;
 };
 
 export const AIRPORT_BACKGROUND_TEXTURE_CONTRACT = {
@@ -45,34 +57,32 @@ function createAirportBackgroundLayer(
   scene: Phaser.Scene,
   textureKey: string,
   depth: number,
-) {
-  const frame = scene.textures.getFrame(textureKey);
-  const textureWidth =
-    frame?.width ?? AIRPORT_BACKGROUND_TEXTURE_CONTRACT.targetTextureWidth;
-  const textureHeight =
-    frame?.height ?? AIRPORT_BACKGROUND_TEXTURE_CONTRACT.targetTextureHeight;
-
-  return scene.add
-    .tileSprite(
-      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.viewportWidth / 2,
-      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.viewportHeight / 2,
-      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.viewportWidth,
-      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.viewportHeight,
-      textureKey,
-    )
-    .setTileScale(
-      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.logicalTileWidth / textureWidth,
-      AIRPORT_BACKGROUND_TEXTURE_CONTRACT.logicalTileHeight / textureHeight,
-    )
-    .setDepth(depth);
+): AirportBackgroundLayer {
+  const { logicalTileWidth: width, logicalTileHeight: height } = AIRPORT_BACKGROUND_TEXTURE_CONTRACT;
+  const copies = [0, 1].map((index) =>
+    scene.add.image(index * width, 0, textureKey).setOrigin(0, 0).setDisplaySize(width, height).setDepth(depth));
+  let offset = 0;
+  const place = () => {
+    // Whole pixels, so the seam between the two copies never shows a hairline.
+    const shift = Math.round(offset);
+    copies[0].setX(-shift);
+    copies[1].setX(width - shift);
+  };
+  return {
+    advance: (logicalDistance) => {
+      offset = (offset + logicalDistance) % width;
+      if (offset < 0) offset += width;
+      place();
+    },
+    setDepth: (value) => copies.forEach((copy) => copy.setDepth(value)),
+  };
 }
 
 export function advanceAirportBackgroundTile(
-  layer: Phaser.GameObjects.TileSprite,
+  layer: AirportBackgroundLayer,
   logicalDistance: number,
 ) {
-  // Phaser scales tilePosition with the texture, so keep movement in logical pixels.
-  layer.tilePositionX += logicalDistance / layer.tileScaleX;
+  layer.advance(logicalDistance);
 }
 
 export function createAirportBackground(scene: Phaser.Scene): AirportBackground {

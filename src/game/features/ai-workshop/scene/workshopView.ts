@@ -266,18 +266,26 @@ export function syncWorkshopDialoguePanel(
   }
   const layoutText =
     (text.getData("dialogue-layout-text") as string | undefined) ?? text.text;
-  const layoutLines = layoutText.split("\n").filter((line) => line.length > 0);
-  const longestLineWidth = Math.max(
-    ...layoutLines.map((line) => measureWorkshopDialogueLine(text, line)),
-  );
   const { padding, tail } = DIALOGUE_BUBBLE;
-  const width = Phaser.Math.Clamp(
-    Math.ceil(longestLineWidth) + padding.left + padding.right + 2,
-    DIALOGUE_BUBBLE.minWidth,
-    DIALOGUE_BUBBLE.width,
-  );
-  text.setWordWrapWidth(width - padding.left - padding.right, true);
-  const lineCount = Phaser.Math.Clamp(layoutLines.length, 2, 4);
+  // Measured once per line of dialogue (this runs every frame); setting the
+  // wrap width redraws the text, so that happens only when the width changes.
+  let measured = text.getData("dialogue-measured") as { layoutText: string; width: number; lineCount: number } | undefined;
+  if (!measured || measured.layoutText !== layoutText) {
+    const layoutLines = layoutText.split("\n").filter((line) => line.length > 0);
+    const longestLineWidth = Math.max(
+      ...layoutLines.map((line) => measureWorkshopDialogueLine(text, line)),
+    );
+    const width = Phaser.Math.Clamp(
+      Math.ceil(longestLineWidth) + padding.left + padding.right + 2,
+      DIALOGUE_BUBBLE.minWidth,
+      DIALOGUE_BUBBLE.width,
+    );
+    measured = { layoutText, width, lineCount: Phaser.Math.Clamp(layoutLines.length, 2, 4) };
+    text.setData("dialogue-measured", measured);
+    const wrapWidth = width - padding.left - padding.right;
+    if (text.style.wordWrapWidth !== wrapWidth) text.setWordWrapWidth(wrapWidth, true);
+  }
+  const { width, lineCount } = measured;
   const bottom = headTopY === undefined
     ? DIALOGUE_BUBBLE.anchorBottom
     : Math.min(DIALOGUE_BUBBLE.anchorBottom, Math.round(headTopY - tail.headGap));

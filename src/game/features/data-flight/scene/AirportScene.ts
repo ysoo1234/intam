@@ -53,12 +53,14 @@ import { createAirportMissionBanner, createAirportQuestionOverlay } from "./airp
 import { updateAirportObstacleMotion } from "./airportObjectMotion";
 import { preloadAirportAssets, releaseAirportTextures } from "./airportTextures";
 import { createAirportDataObject, createAirportEdgeObstacles, createAirportMovingObstacle } from "./airportObjects";
-import { advanceAirportBackgroundTile, createAirportBackground, createAirportPlayer, type AirportPlayerView } from "./airportView";
+import {
+  advanceAirportBackgroundTile, createAirportBackground, createAirportPlayer, type AirportBackgroundLayer, type AirportPlayerView,
+} from "./airportView";
 import type { FlightObject } from "./flightObject";
 export class AirportScene extends Phaser.Scene {
-  private sky?: Phaser.GameObjects.TileSprite;
-  private city?: Phaser.GameObjects.TileSprite;
-  private ground?: Phaser.GameObjects.TileSprite;
+  private sky?: AirportBackgroundLayer;
+  private city?: AirportBackgroundLayer;
+  private ground?: AirportBackgroundLayer;
   private player?: Phaser.GameObjects.Container;
   private reactPlayer?: AirportPlayerView["react"];
   private setPlayerFever?: AirportPlayerView["setFever"];

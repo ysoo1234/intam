@@ -67,6 +67,8 @@ export function createGamePauseMenu(
   let showingReturn = true;
   const refreshButton = () => {
     button.setDepth(isCoachCountdownRunning(scene) ? COUNTDOWN_BUTTON_DEPTH : VILLAGE_RETURN_BUTTON_DEPTH);
+    // On the result screen (its own buttons take over) the dead 멈춤 button goes away.
+    button.setVisible(isGameStartOverlayOpen(scene) || options.canPause?.() !== false);
     const onStartScreen = isGameStartOverlayOpen(scene);
     if (onStartScreen === showingReturn) return;
     showingReturn = onStartScreen;
