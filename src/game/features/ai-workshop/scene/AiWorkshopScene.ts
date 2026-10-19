@@ -128,7 +128,7 @@ export class AiWorkshopScene extends Phaser.Scene {
     preloadPlayerTextures(this);
     preloadCoachAssets(this);
     // A loading card instead of an empty canvas while the pictures load.
-    startSceneTravel(this, this.renderScale, "AI 제작소 가는 중...");
+    startSceneTravel(this, this.renderScale);
   }
 
   create() {

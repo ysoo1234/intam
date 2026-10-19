@@ -171,6 +171,13 @@ export function createCoachCard(scene: Phaser.Scene, config: CoachCardConfig): C
     keyboard?.off("keydown-ENTER", onKey);
     scene.events.off(Phaser.Scenes.Events.SHUTDOWN, onShutdown);
     openCards.set(scene, Math.max(0, (openCards.get(scene) ?? 1) - 1));
+    if (!scene.sys.isActive()) {
+      // Closed while the scene shuts down (e.g. leaving mid-tutorial): its
+      // input and tweens are already going, so just take the card away.
+      container.destroy(true);
+      if (next) config.onNext();
+      return;
+    }
     // The key that closed the card must not also act in the game this frame.
     keyboard?.resetKeys();
     button.disableInteractive();

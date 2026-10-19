@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { GAME_SIZE } from "./assets";
 import { installGameErrorGuard } from "./core/runtime/gameErrorGuard";
+import { chooseRendererType, watchFrameRate } from "./core/runtime/graphicsMode";
 import { syncPageBackdrop } from "./core/runtime/pageBackdrop";
 import { isLowPowerDevice, isTouchFirstDevice } from "./core/runtime/devicePerformance";
 import { selectRenderScale } from "./core/runtime/renderResolution";
@@ -8,9 +9,18 @@ import { createRegisteredScenes } from "./sceneRegistry";
 
 export function createLearningGame(
   parent: HTMLElement,
-  onReady: () => void,
+  onGameReady: () => void,
 ) {
-  const renderScale = selectRenderScale({
+  // On the first screen: if WebGL is too slow on this computer, switch to light mode.
+  const onReady = () => {
+    onGameReady();
+    watchFrameRate(game);
+  };
+  const rendererType = chooseRendererType();
+  // The light (Canvas) renderer draws with the processor, so it keeps the
+  // 1280 x 720 buffer: measured 60 fps there, but 15–40 fps at 1.5–2x.
+  const lightRenderer = rendererType === Phaser.CANVAS;
+  const sharpScale = selectRenderScale({
     parentWidth: parent.clientWidth,
     parentHeight: parent.clientHeight,
     gameWidth: GAME_SIZE.width,
@@ -21,11 +31,12 @@ export function createLearningGame(
     screenHeight: typeof window === "undefined" ? 0 : window.screen.height,
     modestDevice: isTouchFirstDevice() || isLowPowerDevice(),
   });
+  const renderScale = lightRenderer ? 1 : sharpScale;
   const renderWidth = GAME_SIZE.width * renderScale;
   const renderHeight = GAME_SIZE.height * renderScale;
 
   const game = new Phaser.Game({
-    type: Phaser.AUTO,
+    type: rendererType,
     parent,
     width: renderWidth,
     height: renderHeight,

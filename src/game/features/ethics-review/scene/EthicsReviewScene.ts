@@ -79,7 +79,7 @@ export class EthicsReviewScene extends Phaser.Scene {
     preloadEthicsReviewAssets(this);
     preloadCoachAssets(this);
     // A loading card instead of an empty canvas while the pictures load.
-    startSceneTravel(this, this.renderScale, "윤리 심사소 가는 중...");
+    startSceneTravel(this, this.renderScale);
   }
 
   create() {

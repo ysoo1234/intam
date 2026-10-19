@@ -103,7 +103,7 @@ export class AirportScene extends Phaser.Scene {
     preloadGameStartOverlayAssets(this);
     preloadCoachAssets(this);
     // A loading card instead of an empty canvas while the pictures load.
-    startSceneTravel(this, this.renderScale, "데이터 비행장 가는 중...");
+    startSceneTravel(this, this.renderScale);
   }
   create() {
     configureSceneCamera(this, this.renderScale);

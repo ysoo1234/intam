@@ -1,5 +1,6 @@
 import Phaser from "phaser";
-import { markSceneTrip, sceneRgb, TRIP_FADE_OUT_MS } from "../../../core/visual/sceneTravel";
+import { beginSceneTrip, sceneRgb } from "../../../core/visual/sceneTravel";
+import { describeGraphics, nextGraphicsMode, readGraphicsMode, saveGraphicsMode } from "../../../core/runtime/graphicsMode";
 import {
   makeControlKeys,
   type ControlKeys,
@@ -110,6 +111,12 @@ const WORLD_ENTRY_PROMPT_LAYOUT = {
 
 // Midi stands 113 px tall in the village (shared with the intro's door preview).
 const PLAYER_DISPLAY_HEIGHT = VILLAGE_PLAYER_DISPLAY_HEIGHT;
+/** What the trip screen says on the way into each place. */
+const TRIP_LABELS: Readonly<Record<string, string>> = {
+  "ai-workshop": "AI 제작소 가는 중...",
+  "data-flight": "데이터 비행장 가는 중...",
+  "ethics-review": "윤리 심사소 가는 중...",
+};
 
 export class WorldScene extends Phaser.Scene {
   private player?: Phaser.GameObjects.Container;
@@ -334,6 +341,24 @@ export class WorldScene extends Phaser.Scene {
             );
           },
         },
+        {
+          // How smoothly this computer draws the game (check on a school computer).
+          label: "그래픽 상태 보기",
+          run: () => {
+            this.testMenu?.notify("1초 동안 재는 중...", 1_000);
+            void describeGraphics(this.game).then((text) => this.testMenu?.notify(text, 5_000));
+          },
+        },
+        {
+          // 자동 → 가벼운(Canvas) → 선명한(WebGL) → 자동; takes effect after a reload.
+          label: "그래픽 모드 바꾸기",
+          run: () => {
+            const next = nextGraphicsMode(readGraphicsMode());
+            saveGraphicsMode(next.mode);
+            this.testMenu?.notify(`${next.label}로 다시 불러와요`, 1_200);
+            window.setTimeout(() => window.location.reload(), 900);
+          },
+        },
       ],
     });
   }
@@ -498,17 +523,12 @@ export class WorldScene extends Phaser.Scene {
       this.nearestBuilding.destination.featureId,
     );
     // The village fades into its green, where the trip to the place plays
-    // (sceneTravel);
-    // Midi stands still meanwhile (the same "leaving" hold as the ending).
+    // (sceneTravel). Midi stands still meanwhile (the same "leaving" hold as the ending).
     this.touchMovement?.cancel();
     this.stopPlayer();
     this.endingStarted = true;
-    const camera = this.cameras.main;
-    camera.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
-      markSceneTrip(destination);
-      this.scene.start(destination);
-    });
-    camera.fadeOut(TRIP_FADE_OUT_MS, ...sceneRgb(SCENE_KEYS.world));
+    const featureId = this.nearestBuilding.destination.featureId;
+    beginSceneTrip(this, destination, TRIP_LABELS[featureId] ?? "이동하는 중...", () => this.scene.start(destination));
   }
 
   private isPortalAvailable(portal: WorldPortal) {
