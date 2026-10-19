@@ -65,6 +65,9 @@ export class EthicsReviewScene extends Phaser.Scene {
   private arrivalTimer?: Phaser.Time.TimerEvent;
   private presentGeneration = 0;
   private arrived = true;
+  /** While the 3-2-1 runs, the next student waits outside (then comes in on "시작!"). */
+  private arrivalHeld = false;
+  private heldArrival?: () => void;
   private inputReadyAt = 0;
   private lastTickAt = 0;
   private earnedStars?: 0 | 1 | 2 | 3;
@@ -152,6 +155,8 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.result = undefined;
     this.arrivalTimer = undefined;
     this.presentGeneration = 0;
+    this.arrivalHeld = false;
+    this.heldArrival = undefined;
     this.arrived = true;
     this.inputReadyAt = 0;
     this.lastTickAt = 0;
@@ -197,7 +202,7 @@ export class EthicsReviewScene extends Phaser.Scene {
     this.player.reset();
     this.visitor?.reset();
     this.controls?.cancelMovement();
-    this.presentCase(true);
+    if (practice) this.presentCase(true);
     this.updateView();
     if (practice) {
       // The practice form has landed: Midi explains the two stamps, then the
@@ -206,8 +211,13 @@ export class EthicsReviewScene extends Phaser.Scene {
       this.inputReadyAt = Number.POSITIVE_INFINITY;
       this.tutorial.start(() => { this.inputReadyAt = performance.now(); this.uiKey = ""; });
     } else {
-      // Straight into play: 3-2-1 first; the clock starts on "시작!".
-      playCoachCountdown(this, () => { this.lastTickAt = performance.now(); this.uiKey = ""; });
+      // Straight into play: 3-2-1 first; the first student (with the bell) and
+      // the clock both start on "시작!".
+      playCoachCountdown(this, () => {
+        this.lastTickAt = performance.now();
+        this.presentCase(true);
+        this.updateView();
+      });
     }
   }
 
@@ -235,6 +245,7 @@ export class EthicsReviewScene extends Phaser.Scene {
     const generation = ++this.presentGeneration;
     const presentNext = () => {
       if (generation !== this.presentGeneration || this.arrived) return;
+      if (this.arrivalHeld) { this.heldArrival = presentNext; return; }
       this.arrived = true;
       this.presentCase(true);
     };
@@ -273,11 +284,17 @@ export class EthicsReviewScene extends Phaser.Scene {
     }
     this.state = continueEthicsDelivery(this.state);
     this.visitor?.hideBubble();
+    // The practice student leaves now; the first real one comes in on "시작!".
+    this.arrivalHeld = true;
     this.sendOffAndPresentNext();
     this.updateView();
     playCoachCountdown(this, () => {
       this.lastTickAt = performance.now();
       this.uiKey = "";
+      this.arrivalHeld = false;
+      const arrive = this.heldArrival;
+      this.heldArrival = undefined;
+      arrive?.();
     });
   }
 

@@ -77,6 +77,23 @@ export function playEthicsVerdictStamp(
       ring.setPosition(inkX, inkY + 6).setScale(0.6);
       root.add(ring);
       animate({ targets: ring, scale: 1.5, alpha: 0, duration: 340, ease: "Cubic.easeOut" });
+      // A soft wave in the ink's colour, and short burst lines like a comic "쾅".
+      const wave = scene.add.graphics();
+      wave.lineStyle(5, color, 0.38).strokeCircle(0, 0, sealR + 6);
+      wave.setPosition(inkX, inkY).setScale(0.8);
+      root.add(wave);
+      animate({ targets: wave, scale: 1.7, alpha: 0, duration: 380, ease: "Cubic.easeOut" });
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i) / 8 + Math.PI / 8;
+        const burst = scene.add.graphics();
+        burst.lineStyle(4, color, 0.7).lineBetween(0, 0, 16, 0);
+        burst.setPosition(inkX + Math.cos(angle) * (sealR + 10), inkY + Math.sin(angle) * (sealR + 10)).setRotation(angle);
+        root.add(burst);
+        animate({
+          targets: burst, x: inkX + Math.cos(angle) * (sealR + 34), y: inkY + Math.sin(angle) * (sealR + 34),
+          alpha: 0, scaleX: 0.4, duration: 260, ease: "Cubic.easeOut",
+        });
+      }
       animate({ targets: flight, y: inkY - 70, alpha: 0, scale: contactScale * 0.9, duration: 220, delay: 110, ease: "Cubic.easeOut" });
       animate({ targets: flightShadow, alpha: 0, duration: 120 });
       animate({ targets: mark, scale: 1, alpha: 1, duration: 120, ease: "Back.easeOut" });

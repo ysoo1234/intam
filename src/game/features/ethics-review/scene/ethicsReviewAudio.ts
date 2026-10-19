@@ -25,6 +25,29 @@ export function createEthicsStampAudio(scene: Phaser.Scene) {
     oscillator.start(at);
     oscillator.stop(at + duration);
   };
+  // A short burst of filtered noise: the slap of the stamp on paper.
+  let noiseBuffer: AudioBuffer | undefined;
+  const slap = (at: number, duration: number, volume: number) => {
+    if (!context || !manager || disposed) return;
+    if (!noiseBuffer) {
+      noiseBuffer = context.createBuffer(1, Math.ceil(context.sampleRate * 0.12), context.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < data.length; i += 1) data[i] = Math.random() * 2 - 1;
+    }
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const gain = context.createGain();
+    source.buffer = noiseBuffer;
+    filter.type = "bandpass";
+    filter.frequency.setValueAtTime(1_400, at);
+    filter.Q.setValueAtTime(0.8, at);
+    gain.gain.setValueAtTime(volume, at);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+    source.connect(filter).connect(gain).connect(manager.destination);
+    source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); };
+    source.start(at);
+    source.stop(at + duration);
+  };
   const ready = () => !disposed && !!context && context.state === "running" && !scene.sound.mute;
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     disposed = true;
@@ -35,12 +58,15 @@ export function createEthicsStampAudio(scene: Phaser.Scene) {
   });
   return {
     unlock: () => { if (!disposed && context?.state === "suspended") void context.resume().catch(() => {}); },
-    /** The stamp hits the paper; a rising chime follows a correct verdict. */
+    /** "꽝": the stamp hits the paper; a rising chime follows a correct verdict. */
     play: (correct: boolean) => {
       if (!ready() || !context) return;
       const now = context.currentTime;
-      tone(145, 78, now, 0.09, 0.065, "triangle");
+      // A low thump with a little body, and the paper's slap on top.
+      tone(170, 46, now, 0.2, 0.11, "sine");
+      tone(110, 60, now, 0.12, 0.06, "triangle");
       tone(340, 155, now, 0.045, 0.018, "sine");
+      slap(now, 0.07, 0.05);
       if (correct) {
         tone(659, 659, now + 0.045, 0.14, 0.025, "sine");
         tone(880, 880, now + 0.12, 0.2, 0.021, "sine");
