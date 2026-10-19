@@ -41,6 +41,22 @@ const PORTAL_SWIRL = {
   light: [150, 222, 205],
 } as const;
 let portalCount = 0;
+
+/**
+ * How awake the portal looks: "sleep" (fewer than 7 stars: dim and greyish,
+ * no sparkles), "awake" (the starlight road is open: it breathes brighter and
+ * dimmer), "full" (all 9 stars: the same with a touch of gold). "plain" is the
+ * portal as it always was (the ending). `flare` (0–1) is a passing flash.
+ */
+export type AiWorldPortalLevel = "plain" | "sleep" | "awake" | "full";
+export type AiWorldPortalMood = { level: AiWorldPortalLevel; flare: number };
+const PORTAL_MOOD_KEY = "portal-mood";
+const PORTAL_GOLD = [255, 224, 140] as const;
+
+/** The mood object a live portal reads every time it is drawn (set its fields). */
+export function getAiWorldPortalMood(portal: Phaser.GameObjects.GameObject | undefined) {
+  return portal?.getData(PORTAL_MOOD_KEY) as AiWorldPortalMood | undefined;
+}
 // The starlight gate is an open tablet seen at an angle; its screen (cut out
 // of the artwork) shows the portal. Screen corners as fractions of
 // the gate image (v5, 640 x 608): top-left, bottom-left, bottom-right, top-right.
@@ -167,10 +183,22 @@ export function createAiWorldPortalView(
       near[i] = r / maxR;
     }
   }
-  const { deep, light } = PORTAL_SWIRL;
+  const mood: AiWorldPortalMood = { level: "plain", flare: 0 };
+  const { deep } = PORTAL_SWIRL;
   const swirl = (t: number) => {
     const phase = t * PORTAL_SWIRL.speed;
     const drift = t * 0.35;
+    // The mood, worked out once per drawing.
+    const asleep = mood.level === "sleep";
+    const full = mood.level === "full";
+    const breathing = mood.level === "awake" || full;
+    const breath = breathing ? Math.sin((t * Math.PI * 2) / 2.6) * (full ? 0.11 : 0.08) : 0;
+    const gain = asleep ? 0.6 : 1 + breath;
+    const lift = asleep ? 0.04 : breath * 0.5;
+    const goldMix = full ? 0.32 : 0;
+    const light = PORTAL_SWIRL.light.map((value, index) => value + (PORTAL_GOLD[index] - value) * goldMix);
+    const grey = asleep ? 0.42 : 0;
+    const flash = Math.min(1, mood.flare) * 0.6;
     for (let i = 0; i < angle.length; i += 1) {
       // Soft arms, with a slow second wave so they never look mechanical.
       const wave = Math.sin(PORTAL_SWIRL.arms * angle[i] + curl[i] - phase)
@@ -180,11 +208,22 @@ export function createAiWorldPortalView(
       const d = near[i];
       k += 0.45 * Math.exp(-(d * d) / 0.035);
       k -= 0.22 * d * d;
+      k = k * gain + lift + mood.flare * 0.35;
       k = k < 0 ? 0 : k > 1 ? 1 : k;
+      let r = deep[0] + (light[0] - deep[0]) * k;
+      let g = deep[1] + (light[1] - deep[1]) * k;
+      let b = deep[2] + (light[2] - deep[2]) * k;
+      if (grey > 0) {
+        const lum = r * 0.3 + g * 0.59 + b * 0.11;
+        r += (lum - r) * grey; g += (lum - g) * grey; b += (lum - b) * grey;
+      }
+      if (flash > 0) {
+        r += (255 - r) * flash; g += (255 - g) * flash; b += (255 - b) * flash;
+      }
       const o4 = i * 4;
-      out.data[o4] = deep[0] + (light[0] - deep[0]) * k;
-      out.data[o4 + 1] = deep[1] + (light[1] - deep[1]) * k;
-      out.data[o4 + 2] = deep[2] + (light[2] - deep[2]) * k;
+      out.data[o4] = r;
+      out.data[o4 + 1] = g;
+      out.data[o4 + 2] = b;
       out.data[o4 + 3] = 255;
     }
     swirlCtx.putImageData(out, 0, 0);
@@ -206,7 +245,8 @@ export function createAiWorldPortalView(
     ctx.drawImage(swirlCanvas, 0, 0, width, height);
     ctx.save();
     ctx.globalCompositeOperation = "lighter";
-    sparkles.forEach((sparkle) => {
+    // A sleeping portal has no sparkles.
+    if (mood.level !== "sleep") sparkles.forEach((sparkle) => {
       const life = (t - sparkle.born) / sparkle.duration;
       if (life >= 1) {
         Object.assign(sparkle, newSparkle(t));
@@ -239,6 +279,7 @@ export function createAiWorldPortalView(
   const portal = scene.add
     .image(screen.left + screen.width / 2, screen.top + screen.height / 2, key)
     .setDisplaySize(width / scale, height / scale);
+  portal.setData(PORTAL_MOOD_KEY, mood);
   applyAiWorldPortalMask(portal, openingMask, scene);
 
   const portalRedrawMs = getAmbientRedrawIntervalMs();

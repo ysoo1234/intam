@@ -601,6 +601,18 @@ export function createVillageTutorial(scene: Phaser.Scene, options: VillageTutor
       });
       lineDoorId = portalId;
     },
+    /** The starlight gate has just woken (or shone at 9 stars): a happy line that closes on its own. */
+    sayGateOpened: (line: string) => {
+      if (blocking) return;
+      say(line, {
+        mood: "happy",
+        after: "idle",
+        onDone: () => {
+          bubbleHideTimer?.remove(false);
+          bubbleHideTimer = scene.time.delayedCall(2_600, closeBubble);
+        },
+      });
+    },
     /** True while a card or the welcome line is up: Midi must not move or go in. */
     isBlocking: () => blocking,
     /** Call once the player has moved for the first time. */

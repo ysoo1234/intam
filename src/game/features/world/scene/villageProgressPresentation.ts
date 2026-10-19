@@ -3,10 +3,12 @@ import { GAME_ASSETS } from "../../../assets";
 import { playSoftNotes } from "../../../core/audio/softTones";
 import {
   getWorldExitState,
+  getWorldTotalStars,
   type WorldActivityId,
   type WorldProgressSnapshot,
 } from "../../../core/navigation";
 import type { MapDefinition, Point } from "../model/mapDefinition";
+import { getGateLevel, getPendingGateMilestone, playGateMilestone, setUpVillageGate } from "./villageGateGlow";
 import type { VillageSceneryLayer } from "./villageScenery";
 
 const PROGRESS_DEPTH = 1_880;
@@ -157,6 +159,8 @@ export function createVillageProgressPresentation(
   progress: WorldProgressSnapshot,
   /** The place just returned from with stars: its row fills star by star. */
   revealFeatureId?: WorldActivityId,
+  /** Midi's line when the starlight gate wakes (7 stars) or shines (9). */
+  onGateLine?: (line: string) => void,
 ) {
   const exitState = getWorldExitState(progress);
   mapDefinition.scenery.forEach((scenery) => {
@@ -177,17 +181,18 @@ export function createVillageProgressPresentation(
     ({ definition }) => definition.id === "ai-world-gate",
   );
   if (exitLayer) {
-    if (exitState.kind === "locked") {
-      exitLayer.image.clearTint().setAlpha(1);
-    } else {
-      exitLayer.image.clearTint().setAlpha(1);
-      scene.tweens.add({
-        targets: exitLayer.image,
-        alpha: { from: 0.88, to: 1 },
-        duration: 1_600,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
+    exitLayer.image.clearTint().setAlpha(1);
+    const totalStars = getWorldTotalStars(progress);
+    setUpVillageGate(scene, exitLayer, getGateLevel(totalStars));
+    const milestone = getPendingGateMilestone(totalStars);
+    if (milestone) {
+      // After the roof's stars have popped in (when just back from a place).
+      const revealed = revealFeatureId ? progress[revealFeatureId] : 0;
+      const delayMs = revealed > 0
+        ? STAR_REVEAL.delayMs + STAR_REVEAL.stepMs * (revealed - 1) + STAR_REVEAL.popMs + 450
+        : 1_000;
+      playGateMilestone(scene, exitLayer, milestone, {
+        delayMs, starTexture: VILLAGE_STAR_TEXTURES.filled, onLine: (line) => onGateLine?.(line),
       });
     }
   }

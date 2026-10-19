@@ -75,6 +75,7 @@ import {
 } from "./villageProgressPresentation";
 import { createVillageNameTags } from "./villageNameTags";
 import { createVillageTestMenu } from "./villageTestMenu";
+import { resetGateMilestones } from "./villageGateGlow";
 import { preloadWorldSceneAssets } from "./worldSceneAssets";
 import { VILLAGE_PLAYER_DISPLAY_HEIGHT } from "./villagePreview";
 import { createVillageTutorial, type VillageTutorial } from "./villageTutorial";
@@ -207,6 +208,7 @@ export class WorldScene extends Phaser.Scene {
       returnRequest?.result && returnRequest.result.stars > 0
         ? returnRequest.result.featureId
         : undefined,
+      (line) => this.tutorial?.sayGateOpened(line),
     );
 
     // The place name shows briefly over the sky on entry, then fades so it
@@ -376,6 +378,8 @@ export class WorldScene extends Phaser.Scene {
 
   /** Saves `progress` as it is and redraws the village (the tour is not replayed). */
   private applyTestProgress(progress: WorldProgressSnapshot, data?: object) {
+    // So the gate's 7- and 9-star moments can be watched again.
+    resetGateMilestones();
     this.progress = progress;
     this.registry.set(WORLD_PROGRESS_REGISTRY_KEY, this.progress);
     saveStoredWorldProgress(this.progress);
