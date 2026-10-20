@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "신나는 인공지능과 윤리 탐험",
+  title: "AI 월드 배움마을",
   description:
-    "신나는 인공지능과 윤리 탐험 교재를 마무리하며 마을을 탐험하는 어린이 교육용 웹 게임",
+    "AI 월드 배움마을: 인공지능과 윤리를 배우며 마을을 탐험하는 어린이 교육용 웹 게임",
 };
 
 export const viewport: Viewport = {

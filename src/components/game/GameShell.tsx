@@ -125,7 +125,7 @@ export function GameShell() {
     <>
       <section
         className="game-shell"
-        aria-label="배움마을 교육 게임"
+        aria-label="AI 월드 배움마을"
         aria-describedby="game-controls"
       >
         <div ref={gameParentRef} className="game-canvas" />
