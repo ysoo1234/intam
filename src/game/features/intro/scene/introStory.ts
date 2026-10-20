@@ -10,7 +10,8 @@ import { MIDI_POSE, type MidiMood, type MidiPose, type MidiSpeechPace, type Midi
  * "배움마을 입장하기": the nine gems light up and pour their light into the
  * centre, the board opens into a door onto the village, Midi points out the
  * three buildings and the starlight graduation path, then flies through.
- * Tap / Space / Enter advances, Esc or the skip pill skips.
+ * Tap / Space / Enter advances. There is no skip: the story is short and
+ * shows where everything is.
  */
 export const INTRO_STORY_STORAGE_KEY = "intam:intro-story-seen:v1";
 export const INTRO_STORY_TEXTURES = { village: "intro-story-village", frame: "intro-story-frame" } as const;
@@ -27,7 +28,7 @@ const DOOR_DIVE = { flyMs: 720, zoomMs: 950, openMs: 260, openCover: 1.55 } as c
 // Soft light textures drawn once on a canvas (real blur, not hard outlines).
 const LIGHT = { dot: "intro-story-dot", glow: "intro-story-glow", sparkle: "intro-story-sparkle" } as const;
 
-const STORY_DEPTH = { portal: 6, light: 6.5, chip: 9, flash: 10, panel: 20, skip: 21 } as const;
+const STORY_DEPTH = { portal: 6, light: 6.5, chip: 9, flash: 10, panel: 20 } as const;
 // Door into the village, opened over the gem board. The opening matches the
 // ring of the generated frame (story-portal-frame-v1: ring centre 819,479 and
 // semi-axes 742 x 389 on a 1639 x 960 canvas), so the mask edge hides under it.
@@ -42,7 +43,6 @@ const VILLAGE_VIEW = { width: 740, height: 416 } as const;
 // Just under the lifted board (its frame then ends near y 537), level with
 // Midi's body where she stood on the first screen.
 const PANEL = { left: 214, right: 1196, y: 592, height: 92 } as const;
-const SKIP = { x: 1172, y: 42, width: 132, height: 42 } as const;
 // The story reads a little quicker than the intro bubble.
 const STORY_PACE: MidiSpeechPace = { letterMs: 41, spaceMs: 32, lineBreakMs: 110, mouthMs: 95 };
 
@@ -278,25 +278,6 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
     scene.tweens.add({ targets: nextArrow, y: nextArrow.y + 5, duration: 420, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
 
-  // --- Skip pill ----------------------------------------------------------------------
-  const skipPlate = scene.add.graphics();
-  skipPlate.fillStyle(0xffffff, 0.86).fillRoundedRect(-SKIP.width / 2, -SKIP.height / 2, SKIP.width, SKIP.height, SKIP.height / 2);
-  skipPlate.lineStyle(2, 0xc9c2ec, 1).strokeRoundedRect(-SKIP.width / 2, -SKIP.height / 2, SKIP.width, SKIP.height, SKIP.height / 2);
-  const skipText = scene.add
-    .text(-8, 0, "건너뛰기", { fontFamily: FONT_FAMILY, fontSize: "17px", fontStyle: "bold", color: "#2f3d68" })
-    .setOrigin(0.5).setResolution(3);
-  const arrowX = skipText.x + skipText.width / 2 + 8;
-  const skipArrows = scene.add.graphics();
-  skipArrows.fillStyle(0x4b8fe0, 1)
-    .fillTriangle(arrowX, -6, arrowX, 6, arrowX + 8, 0)
-    .fillTriangle(arrowX + 8, -6, arrowX + 8, 6, arrowX + 16, 0);
-  const skip = track(scene.add.container(SKIP.x, SKIP.y, [skipPlate, skipText, skipArrows]))
-    .setDepth(STORY_DEPTH.skip)
-    .setSize(SKIP.width, SKIP.height)
-    .setAlpha(0)
-    .setInteractive({ useHandCursor: true });
-  scene.tweens.add({ targets: skip, alpha: 1, delay: motion(400), duration: motion(300) });
-
   // --- Beats ----------------------------------------------------------------------------
   const boardPoint = (spot: readonly [number, number]) => ({
     x: board.x + spot[0] * board.displayWidth,
@@ -451,8 +432,7 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
     talker.setPose(MIDI_POSE.fly);
     removeInput();
     openPortal(true);
-    skip.disableInteractive();
-    scene.tweens.add({ targets: [panel, skip], alpha: 0, duration: motion(220) });
+    scene.tweens.add({ targets: panel, alpha: 0, duration: motion(220) });
     // Midi flies into the door and lands where she starts in the village, already
     // at the village's size inside the door; then the village grows until it
     // fills the screen exactly as the village scene draws it (Midi grows with
@@ -513,24 +493,14 @@ export function playIntroStory(scene: Phaser.Scene, options: IntroStoryOptions) 
     event.preventDefault();
     advance();
   };
-  const onEscape = () => finish();
   const removeInput = () => {
     scene.input.off("pointerdown", onPointer);
     scene.input.keyboard?.off("keydown-SPACE", onKey);
     scene.input.keyboard?.off("keydown-ENTER", onKey);
-    scene.input.keyboard?.off("keydown-ESC", onEscape);
   };
-  skip.on(
-    "pointerdown",
-    (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      finish();
-    },
-  );
   scene.input.on("pointerdown", onPointer);
   scene.input.keyboard?.on("keydown-SPACE", onKey);
   scene.input.keyboard?.on("keydown-ENTER", onKey);
-  scene.input.keyboard?.on("keydown-ESC", onEscape);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
     removeInput();
     maskShape.destroy();

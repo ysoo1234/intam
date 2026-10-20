@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { addCreditMark } from "../../../core/visual/creditMark";
 import { addGradientImage } from "../../../core/visual/gradientImage";
 import { SCENE_FADE_RGB } from "../../../core/visual/theme";
 import { GAME_ASSETS } from "../../../assets";
@@ -54,6 +55,7 @@ export class IntroScene extends Phaser.Scene {
   private boardShadow?: Phaser.GameObjects.Ellipse;
   private mascot?: Phaser.GameObjects.Container;
   private titleGroup?: Phaser.GameObjects.Container;
+  private creditMark?: Phaser.GameObjects.Text;
   private rays?: Phaser.GameObjects.Container;
   private enterButton?: Phaser.GameObjects.Container;
   private pressedPointerId: number | null = null;
@@ -97,6 +99,7 @@ export class IntroScene extends Phaser.Scene {
     this.createBoard();
     this.createMascot();
     this.createEnterButton();
+    this.creditMark = addCreditMark(this, INTRO_DEPTH.button);
     this.input.keyboard?.on("keydown-SPACE", this.startFromKeyboard);
     this.input.keyboard?.on("keydown-ENTER", this.startFromKeyboard);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -443,7 +446,7 @@ export class IntroScene extends Phaser.Scene {
     if (shouldPlayIntroStory() && this.mascot && this.midiSprite && this.talker) {
       this.midiSprite.disableInteractive();
       this.talker.stop();
-      for (const extra of [this.titleGroup, this.midiBubble, this.boardShadow]) {
+      for (const extra of [this.titleGroup, this.midiBubble, this.boardShadow, this.creditMark]) {
         if (!extra) continue;
         this.tweens.killTweensOf(extra);
         this.tweens.add({ targets: extra, alpha: 0, duration: 220, ease: "Sine.easeIn" });
@@ -465,7 +468,7 @@ export class IntroScene extends Phaser.Scene {
 
     this.talker?.stop();
     // The board's shadow and Midi's bubble go with them, so nothing is left under the opening board.
-    for (const extra of [this.mascot, this.titleGroup, this.midiBubble, this.boardShadow]) {
+    for (const extra of [this.mascot, this.titleGroup, this.midiBubble, this.boardShadow, this.creditMark]) {
       if (!extra) continue;
       this.tweens.killTweensOf(extra);
       this.tweens.add({ targets: extra, alpha: 0, duration: 220, ease: "Sine.easeIn" });

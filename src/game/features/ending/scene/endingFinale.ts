@@ -3,6 +3,7 @@ import { ENDING_FINALE } from "../../../content/endingStory";
 import { MIDI_FRAME_HEIGHT, MIDI_POSE } from "../../../core/player/midiFrames";
 import { applyPageBackdrop } from "../../../core/runtime/pageBackdrop";
 import { SCENE_KEYS } from "../../../core/scenes/sceneKeys";
+import { addCreditMark } from "../../../core/visual/creditMark";
 import { DISPLAY_FONT_FAMILY } from "../../../core/visual/fonts";
 import { addGradientImage } from "../../../core/visual/gradientImage";
 import { FONT_FAMILY } from "../../../core/visual/theme";
@@ -148,6 +149,9 @@ export function showEndingFinale(
       variant: "paper", fontSize: "18px", depth: DEPTH.ui, onPress: options.onShowPhoto,
     }),
   ];
+
+  // The makers' names, faint in the corner like on the first screen.
+  addCreditMark(scene, DEPTH.ui);
 
   // Appears out of the door's white light, or simply fades in on a repeat visit.
   const fade = scene.add

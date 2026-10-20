@@ -9,7 +9,7 @@ import {
   type WorldProgressSnapshot,
 } from "../../../core/navigation/worldProgress";
 import { loadStoredWorldProgress } from "../../../core/navigation/worldProgressStorage";
-import { hasSeenEndingWith, markEndingSeen } from "../../../core/navigation/endingProgressStorage";
+import { getEndingSeenStars, hasSeenEndingWith, markEndingSeen } from "../../../core/navigation/endingProgressStorage";
 import { MIDI_POSE } from "../../../core/player/midiFrames";
 import { configureSceneCamera } from "../../../core/runtime/configureSceneCamera";
 import { readEndingStart, type EndingStart } from "../../../core/scenes/endingStart";
@@ -112,11 +112,16 @@ export class EndingScene extends Phaser.Scene {
     });
     this.dialogue = createEndingDialogue(this, { calm: this.calm });
     this.createBars();
-    this.createSkipPill();
-    this.input.keyboard?.on("keydown-ESC", this.skipFromKeyboard);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
-      this.input.keyboard?.off("keydown-ESC", this.skipFromKeyboard);
-    });
+    // The first viewing plays in full; watching it again (more stars since)
+    // can be skipped.
+    this.skipPill = undefined;
+    if (getEndingSeenStars() !== undefined) {
+      this.createSkipPill();
+      this.input.keyboard?.on("keydown-ESC", this.skipFromKeyboard);
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+        this.input.keyboard?.off("keydown-ESC", this.skipFromKeyboard);
+      });
+    }
     void this.playStory();
   }
 
