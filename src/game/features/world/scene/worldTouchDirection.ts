@@ -14,7 +14,18 @@ type WorldTouchDirectionOptions = Readonly<{
   getOrigin: () => Point | undefined;
   direction?: Phaser.Math.Vector2;
   arrivalRadius?: number;
+  /**
+   * Whether Midi's feet can stand at (x, y). A tap on a building (or any
+   * blocked spot) then becomes a tap on the nearest free spot between it
+   * and Midi, so she walks up to the wall and stops there instead of
+   * pressing into it.
+   */
+  isBlocked?: (x: number, y: number) => boolean;
 }>;
+
+/** How far back from the wall Midi stops, in px (inside the arrival radius). */
+const WALL_STOP_GAP = 4;
+const WALL_SCAN_STEP = 3;
 
 /**
  * Treat a tap or drag as a destination, rather than as a virtual joystick.
@@ -44,9 +55,34 @@ export function createWorldTouchDirection(
   const dragStartRadius = dragStopRadius + 14;
   let dragMoving = false;
 
+  // From a blocked tap, step back toward Midi until her feet would fit.
+  const settleTargetOutsideWalls = () => {
+    const isBlocked = options.isBlocked;
+    const origin = options.getOrigin();
+    if (!isBlocked || !origin || !isBlocked(target.x, target.y)) return;
+    const dx = origin.x - target.x;
+    const dy = origin.y - target.y;
+    const length = Math.hypot(dx, dy);
+    if (length < 1) return;
+    const ux = dx / length;
+    const uy = dy / length;
+    for (let travelled = WALL_SCAN_STEP; travelled < length; travelled += WALL_SCAN_STEP) {
+      const x = target.x + ux * travelled;
+      const y = target.y + uy * travelled;
+      if (!isBlocked(x, y)) {
+        const back = Math.min(WALL_STOP_GAP, length - travelled);
+        target.set(x + ux * back, y + uy * back);
+        return;
+      }
+    }
+    // Everything between Midi and the tap is blocked: stay put.
+    target.set(origin.x, origin.y);
+  };
+
   const rememberTarget = (pointer: Phaser.Input.Pointer) => {
     const point = getPointerWorldPoint(scene, pointer, pointerWorldPoint);
     target.copy(point);
+    settleTargetOutsideWalls();
     hasTarget = true;
     hasPreviousOrigin = false;
     stalledFrames = 0;

@@ -108,6 +108,6 @@ export const WORKSHOP_PRODUCT_DIALOGUES: Readonly<
   },
   "performance-interpreter": {
     ready: "배우의 말을 바로 옮겨 줄 공연 통역기가 준비됐어요!",
-    thanks: "이제 배우의 대사를 제 나라 말로 들으며 공연을 즐길게요!",
+    thanks: "이제 배우의 대사를 우리나라 말로 들으며 공연을 즐길게요!",
   },
 };

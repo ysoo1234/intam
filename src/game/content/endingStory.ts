@@ -23,7 +23,7 @@ export const ENDING_CERTIFICATE = {
   title: "AI 월드 탐험가 증명서",
   nameLabel: "탐험가",
   name: "AI 월드 탐험가",
-  gemsLabel: "교재에서 모은 보석 9개",
+  gemsLabel: "AI월드에서 모은 보석",
   starsLabel: "배움마을에서 모은 별",
   statement: [
     "위 탐험가는 「신나는 인공지능과 윤리 탐험」을 끝까지 잘 마치고",

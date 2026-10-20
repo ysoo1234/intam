@@ -136,10 +136,10 @@ export const VILLAGE_MAP = defineMap({
       interactionArea: {
         kind: "ellipse",
         radiusX: offsetVillageSize("ai-shop", {
-          width: 116, height: 63,
+          width: 156, height: 140,
         }).width,
         radiusY: offsetVillageSize("ai-shop", {
-          width: 116, height: 63,
+          width: 156, height: 140,
         }).height,
       },
       interactionComparison: "strictly-less-than",
@@ -165,10 +165,10 @@ export const VILLAGE_MAP = defineMap({
       interactionArea: {
         kind: "ellipse",
         radiusX: offsetVillageSize("ethics-office", {
-          width: 183, height: 130,
+          width: 228, height: 146,
         }).width,
         radiusY: offsetVillageSize("ethics-office", {
-          width: 183, height: 130,
+          width: 228, height: 146,
         }).height,
       },
       interactionComparison: "strictly-less-than",
@@ -193,10 +193,10 @@ export const VILLAGE_MAP = defineMap({
       interactionArea: {
         kind: "ellipse",
         radiusX: offsetVillageSize("airport", {
-          width: 159, height: 74,
+          width: 204, height: 110,
         }).width,
         radiusY: offsetVillageSize("airport", {
-          width: 159, height: 74,
+          width: 204, height: 110,
         }).height,
       },
       interactionComparison: "strictly-less-than",
@@ -219,10 +219,10 @@ export const VILLAGE_MAP = defineMap({
       interactionArea: {
         kind: "ellipse",
         radiusX: offsetVillageSize("ai-world-gate", {
-          width: 189, height: 78,
+          width: 232, height: 110,
         }).width,
         radiusY: offsetVillageSize("ai-world-gate", {
-          width: 189, height: 78,
+          width: 232, height: 110,
         }).height,
       },
       interactionComparison: "strictly-less-than",

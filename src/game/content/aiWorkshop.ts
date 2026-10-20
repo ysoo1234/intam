@@ -447,7 +447,7 @@ export const WORKSHOP_REQUESTS: WorkshopRequest[] = [
     customerEmoji: "🎭",
     productId: "performance-interpreter",
     dialogue:
-      "배우의 표정은 알겠는데 대사는 모르겠어요. 저희 나라 말로 바로 듣고 싶어요.",
+      "배우의 표정은 알겠는데 대사는 모르겠어요. 우리나라 말로 바로 듣고 싶어요.",
   }),
 ];
 

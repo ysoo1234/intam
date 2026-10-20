@@ -61,7 +61,7 @@ import {
 } from "../model/villageMovement";
 import {
   createVillageCollision,
-  isPlayerBehindBuilding,
+  isPlayerBehindBuildingWall,
 } from "../model/villageCollision";
 import {
   createVillageScenery,
@@ -456,6 +456,7 @@ export class WorldScene extends Phaser.Scene {
       direction: this.touchDirection,
       getOrigin: () =>
         this.player ? { x: this.player.x, y: this.player.y } : undefined,
+      isBlocked: (x, y) => this.isWorldPositionBlocked(x, y),
     });
   }
 
@@ -683,7 +684,7 @@ export class WorldScene extends Phaser.Scene {
             y: this.player!.y,
           }) && (
             !portal.frontOf ||
-            isPlayerBehindBuilding(WORLD_MAP.collision, portal.frontOf, {
+            isPlayerBehindBuildingWall(WORLD_MAP.collision, portal.frontOf, {
               x: this.player!.x,
               y: this.player!.y,
             }) !== true

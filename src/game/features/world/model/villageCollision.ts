@@ -284,6 +284,24 @@ export function isPlayerBehindBuilding(
   return feetY < getBuildingDepthLineY(prepareBuilding(shape), position.x);
 }
 
+/**
+ * Like `isPlayerBehindBuilding`, but only while Midi is actually over the
+ * building's width: standing beside a wall (on the door's side of it) does
+ * not count as behind, so the entry prompt still shows there.
+ */
+export function isPlayerBehindBuildingWall(
+  collision: CollisionDefinition,
+  sceneryId: string,
+  position: Point,
+) {
+  const shape = collision.buildings.find(({ id }) => id === sceneryId);
+  if (!shape) return undefined;
+  const building = prepareBuilding(shape);
+  if (position.x < building.shape.columnLeft || position.x > building.pictureRight) return false;
+  const feetY = position.y + collision.playerBody.feetOffsetY;
+  return feetY < getBuildingDepthLineY(building, position.x);
+}
+
 function createMaskLookup(mask: PrecomputedCollisionMaskDefinition) {
   const expectedCellCount = mask.columns * mask.rows;
   const bytes = decodeBase64Bitset(

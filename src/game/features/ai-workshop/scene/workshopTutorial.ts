@@ -217,7 +217,9 @@ export function createWorkshopTutorial(
               // The yellow arrow rises from below to the 멈춤 button until crafting ends.
               setTarget("stop");
             },
-            { x: 640, y: 150 });
+            // Low enough to sit right above the timing bar (it may cover the
+            // product art), so the coloured target stays in view under it.
+            { x: 640, y: 290 });
           return;
         case "delivery":
           light("customer");

@@ -340,7 +340,7 @@ for (const sceneryKey of [
 }
 assert.match(worldScene, /createVillageScenery\(this, WORLD_MAP\)/);
 assert.match(worldScene, /getVillagePlayerDepth\(this\.player\.y\)/);
-assert.match(worldScene, /isPlayerBehindBuilding\(WORLD_MAP\.collision, portal\.frontOf/, "Entry buttons never show from behind their building.");
+assert.match(worldScene, /isPlayerBehindBuildingWall\(WORLD_MAP\.collision, portal\.frontOf/, "Entry buttons never show from behind their building.");
 assert.equal(villageMap.match(/frontOf: "/g)?.length, 4, "Every village entrance names its building.");
 assert.match(villageScenery, /isPlayerBehindBuilding/, "Depth sorting compares Midi's feet with each building's ground outline.");
 assert.match(villageScenery, /updateVillageSceneryDepths/);
@@ -430,12 +430,12 @@ assert.doesNotMatch(villageCollision, /Phaser|TextureManager|getPixel|getFrame/)
 assert.doesNotMatch(worldScene, /WORLD_COLLISION\.isBlocked\(this\.textures/);
 assert.match(
   villageMap,
-  /id: "shop",[\s\S]*?position: offsetVillagePoint\("ai-shop", \{ x: 366, y: 289 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 116, height: 63[\s\S]*?frontOf: "ai-shop"/,
+  /id: "shop",[\s\S]*?position: offsetVillagePoint\("ai-shop", \{ x: 366, y: 289 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 156, height: 140[\s\S]*?frontOf: "ai-shop"/,
   "The AI shop must activate in the front yard around its door steps.",
 );
 assert.match(
   villageMap,
-  /id: "workshop",[\s\S]*?position: offsetVillagePoint\("ethics-office", \{ x: 318, y: 665 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 183, height: 130/,
+  /id: "workshop",[\s\S]*?position: offsetVillagePoint\("ethics-office", \{ x: 318, y: 665 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 228, height: 146/,
   "The Ethics Review office must activate only on its front paved approach.",
 );
 assert.match(villageScenery, /function getAiWorldPortalScreen/);
@@ -446,7 +446,7 @@ assert.match(
 );
 assert.match(
   villageMap,
-  /id: "library",[\s\S]*?position: offsetVillagePoint\("airport", \{ x: 895, y: 271 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 159, height: 74[\s\S]*?frontOf: "airport"/,
+  /id: "library",[\s\S]*?position: offsetVillagePoint\("airport", \{ x: 895, y: 271 \}\)[\s\S]*?kind: "ellipse"[\s\S]*?width: 204, height: 110[\s\S]*?frontOf: "airport"/,
   "The data airport must activate throughout its marked approach ellipse.",
 );
 assert.doesNotMatch(
